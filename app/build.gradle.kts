@@ -8,6 +8,12 @@ plugins {
 }
 
 dependencies {
+    implementation(libs.bundles.ktor)
+    implementation(libs.exposed.core)
+    implementation(libs.exposed.jdbc)
+    implementation(libs.h2)
+    implementation(libs.logback.classic)
+
     // Project "app" depends on project "utils". (Project paths are separated with ":", so ":utils" refers to the top-level "utils" project.)
     implementation(project(":utils"))
 }
