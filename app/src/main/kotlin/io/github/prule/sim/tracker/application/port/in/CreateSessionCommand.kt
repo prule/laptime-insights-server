@@ -13,7 +13,6 @@ import io.github.prule.sim.tracker.application.domain.model.ValidLap
 import kotlin.time.Instant
 
 data class CreateSessionCommand(
-    val startedAt: Instant,
     val simulator: Simulator,
     val track: Track,
     val car: Car,

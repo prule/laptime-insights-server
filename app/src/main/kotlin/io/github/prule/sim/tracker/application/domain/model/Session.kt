@@ -29,7 +29,8 @@ enum class Simulator {
 
 data class Session(
     val id: SessionId,
-    val startedAt: Instant,
+    val uid: Uid,
+    val startedAt: Instant?,
     val endedAt: Instant?,
     val simulator: Simulator,
     val track: Track,
