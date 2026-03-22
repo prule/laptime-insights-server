@@ -1,4 +1,4 @@
-package io.github.prule.acc.client.app.io.github.prule.sim.tracker.application.domain.model
+package io.github.prule.sim.tracker.application.domain.model
 
 import kotlin.time.Instant
 
