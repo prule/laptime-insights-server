@@ -5,7 +5,7 @@ import org.jetbrains.exposed.v1.datetime.timestamp
 
 const val MAX_VARCHAR_LENGTH = 255
 
-object SessionTable : LongIdTable() {
+object SessionTable : LongIdTable("SESSION") {
     val uid = varchar("uid", MAX_VARCHAR_LENGTH)
     val startedAt = timestamp("started_at").nullable()
     val endedAt = timestamp("ended_at").nullable()

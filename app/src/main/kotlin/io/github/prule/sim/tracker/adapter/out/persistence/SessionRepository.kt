@@ -10,11 +10,8 @@ class SessionRepository(
     FindByCriteriaRepository<SessionEntity> {
     override fun findOneOrNull(id: Long): SessionEntity? = SessionEntity.findById(id)
 
-    fun create(session: Session): Session {
-        val entity =
-            SessionEntity.new {
-                mapper.toEntity(session, this)
-            }
-        return mapper.toDomain(entity)
-    }
+    fun create(session: Session): SessionEntity =
+        SessionEntity.new {
+            mapper.toEntity(session, this)
+        }
 }

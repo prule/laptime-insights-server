@@ -9,6 +9,7 @@ class SessionEntity(
 ) : LongEntity(id) {
     companion object : LongEntityClass<SessionEntity>(SessionTable)
 
+    var uid by SessionTable.uid
     var startedAt by SessionTable.startedAt
     var endedAt by SessionTable.endedAt
     var simulator by SessionTable.simulator

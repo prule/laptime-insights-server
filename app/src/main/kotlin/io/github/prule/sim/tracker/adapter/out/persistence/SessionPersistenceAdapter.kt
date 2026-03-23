@@ -14,7 +14,7 @@ class SessionPersistenceAdapter(
 //    }
 
     override fun create(session: Session): Session {
-        val entity = repository.create()
+        val entity = repository.create(session)
         return mapper.toDomain(entity)
     }
 }

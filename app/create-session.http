@@ -1,0 +1,8 @@
+### GET request to example server
+POST http://localhost:8000/api/1/session
+
+{
+    "car": "Porsche"
+}
+
+###

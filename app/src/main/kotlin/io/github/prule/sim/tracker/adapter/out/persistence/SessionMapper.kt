@@ -1,17 +1,24 @@
 package io.github.prule.sim.tracker.adapter.out.persistence
 
+import io.github.prule.sim.tracker.application.domain.model.Car
 import io.github.prule.sim.tracker.application.domain.model.Session
+import io.github.prule.sim.tracker.application.domain.model.SessionId
+import io.github.prule.sim.tracker.application.domain.model.SessionType
+import io.github.prule.sim.tracker.application.domain.model.Simulator
+import io.github.prule.sim.tracker.application.domain.model.Track
+import io.github.prule.sim.tracker.application.domain.model.Uid
 
 class SessionMapper {
     fun toDomain(entity: SessionEntity): Session =
         Session(
-            id = entity.id.value,
+            id = SessionId(entity.id.value),
+            uid = Uid(entity.uid),
             startedAt = entity.startedAt,
             endedAt = entity.endedAt,
-            simulator = entity.simulator,
-            track = entity.track,
-            car = entity.car,
-            sessionType = entity.sessionType,
+            simulator = Simulator.valueOf(entity.simulator),
+            track = Track(entity.track),
+            car = Car(entity.car),
+            sessionType = SessionType(entity.sessionType),
         )
 
     fun toEntity(
@@ -19,6 +26,7 @@ class SessionMapper {
         entity: SessionEntity,
     ) {
         entity.apply {
+            uid = session.uid.value
             startedAt = session.startedAt
             endedAt = session.endedAt
             simulator = session.simulator.name

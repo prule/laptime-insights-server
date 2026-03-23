@@ -1,27 +1,33 @@
 package io.github.prule.sim.tracker.application.domain.model
 
+import kotlinx.serialization.Serializable
 import kotlin.time.Instant
 
 @JvmInline
+@Serializable
 value class SessionId(
     val value: Long,
 )
 
 @JvmInline
+@Serializable
 value class Track(
     val value: String,
 )
 
 @JvmInline
+@Serializable
 value class Car(
     val value: String,
 )
 
 @JvmInline
+@Serializable
 value class SessionType(
     val value: String,
 )
 
+@Serializable
 enum class Simulator {
     ACC,
     F1,
