@@ -13,14 +13,8 @@ class SessionPersistenceAdapter(
 //        repository.search()
 //    }
 
-    override fun create(session: Session): Session =
-        repository.create {
-            it[SessionTable.uid] = session.uid.value
-            it[SessionTable.startedAt] = session.startedAt
-            it[SessionTable.endedAt] = session.endedAt
-            it[SessionTable.simulator] = session.simulator.name
-            it[SessionTable.track] = session.track.value
-            it[SessionTable.car] = session.car.value
-            it[SessionTable.sessionType] = session.sessionType.value
-        }
+    override fun create(session: Session): Session {
+        val entity = repository.create()
+        return mapper.toDomain(entity)
+    }
 }
