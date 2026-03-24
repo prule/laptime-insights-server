@@ -3,45 +3,52 @@ package io.github.prule.sim.tracker.utils.data
 import org.jetbrains.exposed.v1.core.Expression
 
 interface SearchRepository<T, C> {
-    fun sortableFields(): SortableFields
 
-    fun searchForOne(
-        criteria: C,
-        sort: Sort? = null,
-    ): T?
+  fun searchForOne(
+      criteria: C,
+      sort: Sort = Sort.noSort(),
+  ): T?
 
-    fun search(
-        criteria: C,
-        pageRequest: PageRequest,
-        sort: Sort? = null,
-    ): Page<T>
+  fun search(
+      criteria: C,
+      pageRequest: PageRequest,
+      sort: Sort = Sort.noSort(),
+  ): Page<T>
 }
 
 data class SortableFields(
-    private val mapping: Map<String, Expression<*>>,
+    val mapping: Map<String, Expression<*>>,
 )
 
 data class Sort(
-    private val fields: List<SortBy>,
-)
+    val fields: List<SortBy>,
+) {
+  companion object {
+    fun noSort(): Sort {
+      return Sort(emptyList())
+    }
+  }
+}
 
 enum class Order {
-    ASC,
-    DESC,
+  ASC,
+  DESC,
 }
 
 data class SortBy(
-    private val field: String,
-    private val order: Order,
+    val field: String,
+    val order: Order,
 )
 
 data class Page<T>(
     val page: PageRequest,
     val total: Long,
     val items: List<T>,
-)
+) {
+  fun <R> map(block: (T) -> R): Page<R> = Page(page, total, items.map(block))
+}
 
 data class PageRequest(
-    val page: Int,
-    val size: Int,
+    val page: Int = 1,
+    val size: Int = 25,
 )
