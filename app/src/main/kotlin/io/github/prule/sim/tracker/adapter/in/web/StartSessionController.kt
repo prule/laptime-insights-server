@@ -1,13 +1,15 @@
 package io.github.prule.sim.tracker.adapter.`in`.web
 
+import io.github.prule.sim.tracker.application.domain.model.Uid
 import io.github.prule.sim.tracker.application.port.`in`.StartSessionCommand
 import io.github.prule.sim.tracker.application.port.`in`.StartSessionUseCase
 import io.ktor.server.application.*
 import io.ktor.server.request.*
+import io.ktor.server.resources.post
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
-import kotlin.time.Instant
 import kotlinx.serialization.Serializable
+import kotlin.time.Instant
 
 class StartSessionController(application: Application, startSessionUseCase: StartSessionUseCase) {
   init {
@@ -18,7 +20,7 @@ class StartSessionController(application: Application, startSessionUseCase: Star
             SessionResource.fromDomain(
                 startSessionUseCase.startSession(
                     StartSessionCommand(
-                        uid = start.parent.uid,
+                        uid = Uid(start.parent.uid),
                         startedAt = request.startedAt,
                     ),
                 ),
