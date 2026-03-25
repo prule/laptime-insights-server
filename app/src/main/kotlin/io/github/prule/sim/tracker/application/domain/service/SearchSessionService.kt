@@ -1,4 +1,4 @@
-package io.github.prule.acc.client.app.io.github.prule.sim.tracker.application.domain.service
+package io.github.prule.sim.tracker.application.domain.service
 
 import io.github.prule.sim.tracker.application.domain.model.Session
 import io.github.prule.sim.tracker.application.domain.model.SessionSearchCriteria

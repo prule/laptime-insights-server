@@ -2,6 +2,7 @@ package io.github.prule.sim.tracker.adapter.out.persistence
 
 import io.github.prule.sim.tracker.application.domain.model.Session
 import io.github.prule.sim.tracker.application.domain.model.SessionSearchCriteria
+import io.github.prule.sim.tracker.utils.NotFoundException
 import io.github.prule.sim.tracker.utils.data.FindByCriteriaRepository
 import io.github.prule.sim.tracker.utils.data.FindByIdRepository
 import io.github.prule.sim.tracker.utils.data.Page
@@ -11,6 +12,8 @@ import io.github.prule.sim.tracker.utils.data.Sort
 import io.github.prule.sim.tracker.utils.data.exposed.firstOrNull
 import io.github.prule.sim.tracker.utils.data.exposed.paginate
 import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.core.greaterEq
+import org.jetbrains.exposed.v1.core.lessEq
 import org.jetbrains.exposed.v1.jdbc.Query
 import org.jetbrains.exposed.v1.jdbc.andWhere
 import org.jetbrains.exposed.v1.jdbc.selectAll
@@ -40,12 +43,25 @@ class SessionRepository(
       SessionEntity.wrapRow(it)
     }
   }
+
+  fun update(session: Session): SessionEntity {
+    return SessionEntity.findByIdAndUpdate(session.id.value) { mapper.toEntity(session, it) }
+        ?: throw NotFoundException("Session not found")
+  }
 }
 
 fun SessionSearchCriteria.toQuery(): Query {
   val query = SessionTable.selectAll()
 
+  id?.let { query.andWhere { SessionTable.id eq it.value } }
+  uid?.let { query.andWhere { SessionTable.uid eq it.value } }
+
   car?.let { query.andWhere { SessionTable.car eq it.value } }
+  track?.let { query.andWhere { SessionTable.track eq it.value } }
+  simulator?.let { query.andWhere { SessionTable.simulator eq it.name } }
+
+  from?.let { query.andWhere { SessionTable.startedAt greaterEq it } }
+  to?.let { query.andWhere { SessionTable.startedAt lessEq it } }
 
   return query
 }

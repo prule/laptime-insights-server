@@ -12,4 +12,6 @@ interface SearchSessionPort {
       pageRequest: PageRequest = PageRequest(),
       sort: Sort = Sort.noSort(),
   ): Page<Session>
+
+  fun searchForOne(criteria: SessionSearchCriteria, sort: Sort = Sort.noSort()): Session?
 }

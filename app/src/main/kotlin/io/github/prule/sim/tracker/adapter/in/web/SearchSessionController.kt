@@ -1,6 +1,5 @@
-package io.github.prule.acc.client.app.io.github.prule.sim.tracker.adapter.`in`.web
+package io.github.prule.sim.tracker.adapter.`in`.web
 
-import io.github.prule.sim.tracker.adapter.`in`.web.SessionResource
 import io.github.prule.sim.tracker.application.domain.model.Car
 import io.github.prule.sim.tracker.application.domain.model.SessionSearchCriteria
 import io.github.prule.sim.tracker.application.domain.model.Simulator

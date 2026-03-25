@@ -1,20 +1,25 @@
 package io.github.prule.sim.tracker
 
-import io.github.prule.acc.client.app.io.github.prule.sim.tracker.adapter.`in`.web.SearchSessionController
-import io.github.prule.acc.client.app.io.github.prule.sim.tracker.application.domain.service.CreateSessionService
-import io.github.prule.acc.client.app.io.github.prule.sim.tracker.application.domain.service.SearchSessionService
 import io.github.prule.sim.tracker.adapter.`in`.web.CreateSessionController
+import io.github.prule.sim.tracker.adapter.`in`.web.SearchSessionController
+import io.github.prule.sim.tracker.adapter.`in`.web.StartSessionController
 import io.github.prule.sim.tracker.adapter.out.persistence.SessionMapper
 import io.github.prule.sim.tracker.adapter.out.persistence.SessionPersistenceAdapter
 import io.github.prule.sim.tracker.adapter.out.persistence.SessionRepository
+import io.github.prule.sim.tracker.application.domain.service.CreateSessionService
+import io.github.prule.sim.tracker.application.domain.service.SearchSessionService
+import io.github.prule.sim.tracker.application.domain.service.StartSessionService
 import io.ktor.serialization.kotlinx.json.*
 import io.ktor.server.application.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
 import io.ktor.server.plugins.contentnegotiation.*
+import io.ktor.server.resources.*
 import kotlinx.serialization.json.Json
+import kotlin.time.Clock
 
 fun main() {
+  println(Clock.System.now())
   embeddedServer(
           factory = Netty,
           port = 8000,
@@ -25,6 +30,7 @@ fun main() {
 }
 
 fun Application.module() {
+  install(Resources)
   //    install(DefaultHeaders)
   //    install(CallLogging)
 
@@ -39,6 +45,7 @@ fun Application.module() {
   val mapper = SessionMapper()
   val sessionPort = SessionPersistenceAdapter(SessionRepository(mapper), mapper)
 
+  StartSessionController(this, StartSessionService(sessionPort, sessionPort))
   CreateSessionController(this, CreateSessionService(sessionPort))
   SearchSessionController(
       this,

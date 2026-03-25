@@ -19,6 +19,11 @@ body:json {
   }
 }
 
+script:post-response {
+    bru.setVar("sessionUid", res.body.uid)
+  
+}
+
 settings {
   encodeUrl: true
 }
