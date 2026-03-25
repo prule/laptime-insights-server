@@ -1,5 +1,6 @@
 package io.github.prule.sim.tracker.utils.data
 
+import kotlinx.serialization.Serializable
 import org.jetbrains.exposed.v1.core.Expression
 
 interface SearchRepository<T, C> {
@@ -20,6 +21,7 @@ data class SortableFields(
     val mapping: Map<String, Expression<*>>,
 )
 
+@Serializable
 data class Sort(
     val fields: List<SortBy>,
 ) {
@@ -30,16 +32,19 @@ data class Sort(
   }
 }
 
+@Serializable
 enum class Order {
   ASC,
   DESC,
 }
 
+@Serializable
 data class SortBy(
     val field: String,
     val order: Order,
 )
 
+@Serializable
 data class Page<T>(
     val page: PageRequest,
     val total: Long,
@@ -48,6 +53,7 @@ data class Page<T>(
   fun <R> map(block: (T) -> R): Page<R> = Page(page, total, items.map(block))
 }
 
+@Serializable
 data class PageRequest(
     val page: Int = 1,
     val size: Int = 25,

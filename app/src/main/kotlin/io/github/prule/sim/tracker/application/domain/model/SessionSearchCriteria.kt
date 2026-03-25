@@ -6,4 +6,6 @@ data class SessionSearchCriteria(
     val car: Car? = null,
     val track: Track? = null,
     val simulator: Simulator? = null,
-) : SearchCriteria {}
+) : SearchCriteria {
+  companion object
+}
