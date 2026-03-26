@@ -19,6 +19,7 @@ class FindSessionController(
       get<SessionRoutes.SessionId> { id ->
         call.respond(
             SessionResource.fromDomain(
+                application,
                 findSessionUseCase.findSession(FindSessionCommand(Uid(id.uid)))
             )
         )

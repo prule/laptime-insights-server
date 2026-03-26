@@ -24,7 +24,7 @@ class SearchSessionController(
                     call.request.toPageRequest(),
                     call.request.toSort(),
                 )
-                .map { SessionResource.fromDomain(it) }
+                .map { SessionResource.fromDomain(application, it) }
         )
       }
     }

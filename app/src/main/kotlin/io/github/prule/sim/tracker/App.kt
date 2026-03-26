@@ -11,12 +11,18 @@ import io.github.prule.sim.tracker.adapter.out.persistence.SessionRepository
 import io.github.prule.sim.tracker.application.domain.service.CreateSessionService
 import io.github.prule.sim.tracker.application.domain.service.SearchSessionService
 import io.github.prule.sim.tracker.application.domain.service.StartSessionService
+import io.ktor.http.*
+import io.ktor.openapi.*
 import io.ktor.serialization.kotlinx.json.*
 import io.ktor.server.application.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
 import io.ktor.server.plugins.contentnegotiation.*
+import io.ktor.server.plugins.openapi.*
+import io.ktor.server.plugins.swagger.*
 import io.ktor.server.resources.*
+import io.ktor.server.routing.*
+import io.ktor.server.routing.openapi.*
 import kotlinx.serialization.json.Json
 import kotlin.time.Clock
 
@@ -54,4 +60,16 @@ fun Application.module() {
       this,
       SearchSessionService(sessionPort),
   )
+
+  routing {
+    swaggerUI("/swaggerUI") {
+      info = OpenApiInfo("My API", "1.0")
+      source = OpenApiDocSource.Routing(ContentType.Application.Json) { routingRoot.descendants() }
+    }
+
+    openAPI(path = "openapi") {
+      info = OpenApiInfo("My API", "1.0")
+      source = OpenApiDocSource.Routing { routingRoot.descendants() }
+    }
+  }
 }

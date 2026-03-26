@@ -17,6 +17,9 @@ dependencies {
   implementation(ktorLibs.server.statusPages)
   implementation(ktorLibs.server.compression)
   implementation(ktorLibs.server.dataConversion)
+  implementation(ktorLibs.server.openapi)
+  implementation(ktorLibs.server.swagger)
+
   implementation(ktorLibs.serialization.kotlinx.json)
   implementation(libs.bundles.exposed)
   implementation(libs.h2)
