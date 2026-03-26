@@ -1,3 +1,8 @@
 package io.github.prule.sim.tracker.application.port.out
 
-interface CreateLapPort
+import io.github.prule.sim.tracker.application.domain.model.Lap
+
+interface CreateLapPort {
+  fun create(lap: Lap): Lap
+
+}

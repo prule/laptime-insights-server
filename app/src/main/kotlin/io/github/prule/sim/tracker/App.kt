@@ -1,5 +1,7 @@
 package io.github.prule.sim.tracker
 
+import io.github.prule.acc.client.app.io.github.prule.sim.tracker.adapter.`in`.web.FindSessionController
+import io.github.prule.acc.client.app.io.github.prule.sim.tracker.application.domain.service.FindSessionService
 import io.github.prule.sim.tracker.adapter.`in`.web.CreateSessionController
 import io.github.prule.sim.tracker.adapter.`in`.web.SearchSessionController
 import io.github.prule.sim.tracker.adapter.`in`.web.StartSessionController
@@ -45,6 +47,7 @@ fun Application.module() {
   val mapper = SessionMapper()
   val sessionPort = SessionPersistenceAdapter(SessionRepository(mapper), mapper)
 
+  FindSessionController(this, FindSessionService(sessionPort))
   StartSessionController(this, StartSessionService(sessionPort, sessionPort))
   CreateSessionController(this, CreateSessionService(sessionPort))
   SearchSessionController(
