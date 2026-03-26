@@ -1,0 +1,21 @@
+meta {
+  name: Start session
+  type: http
+  seq: 5
+}
+
+post {
+  url: http://localhost:8000/api/1/sessions/{{sessionUid}}/start
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "startedAt": "2026-03-25T10:34:48.800054Z"
+  }
+}
+
+settings {
+  encodeUrl: true
+}

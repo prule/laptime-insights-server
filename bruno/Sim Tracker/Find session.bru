@@ -1,0 +1,15 @@
+meta {
+  name: Find session
+  type: http
+  seq: 3
+}
+
+get {
+  url: http://localhost:8000/api/1/sessions/{{sessionUid}}
+  body: none
+  auth: inherit
+}
+
+settings {
+  encodeUrl: true
+}

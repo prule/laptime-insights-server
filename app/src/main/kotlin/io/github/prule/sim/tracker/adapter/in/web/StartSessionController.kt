@@ -18,13 +18,13 @@ class StartSessionController(application: Application, startSessionUseCase: Star
         val request = call.receive<StartSessionRequest>()
         call.respond(
             SessionResource.fromDomain(
-                application,
                 startSessionUseCase.startSession(
                     StartSessionCommand(
                         uid = Uid(start.parent.uid),
                         startedAt = request.startedAt,
                     ),
                 ),
+                SessionLinkFactory(application),
             ),
         )
       }

@@ -5,10 +5,11 @@ import io.github.prule.sim.tracker.application.domain.model.SessionSearchCriteri
 import io.github.prule.sim.tracker.application.domain.model.Simulator
 import io.github.prule.sim.tracker.application.domain.model.Track
 import io.github.prule.sim.tracker.application.port.`in`.SearchSessionUseCase
-import io.ktor.http.*
-import io.ktor.server.application.*
-import io.ktor.server.response.*
-import io.ktor.server.routing.*
+import io.ktor.http.Parameters
+import io.ktor.server.application.Application
+import io.ktor.server.response.respond
+import io.ktor.server.routing.get
+import io.ktor.server.routing.routing
 
 class SearchSessionController(
     application: Application,
@@ -24,7 +25,12 @@ class SearchSessionController(
                     call.request.toPageRequest(),
                     call.request.toSort(),
                 )
-                .map { SessionResource.fromDomain(application, it) }
+                .map {
+                  SessionResource.fromDomain(
+                      it,
+                      SessionLinkFactory(application),
+                  )
+                }
         )
       }
     }

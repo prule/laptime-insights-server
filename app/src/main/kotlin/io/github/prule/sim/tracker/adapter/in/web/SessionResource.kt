@@ -5,8 +5,8 @@ import io.github.prule.sim.tracker.application.domain.model.Session
 import io.github.prule.sim.tracker.application.domain.model.SessionType
 import io.github.prule.sim.tracker.application.domain.model.Track
 import io.github.prule.sim.tracker.application.domain.model.Uid
-import io.ktor.server.application.*
-import io.ktor.server.resources.*
+import io.ktor.server.application.Application
+import io.ktor.server.resources.href
 import kotlin.time.Instant
 import kotlinx.serialization.Serializable
 
@@ -22,7 +22,7 @@ data class SessionResource(
 ) {
 
   companion object {
-    fun fromDomain(application: Application, session: Session): SessionResource =
+    fun fromDomain(session: Session, linkFactory: SessionLinkFactory): SessionResource =
         SessionResource(
             uid = session.uid,
             startedAt = session.startedAt,
@@ -30,7 +30,13 @@ data class SessionResource(
             track = session.track,
             car = session.car,
             sessionType = session.sessionType,
-            _links = mapOf("self" to application.href(SessionRoutes.SessionId(uid = session.uid.value)))
+            _links = linkFactory.build(session),
         )
+  }
+}
+
+class SessionLinkFactory(private val application: Application) : LinkFactory<Session> {
+  override fun build(resource: Session): Map<String, String> {
+    return mapOf("self" to application.href(SessionRoutes.SessionId(uid = resource.uid.value)))
   }
 }

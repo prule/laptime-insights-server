@@ -2,13 +2,14 @@ package io.github.prule.acc.client.app.io.github.prule.sim.tracker.adapter.`in`.
 
 import io.github.prule.acc.client.app.io.github.prule.sim.tracker.application.port.`in`.FindSessionCommand
 import io.github.prule.acc.client.app.io.github.prule.sim.tracker.application.port.`in`.FindSessionUseCase
+import io.github.prule.sim.tracker.adapter.`in`.web.SessionLinkFactory
 import io.github.prule.sim.tracker.adapter.`in`.web.SessionResource
 import io.github.prule.sim.tracker.adapter.`in`.web.SessionRoutes
 import io.github.prule.sim.tracker.application.domain.model.Uid
-import io.ktor.server.application.*
-import io.ktor.server.resources.*
-import io.ktor.server.response.*
-import io.ktor.server.routing.*
+import io.ktor.server.application.Application
+import io.ktor.server.resources.get
+import io.ktor.server.response.respond
+import io.ktor.server.routing.routing
 
 class FindSessionController(
     application: Application,
@@ -19,8 +20,8 @@ class FindSessionController(
       get<SessionRoutes.SessionId> { id ->
         call.respond(
             SessionResource.fromDomain(
-                application,
-                findSessionUseCase.findSession(FindSessionCommand(Uid(id.uid)))
+                findSessionUseCase.findSession(FindSessionCommand(Uid(id.uid))),
+                SessionLinkFactory(application),
             )
         )
       }
