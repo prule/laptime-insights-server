@@ -7,6 +7,6 @@ create table Session
     CAR          varchar(255),
     SESSION_TYPE varchar(255),
     STARTED_AT   timestamp,
-    ENDED_AT     timestamp
+    FINISHED_AT     timestamp
 )
 

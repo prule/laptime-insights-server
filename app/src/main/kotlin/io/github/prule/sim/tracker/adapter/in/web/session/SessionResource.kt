@@ -27,7 +27,7 @@ data class SessionResource(
         SessionResource(
             uid = session.uid,
             startedAt = session.startedAt,
-            endedAt = session.endedAt,
+            endedAt = session.finishedAt,
             track = session.track,
             car = session.car,
             sessionType = session.sessionType,
@@ -38,6 +38,16 @@ data class SessionResource(
 
 class SessionLinkFactory(private val application: Application) : LinkFactory<Session> {
   override fun build(resource: Session): Map<String, String> {
-    return mapOf("self" to application.href(SessionRoutes.SessionId(uid = resource.uid.value)))
+    val session = SessionRoutes.SessionId(uid = resource.uid.value)
+    return listOfNotNull(
+            "self" to application.href(session),
+            if (resource.canStart())
+                "start" to application.href(SessionRoutes.SessionId.Start(session))
+            else null,
+            if (resource.canFinish())
+                "finish" to application.href(SessionRoutes.SessionId.Finish(session))
+            else null,
+        )
+        .toMap()
   }
 }

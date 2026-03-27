@@ -7,5 +7,7 @@ class SessionRoutes {
   @Resource("/{uid}")
   class SessionId(val parent: SessionRoutes = SessionRoutes(), val uid: String) {
     @Resource("/start") class Start(val parent: SessionId)
+
+    @Resource("/finish") class Finish(val parent: SessionId)
   }
 }

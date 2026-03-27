@@ -14,7 +14,7 @@ class SessionEntity(
 
   var uid by SessionTable.uid
   var startedAt by SessionTable.startedAt
-  var endedAt by SessionTable.endedAt
+  var finishedAt by SessionTable.finishedAt
   var simulator by SessionTable.simulator
   var track by SessionTable.track
   var car by SessionTable.car

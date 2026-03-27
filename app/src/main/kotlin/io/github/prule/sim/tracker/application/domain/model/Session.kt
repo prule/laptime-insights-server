@@ -29,17 +29,25 @@ value class SessionType(
 
 @Serializable
 enum class Simulator {
-    ACC,
-    F1,
+  ACC,
+  F1,
 }
 
 data class Session(
     val id: SessionId,
     val uid: Uid,
     val startedAt: Instant?,
-    val endedAt: Instant?,
+    val finishedAt: Instant?,
     val simulator: Simulator,
     val track: Track,
     val car: Car,
     val sessionType: SessionType,
-)
+) {
+  fun canStart(): Boolean {
+    return startedAt == null
+  }
+
+  fun canFinish(): Boolean {
+    return startedAt != null && finishedAt == null
+  }
+}
