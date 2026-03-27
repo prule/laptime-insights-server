@@ -26,8 +26,8 @@ data class SessionResource(
     fun fromDomain(session: Session, linkFactory: SessionLinkFactory): SessionResource =
         SessionResource(
             uid = session.uid,
-            startedAt = session.startedAt,
-            endedAt = session.finishedAt,
+            startedAt = session.startedAt(),
+            endedAt = session.finishedAt(),
             track = session.track,
             car = session.car,
             sessionType = session.sessionType,

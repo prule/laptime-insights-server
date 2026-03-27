@@ -36,18 +36,42 @@ enum class Simulator {
 data class Session(
     val id: SessionId,
     val uid: Uid,
-    val startedAt: Instant?,
-    val finishedAt: Instant?,
+    private var startedAt: Instant?,
+    private var finishedAt: Instant?,
     val simulator: Simulator,
     val track: Track,
     val car: Car,
     val sessionType: SessionType,
 ) {
+  fun startedAt() = startedAt
+
+  fun finishedAt() = finishedAt
+
+  fun start(time: Instant) {
+    if (canStart()) {
+      startedAt = time
+    }
+  }
+
+  fun finish(time: Instant) {
+    if (canFinish()) {
+      finishedAt = time
+    }
+  }
+
+  fun isStarted(): Boolean {
+    return startedAt != null
+  }
+
+  fun isFinished(): Boolean {
+    return finishedAt != null
+  }
+
   fun canStart(): Boolean {
-    return startedAt == null
+    return !isStarted()
   }
 
   fun canFinish(): Boolean {
-    return startedAt != null && finishedAt == null
+    return isStarted() && !isFinished()
   }
 }

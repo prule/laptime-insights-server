@@ -27,8 +27,8 @@ class SessionMapper {
   ) {
     entity.apply {
       uid = session.uid.value
-      startedAt = session.startedAt
-      finishedAt = session.finishedAt
+      startedAt = session.startedAt()
+      finishedAt = session.finishedAt()
       simulator = session.simulator.name
       track = session.track.value
       car = session.car.value
