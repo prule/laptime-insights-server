@@ -1,0 +1,31 @@
+meta {
+  name: Create lap
+  type: http
+  seq: 6
+}
+
+post {
+  url: http://localhost:8000/api/1/laps
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "sessionUid": "2ef52875198d4f57b7570d896eee8e6d",
+    "recordedAt": "2026-03-25T10:34:48.800054Z",
+    "lapTime": 12345,
+    "lapNumber": 1,
+    "valid": true,
+    "personalBest": false
+  }
+}
+
+script:post-response {
+    bru.setVar("sessionUid", res.body.uid)
+  
+}
+
+settings {
+  encodeUrl: true
+}

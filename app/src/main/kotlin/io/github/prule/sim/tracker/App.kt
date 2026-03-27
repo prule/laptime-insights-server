@@ -1,13 +1,20 @@
 package io.github.prule.sim.tracker
 
+import io.github.prule.sim.tracker.adapter.`in`.web.lap.CreateLapController
+import io.github.prule.sim.tracker.adapter.`in`.web.lap.SearchLapController
 import io.github.prule.sim.tracker.adapter.`in`.web.session.CreateSessionController
 import io.github.prule.sim.tracker.adapter.`in`.web.session.FindSessionController
 import io.github.prule.sim.tracker.adapter.`in`.web.session.FinishSessionController
 import io.github.prule.sim.tracker.adapter.`in`.web.session.SearchSessionController
 import io.github.prule.sim.tracker.adapter.`in`.web.session.StartSessionController
+import io.github.prule.sim.tracker.adapter.out.persistence.lap.LapMapper
+import io.github.prule.sim.tracker.adapter.out.persistence.lap.LapPersistenceAdapter
+import io.github.prule.sim.tracker.adapter.out.persistence.lap.LapRepository
 import io.github.prule.sim.tracker.adapter.out.persistence.session.SessionMapper
 import io.github.prule.sim.tracker.adapter.out.persistence.session.SessionPersistenceAdapter
 import io.github.prule.sim.tracker.adapter.out.persistence.session.SessionRepository
+import io.github.prule.sim.tracker.application.domain.service.lap.CreateLapService
+import io.github.prule.sim.tracker.application.domain.service.lap.SearchLapService
 import io.github.prule.sim.tracker.application.domain.service.session.CreateSessionService
 import io.github.prule.sim.tracker.application.domain.service.session.FindSessionService
 import io.github.prule.sim.tracker.application.domain.service.session.FinishSessionService
@@ -52,7 +59,11 @@ fun Application.module() {
 
   DatabaseFactory.init()
 
-  initializeSessionControllers()
+  val mapper = SessionMapper()
+  val sessionPort = SessionPersistenceAdapter(SessionRepository(mapper), mapper)
+
+  initializeSessionControllers(sessionPort)
+  initializeLapControllers(sessionPort)
 
   routing {
     swaggerUI("/swaggerUI") {
@@ -67,9 +78,7 @@ fun Application.module() {
   }
 }
 
-private fun Application.initializeSessionControllers() {
-  val mapper = SessionMapper()
-  val sessionPort = SessionPersistenceAdapter(SessionRepository(mapper), mapper)
+private fun Application.initializeSessionControllers(sessionPort: SessionPersistenceAdapter) {
 
   FindSessionController(this, FindSessionService(sessionPort))
   StartSessionController(this, StartSessionService(sessionPort, sessionPort))
@@ -79,4 +88,12 @@ private fun Application.initializeSessionControllers() {
       SearchSessionService(sessionPort),
   )
   FinishSessionController(this, FinishSessionService(sessionPort, sessionPort))
+}
+
+private fun Application.initializeLapControllers(sessionPort: SessionPersistenceAdapter) {
+  val mapper = LapMapper()
+  val lapPort = LapPersistenceAdapter(LapRepository(mapper), mapper)
+
+  CreateLapController(this, CreateLapService(lapPort, sessionPort))
+  SearchLapController(this, SearchLapService(lapPort))
 }

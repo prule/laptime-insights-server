@@ -1,0 +1,26 @@
+meta {
+  name: Search lap
+  type: http
+  seq: 6
+}
+
+get {
+  url: http://localhost:8000/api/1/laps?size=10&page=1
+  body: none
+  auth: inherit
+}
+
+params:query {
+  size: 10
+  page: 1
+}
+
+script:post-response {
+  if (res.body.items.size > 0) {
+    bru.setVar("sessionUid", res.body.items[0].uid)
+  }
+}
+
+settings {
+  encodeUrl: true
+}

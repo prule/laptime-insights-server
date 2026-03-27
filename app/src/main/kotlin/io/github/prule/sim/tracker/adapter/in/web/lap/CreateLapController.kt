@@ -1,16 +1,28 @@
 package io.github.prule.sim.tracker.adapter.`in`.web.lap
 
+import io.github.prule.sim.tracker.application.port.`in`.lap.CreateLapCommand
+import io.github.prule.sim.tracker.application.port.`in`.lap.CreateLapUseCase
 import io.ktor.server.application.Application
-import io.ktor.server.routing.post
+import io.ktor.server.request.receive
+import io.ktor.server.resources.post
+import io.ktor.server.response.respond
 import io.ktor.server.routing.routing
 
 class CreateLapController(
     application: Application,
+    createLapUseCase: CreateLapUseCase,
 ) {
   init {
     application.routing {
-      post("/api/1/lap") {
-        // call.respondText("hello", contentType = ContentType.Text.Plain)
+      post<LapRoutes> {
+        call.respond(
+            LapResource.fromDomain(
+                createLapUseCase.createLap(
+                    call.receive<CreateLapCommand>(),
+                ),
+                LapLinkFactory(application),
+            ),
+        )
       }
     }
   }
