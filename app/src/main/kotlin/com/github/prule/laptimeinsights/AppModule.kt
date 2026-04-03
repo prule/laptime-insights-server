@@ -1,0 +1,62 @@
+package com.github.prule.laptimeinsights
+
+import com.github.prule.laptimeinsights.adapter.out.persistence.lap.LapMapper
+import com.github.prule.laptimeinsights.adapter.out.persistence.lap.LapPersistenceAdapter
+import com.github.prule.laptimeinsights.adapter.out.persistence.lap.LapRepository
+import com.github.prule.laptimeinsights.adapter.out.persistence.session.SessionMapper
+import com.github.prule.laptimeinsights.adapter.out.persistence.session.SessionPersistenceAdapter
+import com.github.prule.laptimeinsights.adapter.out.persistence.session.SessionRepository
+import com.github.prule.laptimeinsights.application.domain.service.lap.CreateLapService
+import com.github.prule.laptimeinsights.application.domain.service.lap.SearchLapService
+import com.github.prule.laptimeinsights.application.domain.service.session.CreateSessionService
+import com.github.prule.laptimeinsights.application.domain.service.session.FindSessionService
+import com.github.prule.laptimeinsights.application.domain.service.session.FinishSessionService
+import com.github.prule.laptimeinsights.application.domain.service.session.SearchSessionService
+import com.github.prule.laptimeinsights.application.domain.service.session.StartSessionService
+
+class AppModule {
+  val session = Session()
+  val lap = Lap(session)
+
+  class Lap(val session: Session) {
+    val mapper = LapMapper()
+
+    val lapPort =
+        LapPersistenceAdapter(
+            LapRepository(mapper),
+            mapper,
+        )
+
+    val createLapUseCase =
+        CreateLapService(
+            lapPort,
+            session.sessionPort,
+        )
+    val searchLapUseCase = SearchLapService(lapPort)
+  }
+
+  class Session {
+
+    val mapper = SessionMapper()
+    val sessionPort =
+        SessionPersistenceAdapter(
+            SessionRepository(mapper),
+            mapper,
+        )
+
+    val startSessionUseCase =
+        StartSessionService(
+            sessionPort,
+            sessionPort,
+        )
+
+    val findSessionUseCase = FindSessionService(sessionPort)
+    val createSessionUseCase = CreateSessionService(sessionPort)
+    val searchSessionUseCase = SearchSessionService(sessionPort)
+    val finishSessionUseCase =
+        FinishSessionService(
+            sessionPort,
+            sessionPort,
+        )
+  }
+}

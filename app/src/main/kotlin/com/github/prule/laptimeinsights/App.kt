@@ -1,15 +1,5 @@
 package com.github.prule.laptimeinsights
 
-import com.github.prule.acc.client.AccClient
-import com.github.prule.acc.client.AccClientConfiguration
-import com.github.prule.acc.client.ClientState
-import com.github.prule.acc.client.FilteredMessageListener
-import com.github.prule.acc.client.JsonFormatter
-import com.github.prule.acc.client.LoggingListener
-import com.github.prule.acc.client.MessageListener
-import com.github.prule.acc.client.MessageSender
-import com.github.prule.acc.client.RegistrationResultListener
-import com.github.prule.acc.messages.AccBroadcastingInbound
 import com.github.prule.laptimeinsights.adapter.`in`.web.lap.CreateLapController
 import com.github.prule.laptimeinsights.adapter.`in`.web.lap.SearchLapController
 import com.github.prule.laptimeinsights.adapter.`in`.web.session.CreateSessionController
@@ -18,19 +8,6 @@ import com.github.prule.laptimeinsights.adapter.`in`.web.session.FinishSessionCo
 import com.github.prule.laptimeinsights.adapter.`in`.web.session.SearchSessionController
 import com.github.prule.laptimeinsights.adapter.`in`.web.session.StartSessionController
 import com.github.prule.laptimeinsights.adapter.out.persistence.JsonFileConfigurationRepository
-import com.github.prule.laptimeinsights.adapter.out.persistence.lap.LapMapper
-import com.github.prule.laptimeinsights.adapter.out.persistence.lap.LapPersistenceAdapter
-import com.github.prule.laptimeinsights.adapter.out.persistence.lap.LapRepository
-import com.github.prule.laptimeinsights.adapter.out.persistence.session.SessionMapper
-import com.github.prule.laptimeinsights.adapter.out.persistence.session.SessionPersistenceAdapter
-import com.github.prule.laptimeinsights.adapter.out.persistence.session.SessionRepository
-import com.github.prule.laptimeinsights.application.domain.service.lap.CreateLapService
-import com.github.prule.laptimeinsights.application.domain.service.lap.SearchLapService
-import com.github.prule.laptimeinsights.application.domain.service.session.CreateSessionService
-import com.github.prule.laptimeinsights.application.domain.service.session.FindSessionService
-import com.github.prule.laptimeinsights.application.domain.service.session.FinishSessionService
-import com.github.prule.laptimeinsights.application.domain.service.session.SearchSessionService
-import com.github.prule.laptimeinsights.application.domain.service.session.StartSessionService
 import io.ktor.http.ContentType
 import io.ktor.openapi.OpenApiInfo
 import io.ktor.serialization.kotlinx.json.json
@@ -72,15 +49,9 @@ fun Application.module(configuration: ApplicationConfiguration) {
 
   DatabaseFactory.init()
 
-  val mapper = SessionMapper()
-  val sessionPort =
-      SessionPersistenceAdapter(
-          SessionRepository(mapper),
-          mapper,
-      )
-
-  initializeSessionControllers(sessionPort)
-  initializeLapControllers(sessionPort)
+  val appModule = AppModule()
+  initializeSessionControllers(appModule)
+  initializeLapControllers(appModule)
 
   routing {
     swaggerUI("/swaggerUI") {
@@ -94,131 +65,39 @@ fun Application.module(configuration: ApplicationConfiguration) {
     }
   }
 
-  initializeClient(configuration.clientConfiguration)
+  ClientInitializer().initializeClient(configuration.clientConfiguration)
 }
 
-private fun initializeClient(configuration: ApplicationClientConfiguration) = runBlocking {
-  val clientState = ClientState()
-  AccClient(
-          AccClientConfiguration(
-              "Test",
-              port = configuration.port,
-              serverIp = configuration.serverIp,
-          ),
-      )
-      .connect(
-          listOf(
-              LoggingListener(),
-              RegistrationResultListener(clientState),
-              buildFilter(),
-              buildFilter2(),
-          ),
-      )
-}
-
-private fun buildFilter(): FilteredMessageListener<AccBroadcastingInbound.RealtimeUpdate> {
-  return FilteredMessageListener(
-      AccBroadcastingInbound.RealtimeUpdate::class,
-      { message -> message.phase() == AccBroadcastingInbound.SessionPhase.SESSION },
-      // listeners to apply to filtered messages
-      listOf(
-          object : MessageListener<AccBroadcastingInbound.RealtimeUpdate> {
-            var sessionStarted = false
-
-            override fun onMessage(
-                bytes: ByteArray,
-                message: AccBroadcastingInbound.RealtimeUpdate,
-                messageSender: MessageSender,
-            ) {
-              /* First "session event" means session has started */
-              if (
-                  !sessionStarted && message.phase() == AccBroadcastingInbound.SessionPhase.SESSION
-              ) {
-                sessionStarted = true
-                println("Session started")
-              }
-
-              if (
-                  !sessionStarted &&
-                      message.phase() == AccBroadcastingInbound.SessionPhase.SESSION_OVER
-              ) {
-                println("Session ended")
-              }
-
-              println("Session ${JsonFormatter.toJsonString(message as Any)}")
-            }
-          },
-      ),
-  )
-}
-
-private fun buildFilter2(): FilteredMessageListener<AccBroadcastingInbound.BroadcastingEvent> {
-  return FilteredMessageListener(
-      AccBroadcastingInbound.BroadcastingEvent::class,
-      { message -> message.type() == AccBroadcastingInbound.BroadcastType.LAPCOMPLETED },
-      // listeners to apply to filtered messages
-      listOf(
-          object : MessageListener<AccBroadcastingInbound.BroadcastingEvent> {
-            override fun onMessage(
-                bytes: ByteArray,
-                message: AccBroadcastingInbound.BroadcastingEvent,
-                messageSender: MessageSender,
-            ) {
-              println("Lap completed ${JsonFormatter.toJsonString(message as Any)}")
-            }
-          },
-      ),
-  )
-}
-
-private fun Application.initializeSessionControllers(sessionPort: SessionPersistenceAdapter) {
-
+private fun Application.initializeSessionControllers(appModule: AppModule) {
   FindSessionController(
       this,
-      FindSessionService(sessionPort),
+      appModule.session.findSessionUseCase,
   )
   StartSessionController(
       this,
-      StartSessionService(
-          sessionPort,
-          sessionPort,
-      ),
+      appModule.session.startSessionUseCase,
   )
   CreateSessionController(
       this,
-      CreateSessionService(sessionPort),
+      appModule.session.createSessionUseCase,
   )
   SearchSessionController(
       this,
-      SearchSessionService(sessionPort),
+      appModule.session.searchSessionUseCase,
   )
   FinishSessionController(
       this,
-      FinishSessionService(
-          sessionPort,
-          sessionPort,
-      ),
+      appModule.session.finishSessionUseCase,
   )
 }
 
-private fun Application.initializeLapControllers(sessionPort: SessionPersistenceAdapter) {
-  val mapper = LapMapper()
-
-  val lapPort =
-      LapPersistenceAdapter(
-          LapRepository(mapper),
-          mapper,
-      )
-
+private fun Application.initializeLapControllers(appModule: AppModule) {
   CreateLapController(
       this,
-      CreateLapService(
-          lapPort,
-          sessionPort,
-      ),
+      appModule.lap.createLapUseCase,
   )
   SearchLapController(
       this,
-      SearchLapService(lapPort),
+      appModule.lap.searchLapUseCase,
   )
 }
