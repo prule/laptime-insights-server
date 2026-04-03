@@ -1,17 +1,17 @@
 <component name="ProjectRunConfigurationManager">
   <configuration default="false" name="Run server" type="KtorApplicationConfigurationType" factoryName="Ktor">
-    <option name="MAIN_CLASS_NAME" value="com.github.prule.sim.tracker.AppKt" />
+    <option name="MAIN_CLASS_NAME" value="com.github.prule.laptimeinsights.tracker.AppKt" />
     <module name="lap-insights-server.app.main" />
     <extension name="coverage">
       <pattern>
-        <option name="PATTERN" value="com.github.prule.sim.tracker.*" />
+        <option name="PATTERN" value="com.github.prule.laptimeinsights.tracker.*" />
         <option name="ENABLED" value="true" />
       </pattern>
     </extension>
     <option name="alternativeJrePath" />
     <option name="alternativeJrePathEnabled" value="false" />
     <option name="includeProvidedScope" value="false" />
-    <option name="mainClass" value="com.github.prule.sim.tracker.AppKt" />
+    <option name="mainClass" value="com.github.prule.laptimeinsights.tracker.AppKt" />
     <option name="passParentEnvs" value="true" />
     <option name="programParameters" value="" />
     <option name="shortenCommandLine" />

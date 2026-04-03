@@ -1,0 +1,7 @@
+{
+  port: 8000,
+  clientConfiguration: {
+    port: 9000,
+    serverIp: "127.0.0.1"
+  }
+}
