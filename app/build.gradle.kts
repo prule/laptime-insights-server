@@ -13,6 +13,8 @@ dependencies {
   implementation("com.github.prule:acc-client:main-SNAPSHOT")
   implementation("com.github.prule:acc-messages:main-SNAPSHOT")
 
+  implementation("io.github.xn32:json5k:0.3.0")
+
   implementation(ktorLibs.server.core)
   implementation(ktorLibs.server.contentNegotiation)
   implementation(ktorLibs.server.netty)

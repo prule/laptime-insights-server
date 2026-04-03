@@ -12,6 +12,7 @@ import com.github.prule.laptimeinsights.adapter.`in`.web.session.FindSessionCont
 import com.github.prule.laptimeinsights.adapter.`in`.web.session.FinishSessionController
 import com.github.prule.laptimeinsights.adapter.`in`.web.session.SearchSessionController
 import com.github.prule.laptimeinsights.adapter.`in`.web.session.StartSessionController
+import com.github.prule.laptimeinsights.adapter.out.persistence.JsonFileConfigurationRepository
 import com.github.prule.laptimeinsights.adapter.out.persistence.lap.LapMapper
 import com.github.prule.laptimeinsights.adapter.out.persistence.lap.LapPersistenceAdapter
 import com.github.prule.laptimeinsights.adapter.out.persistence.lap.LapRepository
@@ -42,8 +43,8 @@ import io.ktor.server.routing.routingRoot
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
 
-fun main() {
-  val configuration = ApplicationConfiguration()
+fun main(args: Array<String>): Unit = runBlocking {
+  val configuration = JsonFileConfigurationRepository().loadConfiguration(args[0])
   embeddedServer(
           factory = Netty,
           port = configuration.port,
@@ -103,9 +104,6 @@ private fun initializeClient(configuration: ApplicationClientConfiguration) = ru
       .connect(
           listOf(
               LoggingListener(),
-              //              CsvWriterListener(
-              //                  java.nio.file.Path.of("./recordings"),
-              //              ),
               RegistrationResultListener(clientState),
           ),
       )
@@ -143,6 +141,7 @@ private fun Application.initializeSessionControllers(sessionPort: SessionPersist
 
 private fun Application.initializeLapControllers(sessionPort: SessionPersistenceAdapter) {
   val mapper = LapMapper()
+
   val lapPort =
       LapPersistenceAdapter(
           LapRepository(mapper),
