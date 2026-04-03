@@ -1,6 +1,9 @@
 {
+  // web server port - this will serve the laptime insights dashboard
   port: 8000,
+  // acc client
   clientConfiguration: {
+    // acc server details
     port: 9000,
     serverIp: "127.0.0.1"
   }
