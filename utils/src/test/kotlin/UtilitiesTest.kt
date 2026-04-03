@@ -1,4 +1,4 @@
-package io.github.prule.acc.client.utils
+package com.github.prule.acc.client.utils
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -6,18 +6,18 @@ import kotlinx.serialization.json.Json
 
 internal class PrinterTest {
 
-    @Test
-    fun testMessage() {
-        val message = "message"
-        val testPrinter = Printer(message)
-        assertEquals(testPrinter.message, message)
-    }
+  @Test
+  fun testMessage() {
+    val message = "message"
+    val testPrinter = Printer(message)
+    assertEquals(testPrinter.message, message)
+  }
 
-    @Test
-    fun testSerialization() {
-        val message = "message"
-        val json1 = Json.encodeToString(Printer(message))
-        val json2 = Json.encodeToString(Printer(message))
-        assertEquals(json1, json2)
-    }
+  @Test
+  fun testSerialization() {
+    val message = "message"
+    val json1 = Json.encodeToString(Printer(message))
+    val json2 = Json.encodeToString(Printer(message))
+    assertEquals(json1, json2)
+  }
 }

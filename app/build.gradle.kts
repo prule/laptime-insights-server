@@ -10,6 +10,9 @@ plugins {
 }
 
 dependencies {
+  implementation("com.github.prule:acc-client:main-SNAPSHOT")
+  implementation("com.github.prule:acc-messages:main-SNAPSHOT")
+
   implementation(ktorLibs.server.core)
   implementation(ktorLibs.server.contentNegotiation)
   implementation(ktorLibs.server.netty)
@@ -34,5 +37,5 @@ dependencies {
 application {
   // Define the Fully Qualified Name for the application main class
   // (Note that Kotlin compiles `App.kt` to a class with FQN `com.example.app.AppKt`.)
-  mainClass = "io.github.prule.acc.client.app.AppKt"
+  mainClass = "com.github.prule.acc.client.app.AppKt"
 }
