@@ -12,7 +12,7 @@ import com.github.prule.acc.client.RegistrationResultListener
 import com.github.prule.acc.messages.AccBroadcastingInbound
 import kotlinx.coroutines.runBlocking
 
-class ClientInitializer {
+class ClientInitializer(private val appModule: AppModule) {
   fun initializeClient(configuration: ApplicationClientConfiguration) = runBlocking {
     val clientState = ClientState()
     AccClient(
@@ -52,6 +52,9 @@ class ClientInitializer {
                         message.phase() == AccBroadcastingInbound.SessionPhase.SESSION
                 ) {
                   sessionStarted = true
+//                  appModule.session.createSessionUseCase.createSession(
+//                      CreateSessionCommand(Simulator.ACC, Track(), message.sessionType())
+//                  )
                   println("Session started")
                 }
 

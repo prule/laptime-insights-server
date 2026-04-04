@@ -13,6 +13,6 @@ class FindSessionService(
 ) : FindSessionUseCase {
   override fun findSession(command: FindSessionCommand): Session = transaction {
     searchSessionPort.searchForOne(SessionSearchCriteria(uid = command.uid))
-        ?: throw NotFoundException()
+        ?: throw NotFoundException(command.uid.toString())
   }
 }

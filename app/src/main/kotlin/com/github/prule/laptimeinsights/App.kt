@@ -22,6 +22,8 @@ import io.ktor.server.resources.Resources
 import io.ktor.server.routing.openapi.OpenApiDocSource
 import io.ktor.server.routing.routing
 import io.ktor.server.routing.routingRoot
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
 
@@ -65,7 +67,9 @@ fun Application.module(configuration: ApplicationConfiguration) {
     }
   }
 
-  ClientInitializer().initializeClient(configuration.clientConfiguration)
+  launch(Dispatchers.IO) {
+    ClientInitializer(appModule).initializeClient(configuration.clientConfiguration)
+  }
 }
 
 private fun Application.initializeSessionControllers(appModule: AppModule) {
