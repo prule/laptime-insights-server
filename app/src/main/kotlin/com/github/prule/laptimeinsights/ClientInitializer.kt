@@ -10,10 +10,9 @@ import com.github.prule.acc.client.MessageListener
 import com.github.prule.acc.client.MessageSender
 import com.github.prule.acc.client.RegistrationResultListener
 import com.github.prule.acc.messages.AccBroadcastingInbound
-import kotlinx.coroutines.runBlocking
 
 class ClientInitializer(private val appModule: AppModule) {
-  fun initializeClient(configuration: ApplicationClientConfiguration) = runBlocking {
+  suspend fun initializeClient(configuration: ApplicationClientConfiguration) {
     val clientState = ClientState()
     AccClient(
             AccClientConfiguration(
