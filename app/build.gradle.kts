@@ -24,6 +24,7 @@ dependencies {
   implementation(ktorLibs.server.dataConversion)
   implementation(ktorLibs.server.openapi)
   implementation(ktorLibs.server.swagger)
+  implementation(ktorLibs.server.websockets)
 
   implementation(ktorLibs.serialization.kotlinx.json)
   implementation(libs.bundles.exposed)
@@ -31,13 +32,7 @@ dependencies {
   implementation(libs.logback.classic)
   implementation("com.zaxxer:HikariCP:3.4.2")
 
-  // Project "app" depends on project "utils". (Project paths are separated with ":", so ":utils"
-  // refers to the top-level "utils" project.)
   implementation(project(":utils"))
 }
 
-application {
-  // Define the Fully Qualified Name for the application main class
-  // (Note that Kotlin compiles `App.kt` to a class with FQN `com.example.app.AppKt`.)
-  mainClass = "com.github.prule.acc.client.app.AppKt"
-}
+application { mainClass = "com.github.prule.acc.client.app.AppKt" }

@@ -6,6 +6,7 @@ import com.github.prule.laptimeinsights.adapter.`in`.web.session.CreateSessionCo
 import com.github.prule.laptimeinsights.adapter.`in`.web.session.FindSessionController
 import com.github.prule.laptimeinsights.adapter.`in`.web.session.FinishSessionController
 import com.github.prule.laptimeinsights.adapter.`in`.web.session.SearchSessionController
+import com.github.prule.laptimeinsights.adapter.`in`.web.session.SessionEventController
 import com.github.prule.laptimeinsights.adapter.`in`.web.session.StartSessionController
 import com.github.prule.laptimeinsights.adapter.out.persistence.JsonFileConfigurationRepository
 import io.ktor.http.ContentType
@@ -22,10 +23,14 @@ import io.ktor.server.resources.Resources
 import io.ktor.server.routing.openapi.OpenApiDocSource
 import io.ktor.server.routing.routing
 import io.ktor.server.routing.routingRoot
+import io.ktor.server.websocket.WebSockets
+import io.ktor.server.websocket.pingPeriod
+import io.ktor.server.websocket.timeout
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
+import kotlin.time.Duration.Companion.seconds
 
 fun main(args: Array<String>): Unit = runBlocking {
   val configuration = JsonFileConfigurationRepository().loadConfiguration(args[0])
@@ -49,11 +54,20 @@ fun Application.module(configuration: ApplicationConfiguration) {
     )
   }
 
+  install(WebSockets) {
+    pingPeriod = 15.seconds
+    timeout = 15.seconds
+    maxFrameSize = Long.MAX_VALUE
+    masking = false
+    contentConverter = io.ktor.serialization.kotlinx.KotlinxWebsocketSerializationConverter(Json)
+  }
+
   DatabaseFactory.init()
 
   val appModule = AppModule()
   initializeSessionControllers(appModule)
   initializeLapControllers(appModule)
+  SessionEventController(this, appModule.eventPort)
 
   routing {
     swaggerUI("/swaggerUI") {
@@ -67,9 +81,7 @@ fun Application.module(configuration: ApplicationConfiguration) {
     }
   }
 
-  launch(Dispatchers.IO) {
-    ClientInitializer(appModule).initializeClient(configuration.clientConfiguration)
-  }
+  launch(Dispatchers.IO) { ClientInitializer(appModule).initializeClient(configuration.clientConfiguration) }
 }
 
 private fun Application.initializeSessionControllers(appModule: AppModule) {

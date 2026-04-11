@@ -1,6 +1,7 @@
 package com.github.prule.laptimeinsights
 
 import com.github.prule.acc.client.CarModelRepository
+import com.github.prule.laptimeinsights.adapter.out.event.InMemoryEventAdapter
 import com.github.prule.laptimeinsights.adapter.out.persistence.lap.LapMapper
 import com.github.prule.laptimeinsights.adapter.out.persistence.lap.LapPersistenceAdapter
 import com.github.prule.laptimeinsights.adapter.out.persistence.lap.LapRepository
@@ -18,6 +19,7 @@ import com.github.prule.laptimeinsights.application.domain.service.session.Start
 import com.github.prule.laptimeinsights.application.domain.service.session.UpdateSessionService
 
 class AppModule {
+  val eventPort = InMemoryEventAdapter()
   val session = Session()
   val lap = Lap(session)
   val car = Car()
@@ -27,7 +29,7 @@ class AppModule {
     val findCarUseCase = FindCarService(carModelRepository)
   }
 
-  class Lap(val session: Session) {
+  inner class Lap(val session: Session) {
     val mapper = LapMapper()
 
     val lapPort =
@@ -40,11 +42,12 @@ class AppModule {
         CreateLapService(
             lapPort,
             session.sessionPort,
+            eventPort
         )
     val searchLapUseCase = SearchLapService(lapPort)
   }
 
-  class Session {
+  inner class Session {
 
     val mapper = SessionMapper()
     val sessionPort =
@@ -60,7 +63,7 @@ class AppModule {
         )
 
     val findSessionUseCase = FindSessionService(sessionPort)
-    val createSessionUseCase = CreateSessionService(sessionPort)
+    val createSessionUseCase = CreateSessionService(sessionPort, eventPort)
     val searchSessionUseCase = SearchSessionService(sessionPort)
     val finishSessionUseCase =
         FinishSessionService(

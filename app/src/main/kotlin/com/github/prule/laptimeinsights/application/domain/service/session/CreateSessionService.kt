@@ -1,16 +1,20 @@
 package com.github.prule.laptimeinsights.application.domain.service.session
 
 import com.github.prule.laptimeinsights.application.domain.model.Session
+import com.github.prule.laptimeinsights.application.domain.model.SessionCreated
 import com.github.prule.laptimeinsights.application.domain.model.SessionId
 import com.github.prule.laptimeinsights.application.domain.model.Uid
 import com.github.prule.laptimeinsights.application.port.`in`.session.CreateSessionCommand
 import com.github.prule.laptimeinsights.application.port.`in`.session.CreateSessionUseCase
+import com.github.prule.laptimeinsights.application.port.out.EventPort
 import com.github.prule.laptimeinsights.application.port.out.session.CreateSessionPort
+import kotlinx.coroutines.runBlocking
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import kotlin.time.Clock
 
 class CreateSessionService(
     private val createSessionPort: CreateSessionPort,
+    private val eventPort: EventPort,
 ) : CreateSessionUseCase {
   override fun createSession(command: CreateSessionCommand): Session = transaction {
     val session =
@@ -24,6 +28,8 @@ class CreateSessionService(
             car = command.car,
             sessionType = command.sessionType,
         )
-    createSessionPort.create(session)
+    val savedSession = createSessionPort.create(session)
+    runBlocking { eventPort.emit(SessionCreated(savedSession)) }
+    savedSession
   }
 }
