@@ -1,7 +1,7 @@
 package com.github.prule.laptimeinsights.application.domain.model
 
-import kotlinx.serialization.Serializable
 import kotlin.time.Instant
+import kotlinx.serialization.Serializable
 
 @JvmInline
 @Serializable
@@ -39,8 +39,8 @@ data class Session(
     private var startedAt: Instant?,
     private var finishedAt: Instant?,
     val simulator: Simulator,
-    val track: Track,
-    val car: Car,
+    val track: Track?,
+    val car: Car?,
     val sessionType: SessionType,
 ) {
   fun startedAt() = startedAt

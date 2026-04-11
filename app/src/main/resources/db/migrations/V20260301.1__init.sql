@@ -1,11 +1,11 @@
 create table Session
 (
     ID identity,
-    UID          varchar(255),
-    SIMULATOR    varchar(255),
+    UID          varchar(255) not null,
+    SIMULATOR    varchar(255) not null ,
+    SESSION_TYPE varchar(255) not null ,
     TRACK        varchar(255),
     CAR          varchar(255),
-    SESSION_TYPE varchar(255),
     STARTED_AT   timestamp,
     FINISHED_AT     timestamp
 );

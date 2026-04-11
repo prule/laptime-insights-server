@@ -10,7 +10,7 @@ object SessionTable : LongIdTable("SESSION") {
   val startedAt = timestamp("started_at").nullable()
   val finishedAt = timestamp("finished_at").nullable()
   val simulator = varchar("simulator", MAX_VARCHAR_LENGTH)
-  val track = varchar("track", MAX_VARCHAR_LENGTH)
-  val car = varchar("car", MAX_VARCHAR_LENGTH)
+  val track = varchar("track", MAX_VARCHAR_LENGTH).nullable()
+  val car = varchar("car", MAX_VARCHAR_LENGTH).nullable()
   val sessionType = varchar("session_type", MAX_VARCHAR_LENGTH)
 }

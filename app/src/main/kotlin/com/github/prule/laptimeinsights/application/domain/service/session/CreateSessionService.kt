@@ -7,6 +7,7 @@ import com.github.prule.laptimeinsights.application.port.`in`.session.CreateSess
 import com.github.prule.laptimeinsights.application.port.`in`.session.CreateSessionUseCase
 import com.github.prule.laptimeinsights.application.port.out.session.CreateSessionPort
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
+import kotlin.time.Clock
 
 class CreateSessionService(
     private val createSessionPort: CreateSessionPort,
@@ -16,7 +17,7 @@ class CreateSessionService(
         Session(
             id = SessionId(0),
             uid = Uid(),
-            startedAt = null,
+            startedAt = Clock.System.now(),
             finishedAt = null,
             simulator = command.simulator,
             track = command.track,

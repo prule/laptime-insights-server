@@ -16,8 +16,8 @@ data class SessionResource(
     val uid: Uid,
     val startedAt: Instant?,
     val endedAt: Instant?,
-    val track: Track,
-    val car: Car,
+    val track: Track?,
+    val car: Car?,
     val sessionType: SessionType,
     val _links: Map<String, String>,
 ) {
@@ -41,12 +41,8 @@ class SessionLinkFactory(private val application: Application) : LinkFactory<Ses
     val session = SessionRoutes.SessionId(uid = resource.uid.value)
     return listOfNotNull(
             "self" to application.href(session),
-            if (resource.canStart())
-                "start" to application.href(SessionRoutes.SessionId.Start(session))
-            else null,
-            if (resource.canFinish())
-                "finish" to application.href(SessionRoutes.SessionId.Finish(session))
-            else null,
+            if (resource.canStart()) "start" to application.href(SessionRoutes.SessionId.Start(session)) else null,
+            if (resource.canFinish()) "finish" to application.href(SessionRoutes.SessionId.Finish(session)) else null,
         )
         .toMap()
   }

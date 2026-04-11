@@ -1,5 +1,8 @@
 <component name="ProjectRunConfigurationManager">
   <configuration default="false" name="Run server" type="KtorApplicationConfigurationType" factoryName="Ktor">
+    <option name="envFilePaths">
+      <option value="$PROJECT_DIR$/.env.local" />
+    </option>
     <option name="MAIN_CLASS_NAME" value="com.github.prule.laptimeinsights.AppKt" />
     <module name="lap-insights-server.app.main" />
     <option name="PROGRAM_PARAMETERS" value="app/configuration.json5" />

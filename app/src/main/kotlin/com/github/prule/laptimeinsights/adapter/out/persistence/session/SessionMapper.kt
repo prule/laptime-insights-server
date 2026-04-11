@@ -16,8 +16,8 @@ class SessionMapper {
           startedAt = entity.startedAt,
           finishedAt = entity.finishedAt,
           simulator = Simulator.valueOf(entity.simulator),
-          track = Track(entity.track),
-          car = Car(entity.car),
+          track = Track(entity.track ?: "Unknown"),
+          car = Car(entity.car ?: "Unknown"),
           sessionType = SessionType(entity.sessionType),
       )
 
@@ -30,8 +30,8 @@ class SessionMapper {
       startedAt = session.startedAt()
       finishedAt = session.finishedAt()
       simulator = session.simulator.name
-      track = session.track.value
-      car = session.car.value
+      session.track?.let { track = it.value }
+      session.car?.let { car = it.value }
       sessionType = session.sessionType.value
     }
   }
