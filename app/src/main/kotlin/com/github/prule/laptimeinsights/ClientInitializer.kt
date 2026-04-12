@@ -10,28 +10,35 @@ import com.github.prule.acc.client.MessageListener
 import com.github.prule.acc.client.MessageSender
 import com.github.prule.acc.client.RegistrationResultListener
 import com.github.prule.acc.messages.AccBroadcastingInbound
+import com.github.prule.laptimeinsights.application.domain.model.Car
 import com.github.prule.laptimeinsights.application.domain.model.LapTimeMs
 import com.github.prule.laptimeinsights.application.domain.model.PersonalBest
 import com.github.prule.laptimeinsights.application.domain.model.Session
 import com.github.prule.laptimeinsights.application.domain.model.SessionType
 import com.github.prule.laptimeinsights.application.domain.model.Simulator
+import com.github.prule.laptimeinsights.application.domain.model.Track
 import com.github.prule.laptimeinsights.application.domain.model.ValidLap
 import com.github.prule.laptimeinsights.application.port.`in`.car.FindCarCommand
 import com.github.prule.laptimeinsights.application.port.`in`.lap.CreateLapCommand
 import com.github.prule.laptimeinsights.application.port.`in`.session.CreateSessionCommand
 import com.github.prule.laptimeinsights.application.port.`in`.session.FinishSessionCommand
 import com.github.prule.laptimeinsights.application.port.`in`.session.UpdateSessionCommand
-import org.slf4j.LoggerFactory
 import kotlin.reflect.KClass
 import kotlin.time.Clock
+import org.slf4j.LoggerFactory
 
 class ClientInitializer(private val appModule: AppModule) {
   private val logger = LoggerFactory.getLogger(javaClass)
+  private var clientState: ClientState? = null
   private var session: Session? = null
   private var sessionState: SessionState? = null
+  private var track: Track? = null
+  private var car: Car? = null
+  private var sessionStartPhases = listOf(AccBroadcastingInbound.SessionPhase.SESSION, AccBroadcastingInbound.SessionPhase.PRE_SESSION)
+  private var sessionFinishPhases = listOf(AccBroadcastingInbound.SessionPhase.SESSION_OVER, AccBroadcastingInbound.SessionPhase.POST_SESSION)
 
   suspend fun initializeClient(configuration: ApplicationClientConfiguration) {
-    val clientState = ClientState()
+    clientState = ClientState()
 
     AccClient(
             AccClientConfiguration(
@@ -40,55 +47,49 @@ class ClientInitializer(private val appModule: AppModule) {
                 serverIp = configuration.serverIp,
             )
         )
-        .connect(listOf(LoggingListener(), RegistrationResultListener(clientState), buildFilter(), buildFilter2(), buildFilter3()))
+        .connect(listOf(LoggingListener(), RegistrationResultListener(clientState!!), buildFilter(), buildFilter2(), buildFilter3(), buildFilter4()))
   }
 
   private fun buildFilter(): FilteredMessageListener<AccBroadcastingInbound.RealtimeUpdate> {
     return FilteredMessageListener(
-        AccBroadcastingInbound.RealtimeUpdate::class,
-        { message -> message.phase() == AccBroadcastingInbound.SessionPhase.SESSION },
+        clazz = AccBroadcastingInbound.RealtimeUpdate::class,
         // listeners to apply to filtered messages
-        listOf(
-            object : MessageListener<AccBroadcastingInbound.RealtimeUpdate> {
+        listeners =
+            listOf(
+                object : MessageListener<AccBroadcastingInbound.RealtimeUpdate> {
 
-              override fun onMessage(
-                  bytes: ByteArray,
-                  message: AccBroadcastingInbound.RealtimeUpdate,
-                  messageSender: MessageSender,
-              ) {
+                  override fun onMessage(
+                      bytes: ByteArray,
+                      message: AccBroadcastingInbound.RealtimeUpdate,
+                      messageSender: MessageSender,
+                  ) {
 
-                /* First "session event" means session has started */
-                if (session == null && message.phase() == AccBroadcastingInbound.SessionPhase.SESSION) {
-                  sessionState = SessionState()
-                  session =
-                      appModule.session.createSessionUseCase.createSession(
-                          CreateSessionCommand(
-                              Simulator.ACC,
-                              SessionType(message.sessionType()?.name ?: "Unknown"),
+                    /* First "session event" means session has started */
+                    if (session == null && sessionStartPhases.contains(message.phase())) {
+                      sessionState = SessionState()
+                      session =
+                          appModule.session.createSessionUseCase.createSession(
+                              CreateSessionCommand(Simulator.ACC, SessionType(message.sessionType()?.name ?: "Unknown"), track, car)
                           )
-                      )
+                      logger.info("Session started")
+                    }
 
-                  logger.info("Session started")
+                    if (session != null && sessionFinishPhases.contains(message.phase())) {
+                      appModule.session.finishSessionUseCase.finishSession(FinishSessionCommand(session!!.uid, Clock.System.now()))
+                      session = null
+                      sessionState = null
+                      logger.info("Session ended")
+                    }
+                  }
                 }
-
-                if (session != null && message.phase() == AccBroadcastingInbound.SessionPhase.SESSION_OVER) {
-                  appModule.session.finishSessionUseCase.finishSession(FinishSessionCommand(session!!.uid, Clock.System.now()))
-                  session = null
-                  sessionState = null
-                  logger.info("Session ended")
-                }
-
-                logger.info("Session ${JsonFormatter.toJsonString(message as Any)}")
-              }
-            }
-        ),
+            ),
     )
   }
 
   private fun buildFilter2(): FilteredMessageListener<AccBroadcastingInbound.BroadcastingEvent> {
     return FilteredMessageListener(
         AccBroadcastingInbound.BroadcastingEvent::class,
-        { message -> message.type() == AccBroadcastingInbound.BroadcastType.LAPCOMPLETED },
+        { message -> session != null && message.type() == AccBroadcastingInbound.BroadcastType.LAPCOMPLETED },
         // listeners to apply to filtered messages
         listOf(
             object : MessageListener<AccBroadcastingInbound.BroadcastingEvent> {
@@ -120,19 +121,36 @@ class ClientInitializer(private val appModule: AppModule) {
 
   private fun buildFilter3(): MessageListener<AccBroadcastingInbound> {
     return ConditionalFilter(
-        condition = { message -> session != null },
+        condition = { message -> message.msgType() == AccBroadcastingInbound.InboundMsgType.ENTRY_LIST_CAR && clientState?.focusedCarIndex != null },
         clazz = AccBroadcastingInbound.EntryListCar::class,
         block = { message, _ ->
-          appModule.session.updateSessionUseCase.update(
-              UpdateSessionCommand(session!!.uid, null, appModule.car.findCarUseCase.findCarByModel(FindCarCommand(message.carModelType())))
-          )
+          if (message.carId() == clientState?.focusedCarIndex) {
+            car = appModule.car.findCarUseCase.findCarByModel(FindCarCommand(message.carModelType()))
+            logger.info("Car is $car")
+            if (session != null) {
+              appModule.session.updateSessionUseCase.update(UpdateSessionCommand(session!!.uid, track, car))
+            }
+          }
+        },
+    )
+  }
+
+  private fun buildFilter4(): MessageListener<AccBroadcastingInbound> {
+    return ConditionalFilter(
+        condition = { message -> message.msgType() == AccBroadcastingInbound.InboundMsgType.TRACK_DATA },
+        clazz = AccBroadcastingInbound.TrackData::class,
+        block = { message, _ ->
+          track = Track(message.trackName().data())
+          if (session != null) {
+            appModule.session.updateSessionUseCase.update(UpdateSessionCommand(session!!.uid, track, car))
+          }
         },
     )
   }
 }
 
 @Suppress("UNCHECKED_CAST")
-class ConditionalFilter<T, SUB : Any>(
+class ConditionalFilter<T : AccBroadcastingInbound, SUB : Any>(
     private val condition: (message: T) -> Boolean,
     private val clazz: KClass<SUB>,
     private val block:
@@ -143,8 +161,8 @@ class ConditionalFilter<T, SUB : Any>(
 ) : MessageListener<T> {
   override fun onMessage(bytes: ByteArray, message: T, messageSender: MessageSender) {
     if (condition(message)) {
-      if (clazz.isInstance(message)) {
-        block(message as SUB, messageSender)
+      if (clazz.isInstance(message.body())) {
+        block(message.body() as SUB, messageSender)
       }
     }
   }

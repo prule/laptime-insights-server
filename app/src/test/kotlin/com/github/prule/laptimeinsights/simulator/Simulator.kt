@@ -16,7 +16,7 @@ fun main(args: Array<String>) = runBlocking {
         FileSource(path)
       } else {
         println("Using default classpath events file.")
-        FileSource("./recordings/simulator-recording-2026-03-16T19-11-55.501550.csv")
+        FileSource("./recordings/10min-race-snetterton-ferrari-simulator-recording-2026-04-11T20-04-49.434542=abbrev.csv")
       }
 
   AccSimulator(
