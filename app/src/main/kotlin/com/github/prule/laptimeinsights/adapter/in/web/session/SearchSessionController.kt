@@ -3,15 +3,18 @@ package com.github.prule.laptimeinsights.adapter.`in`.web.session
 import com.github.prule.laptimeinsights.adapter.`in`.web.toPageRequest
 import com.github.prule.laptimeinsights.adapter.`in`.web.toSort
 import com.github.prule.laptimeinsights.application.domain.model.Car
+import com.github.prule.laptimeinsights.application.domain.model.SessionId
 import com.github.prule.laptimeinsights.application.domain.model.SessionSearchCriteria
 import com.github.prule.laptimeinsights.application.domain.model.Simulator
 import com.github.prule.laptimeinsights.application.domain.model.Track
+import com.github.prule.laptimeinsights.application.domain.model.Uid
 import com.github.prule.laptimeinsights.application.port.`in`.session.SearchSessionUseCase
 import io.ktor.http.Parameters
 import io.ktor.server.application.Application
 import io.ktor.server.resources.get
 import io.ktor.server.response.respond
 import io.ktor.server.routing.routing
+import kotlin.time.Instant
 
 class SearchSessionController(
     application: Application,
@@ -44,5 +47,9 @@ fun SessionSearchCriteria.Companion.fromParameters(parameters: Parameters): Sess
       car = parameters["car"]?.let { Car(it) },
       track = parameters["track"]?.let { Track(it) },
       simulator = parameters["simulator"]?.let { Simulator.valueOf(it) },
+      from = parameters["from"]?.let { Instant.parse(it) },
+      to = parameters["to"]?.let { Instant.parse(it) },
+      uid = parameters["uid"]?.let { Uid(it) },
+      id = parameters["id"]?.let { SessionId(it.toLong()) },
   )
 }
