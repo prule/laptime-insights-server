@@ -1,0 +1,25 @@
+meta {
+  name: Session options
+  type: http
+  seq: 5
+}
+
+get {
+  url: http://localhost:8000/api/1/sessions/options?size=10&page=1&from=2026-04-11T00:00:00Z&to=2026-04-13T00:00:00Z&track=Snetterton Circuit&car=Ferrari 296 GT3
+  body: none
+  auth: inherit
+}
+
+params:query {
+  size: 10
+  page: 1
+  from: 2026-04-11T00:00:00Z
+  to: 2026-04-13T00:00:00Z
+  track: Snetterton Circuit
+  car: Ferrari 296 GT3
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
