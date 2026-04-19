@@ -1,7 +1,10 @@
 package com.github.prule.laptimeinsights.adapter.out.persistence.session
 
+import com.github.prule.laptimeinsights.application.domain.model.Car
 import com.github.prule.laptimeinsights.application.domain.model.Session
 import com.github.prule.laptimeinsights.application.domain.model.SessionSearchCriteria
+import com.github.prule.laptimeinsights.application.domain.model.Simulator
+import com.github.prule.laptimeinsights.application.domain.model.Track
 import com.github.prule.laptimeinsights.tracker.utils.NotFoundException
 import com.github.prule.laptimeinsights.tracker.utils.data.FindByCriteriaRepository
 import com.github.prule.laptimeinsights.tracker.utils.data.FindByIdRepository
@@ -16,22 +19,18 @@ import org.jetbrains.exposed.v1.core.greaterEq
 import org.jetbrains.exposed.v1.core.lessEq
 import org.jetbrains.exposed.v1.jdbc.Query
 import org.jetbrains.exposed.v1.jdbc.andWhere
+import org.jetbrains.exposed.v1.jdbc.select
 import org.jetbrains.exposed.v1.jdbc.selectAll
 
 class SessionRepository(
     private val mapper: SessionMapper,
-) :
-    FindByIdRepository<SessionEntity, Long>,
-    FindByCriteriaRepository<SessionEntity>,
-    SearchRepository<SessionEntity, SessionSearchCriteria> {
+) : FindByIdRepository<SessionEntity, Long>, FindByCriteriaRepository<SessionEntity>, SearchRepository<SessionEntity, SessionSearchCriteria> {
   override fun findOneOrNull(id: Long): SessionEntity? = SessionEntity.findById(id)
 
   fun create(session: Session): SessionEntity = SessionEntity.new { mapper.toEntity(session, this) }
 
   override fun searchForOne(criteria: SessionSearchCriteria, sort: Sort): SessionEntity? {
-    return criteria.toQuery().firstOrNull(sort, SessionEntity.sortableFields) {
-      SessionEntity.wrapRow(it)
-    }
+    return criteria.toQuery().firstOrNull(sort, SessionEntity.sortableFields) { SessionEntity.wrapRow(it) }
   }
 
   override fun search(
@@ -39,16 +38,29 @@ class SessionRepository(
       pageRequest: PageRequest,
       sort: Sort,
   ): Page<SessionEntity> {
-    return criteria.toQuery().paginate(pageRequest, sort, SessionEntity.sortableFields) {
-      SessionEntity.wrapRow(it)
-    }
+    return criteria.toQuery().paginate(pageRequest, sort, SessionEntity.sortableFields) { SessionEntity.wrapRow(it) }
   }
 
   fun update(session: Session): SessionEntity {
-    return SessionEntity.findByIdAndUpdate(session.id.value) { mapper.toEntity(session, it) }
-        ?: throw NotFoundException("Session not found")
+    return SessionEntity.findByIdAndUpdate(session.id.value) { mapper.toEntity(session, it) } ?: throw NotFoundException("Session not found")
+  }
+
+  fun options(criteria: SessionSearchCriteria): SessionOptions {
+    val query = criteria.toQuery()
+
+    val cars = query.copy().adjustSelect { select(SessionTable.car) }.withDistinct().mapNotNull { it[SessionTable.car]?.let { Car(it) } }
+    val tracks = query.copy().adjustSelect { select(SessionTable.track) }.withDistinct().mapNotNull { it[SessionTable.track]?.let { Track(it) } }
+    val simulators = query.copy().adjustSelect { select(SessionTable.simulator) }.withDistinct().map { Simulator.valueOf(it[SessionTable.simulator]) }
+
+    return SessionOptions(cars = cars, tracks = tracks, simulators = simulators)
   }
 }
+
+data class SessionOptions(
+    val cars: List<Car>,
+    val tracks: List<Track>,
+    val simulators: List<Simulator>,
+)
 
 fun SessionSearchCriteria.toQuery(): Query {
   val query = SessionTable.selectAll()

@@ -25,6 +25,10 @@ class SessionPersistenceAdapter(
     return repository.searchForOne(criteria, sort)?.let(mapper::toDomain)
   }
 
+  override fun options(criteria: SessionSearchCriteria): SessionOptions {
+    return repository.options(criteria)
+  }
+
   override fun create(session: Session): Session {
     val entity = repository.create(session)
     return mapper.toDomain(entity)

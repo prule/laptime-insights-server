@@ -1,5 +1,6 @@
 package com.github.prule.laptimeinsights.application.port.out.session
 
+import com.github.prule.laptimeinsights.adapter.out.persistence.session.SessionOptions
 import com.github.prule.laptimeinsights.application.domain.model.Session
 import com.github.prule.laptimeinsights.application.domain.model.SessionSearchCriteria
 import com.github.prule.laptimeinsights.tracker.utils.data.Page
@@ -14,4 +15,6 @@ interface SearchSessionPort {
   ): Page<Session>
 
   fun searchForOne(criteria: SessionSearchCriteria, sort: Sort = Sort.noSort()): Session?
+
+  fun options(criteria: SessionSearchCriteria): SessionOptions
 }
