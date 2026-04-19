@@ -14,9 +14,12 @@ import com.github.prule.laptimeinsights.tracker.utils.data.SearchRepository
 import com.github.prule.laptimeinsights.tracker.utils.data.Sort
 import com.github.prule.laptimeinsights.tracker.utils.data.exposed.firstOrNull
 import com.github.prule.laptimeinsights.tracker.utils.data.exposed.paginate
+import kotlin.time.Instant
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.greaterEq
 import org.jetbrains.exposed.v1.core.lessEq
+import org.jetbrains.exposed.v1.core.max
+import org.jetbrains.exposed.v1.core.min
 import org.jetbrains.exposed.v1.jdbc.Query
 import org.jetbrains.exposed.v1.jdbc.andWhere
 import org.jetbrains.exposed.v1.jdbc.select
@@ -52,7 +55,20 @@ class SessionRepository(
     val tracks = query.copy().adjustSelect { select(SessionTable.track) }.withDistinct().mapNotNull { it[SessionTable.track]?.let { Track(it) } }
     val simulators = query.copy().adjustSelect { select(SessionTable.simulator) }.withDistinct().map { Simulator.valueOf(it[SessionTable.simulator]) }
 
-    return SessionOptions(cars = cars, tracks = tracks, simulators = simulators)
+    val minStartedAt = SessionTable.startedAt.min()
+    val maxStartedAt = SessionTable.startedAt.max()
+    val rangeRow = query.copy()
+        .adjustSelect { select(minStartedAt, maxStartedAt) }
+        .toList()
+        .firstOrNull()
+
+    return SessionOptions(
+        cars = cars,
+        tracks = tracks,
+        simulators = simulators,
+        from = rangeRow?.get(minStartedAt),
+        to = rangeRow?.get(maxStartedAt)
+    )
   }
 }
 
@@ -60,6 +76,8 @@ data class SessionOptions(
     val cars: List<Car>,
     val tracks: List<Track>,
     val simulators: List<Simulator>,
+    val from: Instant?,
+    val to: Instant?,
 )
 
 fun SessionSearchCriteria.toQuery(): Query {
