@@ -28,6 +28,8 @@ value class LapTimeMs(val value: Long) {
   }
 }
 
+@Serializable @JvmInline value class CarId(val value: Int)
+
 @Serializable @JvmInline value class LapNumber(val value: Int)
 
 @Serializable @JvmInline value class ValidLap(val value: Boolean)
@@ -40,6 +42,7 @@ data class Lap(
     val uid: Uid,
     val sessionId: SessionId,
     val sessionUId: Uid,
+    val carId: CarId,
     val recordedAt: Instant,
     val lapTime: LapTimeMs,
     val lapNumber: LapNumber,

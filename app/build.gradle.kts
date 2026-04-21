@@ -6,6 +6,7 @@ plugins {
   // Apply the Application plugin to add support for building an executable JVM application.
   application
   alias(libs.plugins.flyway)
+  alias(libs.plugins.ktfmt)
   alias(libs.plugins.kotlinPluginSerialization)
 }
 

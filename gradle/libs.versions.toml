@@ -39,3 +39,4 @@ exposed = ["exposed-core", "exposed-jdbc", "exposed-dao", "exposed-kotlin-dateti
 [plugins]
 kotlinPluginSerialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 flyway = { id = "org.flywaydb.flyway", version.ref = "flyway" }
+ktfmt = { id = "com.ncorti.ktfmt.gradle", version = "0.26.0" }

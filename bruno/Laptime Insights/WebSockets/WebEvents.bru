@@ -1,10 +1,15 @@
 meta {
-  name: Websocket Events
-  type: websocket
+  name: WEvents
+  type: ws
   seq: 1
 }
 
-websocket {
+ws {
   url: ws://localhost:8000/api/1/events
-  name: Websocket Events
+  body: ws
+  auth: none
+}
+
+headers {
+  Accept: application/json
 }

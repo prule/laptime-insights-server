@@ -1,5 +1,6 @@
 package com.github.prule.laptimeinsights.application.port.`in`.lap
 
+import com.github.prule.laptimeinsights.application.domain.model.CarId
 import com.github.prule.laptimeinsights.application.domain.model.LapNumber
 import com.github.prule.laptimeinsights.application.domain.model.LapTimeMs
 import com.github.prule.laptimeinsights.application.domain.model.PersonalBest
@@ -12,6 +13,7 @@ import kotlin.time.Instant
 data class CreateLapCommand(
     val sessionUid: Uid,
     val recordedAt: Instant,
+    val carId: CarId,
     val lapTime: LapTimeMs,
     val lapNumber: LapNumber,
     val valid: ValidLap,

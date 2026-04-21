@@ -11,6 +11,7 @@ import com.github.prule.acc.client.MessageSender
 import com.github.prule.acc.client.RegistrationResultListener
 import com.github.prule.acc.messages.AccBroadcastingInbound
 import com.github.prule.laptimeinsights.application.domain.model.Car
+import com.github.prule.laptimeinsights.application.domain.model.CarId
 import com.github.prule.laptimeinsights.application.domain.model.LapTimeMs
 import com.github.prule.laptimeinsights.application.domain.model.PersonalBest
 import com.github.prule.laptimeinsights.application.domain.model.Session
@@ -23,9 +24,9 @@ import com.github.prule.laptimeinsights.application.port.`in`.lap.CreateLapComma
 import com.github.prule.laptimeinsights.application.port.`in`.session.CreateSessionCommand
 import com.github.prule.laptimeinsights.application.port.`in`.session.FinishSessionCommand
 import com.github.prule.laptimeinsights.application.port.`in`.session.UpdateSessionCommand
+import org.slf4j.LoggerFactory
 import kotlin.reflect.KClass
 import kotlin.time.Clock
-import org.slf4j.LoggerFactory
 
 class ClientInitializer(private val appModule: AppModule) {
   private val logger = LoggerFactory.getLogger(javaClass)
@@ -47,10 +48,19 @@ class ClientInitializer(private val appModule: AppModule) {
                 serverIp = configuration.serverIp,
             )
         )
-        .connect(listOf(LoggingListener(), RegistrationResultListener(clientState!!), buildFilter(), buildFilter2(), buildFilter3(), buildFilter4()))
+        .connect(
+            listOf(
+                LoggingListener(),
+                RegistrationResultListener(clientState!!),
+                buildRealTimeUpdate(),
+                buildLapCompleted(),
+                buildEntryListCar(),
+                buildTrackData(),
+            )
+        )
   }
 
-  private fun buildFilter(): FilteredMessageListener<AccBroadcastingInbound.RealtimeUpdate> {
+  private fun buildRealTimeUpdate(): FilteredMessageListener<AccBroadcastingInbound.RealtimeUpdate> {
     return FilteredMessageListener(
         clazz = AccBroadcastingInbound.RealtimeUpdate::class,
         // listeners to apply to filtered messages
@@ -86,7 +96,7 @@ class ClientInitializer(private val appModule: AppModule) {
     )
   }
 
-  private fun buildFilter2(): FilteredMessageListener<AccBroadcastingInbound.BroadcastingEvent> {
+  private fun buildLapCompleted(): FilteredMessageListener<AccBroadcastingInbound.BroadcastingEvent> {
     return FilteredMessageListener(
         AccBroadcastingInbound.BroadcastingEvent::class,
         { message -> session != null && message.type() == AccBroadcastingInbound.BroadcastType.LAPCOMPLETED },
@@ -100,14 +110,16 @@ class ClientInitializer(private val appModule: AppModule) {
                   messageSender: MessageSender,
               ) {
 
-                val lapNumber = sessionState!!.incrementLapCount(message.carId())
+                val carId = CarId(message.carId())
+                val lapNumber = sessionState!!.incrementLapCount(carId)
                 appModule.lap.createLapUseCase.createLap(
                     CreateLapCommand(
                         session!!.uid,
                         Clock.System.now(),
+                        carId,
                         LapTimeMs.fromString(message.msg().data()),
                         lapNumber,
-                        ValidLap(sessionState!!.isValidLap(message.carId(), lapNumber)),
+                        ValidLap(sessionState!!.isValidLap(carId, lapNumber)),
                         PersonalBest(false), // TODO
                     )
                 )
@@ -119,7 +131,7 @@ class ClientInitializer(private val appModule: AppModule) {
     )
   }
 
-  private fun buildFilter3(): MessageListener<AccBroadcastingInbound> {
+  private fun buildEntryListCar(): MessageListener<AccBroadcastingInbound> {
     return ConditionalFilter(
         condition = { message -> message.msgType() == AccBroadcastingInbound.InboundMsgType.ENTRY_LIST_CAR && clientState?.focusedCarIndex != null },
         clazz = AccBroadcastingInbound.EntryListCar::class,
@@ -135,7 +147,7 @@ class ClientInitializer(private val appModule: AppModule) {
     )
   }
 
-  private fun buildFilter4(): MessageListener<AccBroadcastingInbound> {
+  private fun buildTrackData(): MessageListener<AccBroadcastingInbound> {
     return ConditionalFilter(
         condition = { message -> message.msgType() == AccBroadcastingInbound.InboundMsgType.TRACK_DATA },
         clazz = AccBroadcastingInbound.TrackData::class,
