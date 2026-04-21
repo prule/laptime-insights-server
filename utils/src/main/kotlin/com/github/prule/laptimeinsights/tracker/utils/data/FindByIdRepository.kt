@@ -7,4 +7,4 @@ interface FindByIdRepository<T, ID> {
 }
 
 fun <T, ID> FindByIdRepository<T, ID>.findOneOrThrow(id: ID): T =
-    findOneOrNull(id) ?: throw NotFoundException()
+  findOneOrNull(id) ?: throw NotFoundException()

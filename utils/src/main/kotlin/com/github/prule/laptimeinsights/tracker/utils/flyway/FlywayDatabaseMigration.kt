@@ -9,11 +9,11 @@ class FlywayDatabaseMigration {
   }
 
   fun flyway(datasource: DataSource): Flyway =
-      Flyway.configure()
-          //            .defaultSchema("simtracker")
-          .baselineOnMigrate(true)
-          .baselineVersion("0")
-          .dataSource(datasource)
-          .locations("classpath:db/migrations")
-          .load()
+    Flyway.configure()
+      //            .defaultSchema("simtracker")
+      .baselineOnMigrate(true)
+      .baselineVersion("0")
+      .dataSource(datasource)
+      .locations("classpath:db/migrations")
+      .load()
 }

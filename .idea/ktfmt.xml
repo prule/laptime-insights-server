@@ -3,6 +3,6 @@
   <component name="KtfmtSettings">
     <option name="customMaxLineLength" value="150" />
     <option name="enableKtfmt" value="Enabled" />
-    <option name="uiFormatterStyle" value="Custom" />
+    <option name="uiFormatterStyle" value="Google (internal)" />
   </component>
 </project>

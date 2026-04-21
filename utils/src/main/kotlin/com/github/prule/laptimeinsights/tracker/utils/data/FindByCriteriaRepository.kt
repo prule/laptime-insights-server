@@ -7,7 +7,7 @@ interface FindByCriteriaRepository<T> {
 }
 
 fun <T> FindByCriteriaRepository<T>.findOneOrThrow(criteria: FindCriteria<T>): T =
-    findOneOrNull(criteria) ?: throw NotFoundException("Not Found")
+  findOneOrNull(criteria) ?: throw NotFoundException("Not Found")
 
 interface FindCriteria<T> {
   fun find(): T?
