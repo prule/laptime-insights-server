@@ -9,19 +9,17 @@ import io.ktor.server.response.respond
 import io.ktor.server.routing.routing
 
 class CreateSessionController(
-    application: Application,
-    createSessionUseCase: CreateSessionUseCase,
+  application: Application,
+  createSessionUseCase: CreateSessionUseCase,
 ) {
   init {
     application.routing {
       post<SessionRoutes> {
         call.respond(
-            SessionResource.fromDomain(
-                createSessionUseCase.createSession(
-                    call.receive<CreateSessionCommand>(),
-                ),
-                SessionLinkFactory(application),
-            ),
+          SessionResource.fromDomain(
+            createSessionUseCase.createSession(call.receive<CreateSessionCommand>()),
+            SessionLinkFactory(application),
+          )
         )
       }
     }

@@ -10,13 +10,13 @@ import io.ktor.server.plugins.NotFoundException
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 
 class FinishSessionService(
-    private val updateSessionPort: UpdateSessionPort,
-    private val searchSessionPort: SearchSessionPort,
+  private val updateSessionPort: UpdateSessionPort,
+  private val searchSessionPort: SearchSessionPort,
 ) : FinishSessionUseCase {
   override fun finishSession(command: FinishSessionCommand): Session = transaction {
     val session =
-        searchSessionPort.searchForOne(SessionSearchCriteria(uid = command.uid))
-            ?: throw NotFoundException()
+      searchSessionPort.searchForOne(SessionSearchCriteria(uid = command.uid))
+        ?: throw NotFoundException()
     updateSessionPort.update(session.copy(finishedAt = command.finishedAt))
   }
 }

@@ -11,14 +11,16 @@ import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.slf4j.LoggerFactory
 
 class UpdateSessionService(
-    private val updateSessionPort: UpdateSessionPort,
-    private val searchSessionPort: SearchSessionPort,
+  private val updateSessionPort: UpdateSessionPort,
+  private val searchSessionPort: SearchSessionPort,
 ) : UpdateSessionUseCase {
   private val logger = LoggerFactory.getLogger(javaClass)
 
   override fun update(command: UpdateSessionCommand): Session = transaction {
     logger.debug("Update session: $command")
-    val session = searchSessionPort.searchForOne(SessionSearchCriteria(uid = command.uid)) ?: throw NotFoundException(command.uid.toString())
+    val session =
+      searchSessionPort.searchForOne(SessionSearchCriteria(uid = command.uid))
+        ?: throw NotFoundException(command.uid.toString())
     updateSessionPort.update(command.copyToSession(session))
   }
 }

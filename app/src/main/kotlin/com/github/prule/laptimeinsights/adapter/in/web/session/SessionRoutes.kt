@@ -6,7 +6,9 @@ import kotlinx.serialization.Serializable
 @Serializable
 @Resource("/api/1/sessions")
 data class SessionRoutes(val dummy: String? = null) {
-  @Serializable @Resource("/options") data class Options(val parent: SessionRoutes = SessionRoutes())
+  @Serializable
+  @Resource("/options")
+  data class Options(val parent: SessionRoutes = SessionRoutes())
 
   @Serializable
   @Resource("/{uid}")

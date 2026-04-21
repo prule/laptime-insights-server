@@ -3,29 +3,13 @@ package com.github.prule.laptimeinsights.application.domain.model
 import kotlin.time.Instant
 import kotlinx.serialization.Serializable
 
-@JvmInline
-@Serializable
-value class SessionId(
-    val value: Long,
-)
+@JvmInline @Serializable value class SessionId(val value: Long)
 
-@JvmInline
-@Serializable
-value class Track(
-    val value: String,
-)
+@JvmInline @Serializable value class Track(val value: String)
 
-@JvmInline
-@Serializable
-value class Car(
-    val value: String,
-)
+@JvmInline @Serializable value class Car(val value: String)
 
-@JvmInline
-@Serializable
-value class SessionType(
-    val value: String,
-)
+@JvmInline @Serializable value class SessionType(val value: String)
 
 @Serializable
 enum class Simulator {
@@ -34,14 +18,14 @@ enum class Simulator {
 }
 
 data class Session(
-    val id: SessionId,
-    val uid: Uid,
-    private var startedAt: Instant?,
-    private var finishedAt: Instant?,
-    val simulator: Simulator,
-    val track: Track?,
-    val car: Car?,
-    val sessionType: SessionType,
+  val id: SessionId,
+  val uid: Uid,
+  private var startedAt: Instant?,
+  private var finishedAt: Instant?,
+  val simulator: Simulator,
+  val track: Track?,
+  val car: Car?,
+  val sessionType: SessionType,
 ) {
   fun startedAt() = startedAt
 

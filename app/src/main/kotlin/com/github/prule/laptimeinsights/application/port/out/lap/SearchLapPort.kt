@@ -8,9 +8,9 @@ import com.github.prule.laptimeinsights.tracker.utils.data.Sort
 
 interface SearchLapPort {
   fun search(
-      criteria: LapSearchCriteria,
-      pageRequest: PageRequest = PageRequest(),
-      sort: Sort = Sort.noSort(),
+    criteria: LapSearchCriteria,
+    pageRequest: PageRequest = PageRequest(),
+    sort: Sort = Sort.noSort(),
   ): Page<Lap>
 
   fun searchForOne(criteria: LapSearchCriteria, sort: Sort = Sort.noSort()): Lap?

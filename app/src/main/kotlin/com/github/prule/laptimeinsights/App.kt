@@ -27,21 +27,16 @@ import io.ktor.server.routing.routingRoot
 import io.ktor.server.websocket.WebSockets
 import io.ktor.server.websocket.pingPeriod
 import io.ktor.server.websocket.timeout
+import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
-import kotlin.time.Duration.Companion.seconds
 
 fun main(args: Array<String>): Unit = runBlocking {
   val configuration = JsonFileConfigurationRepository().loadConfiguration(args[0])
-  embeddedServer(
-          factory = Netty,
-          port = configuration.port,
-      ) {
-        module(configuration)
-      }
-      .start(wait = true)
+  embeddedServer(factory = Netty, port = configuration.port) { module(configuration) }
+    .start(wait = true)
 }
 
 fun Application.module(configuration: ApplicationConfiguration) {
@@ -49,11 +44,7 @@ fun Application.module(configuration: ApplicationConfiguration) {
   //    install(DefaultHeaders)
   //    install(CallLogging)
 
-  install(ContentNegotiation) {
-    json(
-        Json { encodeDefaults = true },
-    )
-  }
+  install(ContentNegotiation) { json(Json { encodeDefaults = true }) }
 
   install(WebSockets) {
     pingPeriod = 15.seconds
@@ -82,43 +73,21 @@ fun Application.module(configuration: ApplicationConfiguration) {
     }
   }
 
-  launch(Dispatchers.IO) { ClientInitializer(appModule).initializeClient(configuration.clientConfiguration) }
+  launch(Dispatchers.IO) {
+    ClientInitializer(appModule).initializeClient(configuration.clientConfiguration)
+  }
 }
 
 private fun Application.initializeSessionControllers(appModule: AppModule) {
-  FindSessionController(
-      this,
-      appModule.session.findSessionUseCase,
-  )
-  StartSessionController(
-      this,
-      appModule.session.startSessionUseCase,
-  )
-  CreateSessionController(
-      this,
-      appModule.session.createSessionUseCase,
-  )
-  SearchSessionController(
-      this,
-      appModule.session.searchSessionUseCase,
-  )
-  SearchOptionsController(
-      this,
-      appModule.session.searchSessionOptionsUseCase,
-  )
-  FinishSessionController(
-      this,
-      appModule.session.finishSessionUseCase,
-  )
+  FindSessionController(this, appModule.session.findSessionUseCase)
+  StartSessionController(this, appModule.session.startSessionUseCase)
+  CreateSessionController(this, appModule.session.createSessionUseCase)
+  SearchSessionController(this, appModule.session.searchSessionUseCase)
+  SearchOptionsController(this, appModule.session.searchSessionOptionsUseCase)
+  FinishSessionController(this, appModule.session.finishSessionUseCase)
 }
 
 private fun Application.initializeLapControllers(appModule: AppModule) {
-  CreateLapController(
-      this,
-      appModule.lap.createLapUseCase,
-  )
-  SearchLapController(
-      this,
-      appModule.lap.searchLapUseCase,
-  )
+  CreateLapController(this, appModule.lap.createLapUseCase)
+  SearchLapController(this, appModule.lap.searchLapUseCase)
 }

@@ -17,25 +17,20 @@ import io.ktor.server.routing.routing
 import kotlin.time.Instant
 
 class SearchSessionController(
-    application: Application,
-    searchSessionUseCase: SearchSessionUseCase,
+  application: Application,
+  searchSessionUseCase: SearchSessionUseCase,
 ) {
   init {
     application.routing {
       get<SessionRoutes> {
         call.respond(
-            searchSessionUseCase
-                .searchSessions(
-                    SessionSearchCriteria.fromParameters(call.request.queryParameters),
-                    call.request.toPageRequest(),
-                    call.request.toSort(),
-                )
-                .map {
-                  SessionResource.fromDomain(
-                      it,
-                      SessionLinkFactory(application),
-                  )
-                }
+          searchSessionUseCase
+            .searchSessions(
+              SessionSearchCriteria.fromParameters(call.request.queryParameters),
+              call.request.toPageRequest(),
+              call.request.toSort(),
+            )
+            .map { SessionResource.fromDomain(it, SessionLinkFactory(application)) }
         )
       }
     }
@@ -44,12 +39,12 @@ class SearchSessionController(
 
 fun SessionSearchCriteria.Companion.fromParameters(parameters: Parameters): SessionSearchCriteria {
   return SessionSearchCriteria(
-      car = parameters["car"]?.let { Car(it) },
-      track = parameters["track"]?.let { Track(it) },
-      simulator = parameters["simulator"]?.let { Simulator.valueOf(it) },
-      from = parameters["from"]?.let { Instant.parse(it) },
-      to = parameters["to"]?.let { Instant.parse(it) },
-      uid = parameters["uid"]?.let { Uid(it) },
-      id = parameters["id"]?.let { SessionId(it.toLong()) },
+    car = parameters["car"]?.let { Car(it) },
+    track = parameters["track"]?.let { Track(it) },
+    simulator = parameters["simulator"]?.let { Simulator.valueOf(it) },
+    from = parameters["from"]?.let { Instant.parse(it) },
+    to = parameters["to"]?.let { Instant.parse(it) },
+    uid = parameters["uid"]?.let { Uid(it) },
+    id = parameters["id"]?.let { SessionId(it.toLong()) },
   )
 }

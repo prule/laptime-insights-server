@@ -12,7 +12,9 @@ class SessionState {
 
   private val validLaps = mutableMapOf<CarId, MutableList<ValidLap>>()
 
-  @OptIn(ExperimentalAtomicApi::class) fun incrementLapCount(carId: CarId) = LapNumber(lapCounts.getOrPut(carId) { AtomicInt(0) }.incrementAndFetch())
+  @OptIn(ExperimentalAtomicApi::class)
+  fun incrementLapCount(carId: CarId) =
+    LapNumber(lapCounts.getOrPut(carId) { AtomicInt(0) }.incrementAndFetch())
 
   fun isValidLap(carId: CarId, lapNumber: LapNumber): Boolean {
     if (!validLaps.containsKey(carId)) return false

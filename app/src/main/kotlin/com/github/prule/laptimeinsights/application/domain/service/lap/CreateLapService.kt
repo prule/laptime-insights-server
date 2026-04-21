@@ -15,28 +15,27 @@ import kotlinx.coroutines.runBlocking
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 
 class CreateLapService(
-    private val createLapPort: CreateLapPort,
-    private val searchSessionPort: SearchSessionPort,
-    private val eventPort: EventPort,
+  private val createLapPort: CreateLapPort,
+  private val searchSessionPort: SearchSessionPort,
+  private val eventPort: EventPort,
 ) : CreateLapUseCase {
   override fun createLap(command: CreateLapCommand): Lap = transaction {
     val session =
-        searchSessionPort.searchForOne(
-            SessionSearchCriteria(uid = command.sessionUid),
-        ) ?: throw NotFoundException()
+      searchSessionPort.searchForOne(SessionSearchCriteria(uid = command.sessionUid))
+        ?: throw NotFoundException()
     val lap =
-        Lap(
-            id = LapId(0),
-            uid = Uid(),
-            sessionId = session.id,
-            sessionUId = session.uid,
-            carId = command.carId,
-            personalBest = command.personalBest,
-            valid = command.valid,
-            recordedAt = command.recordedAt,
-            lapTime = command.lapTime,
-            lapNumber = command.lapNumber,
-        )
+      Lap(
+        id = LapId(0),
+        uid = Uid(),
+        sessionId = session.id,
+        sessionUId = session.uid,
+        carId = command.carId,
+        personalBest = command.personalBest,
+        valid = command.valid,
+        recordedAt = command.recordedAt,
+        lapTime = command.lapTime,
+        lapNumber = command.lapNumber,
+      )
     val savedLap = createLapPort.create(lap)
     runBlocking { eventPort.emit(LapCreated(savedLap)) }
     savedLap

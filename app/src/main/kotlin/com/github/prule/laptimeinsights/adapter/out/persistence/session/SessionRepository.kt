@@ -25,59 +25,78 @@ import org.jetbrains.exposed.v1.jdbc.andWhere
 import org.jetbrains.exposed.v1.jdbc.select
 import org.jetbrains.exposed.v1.jdbc.selectAll
 
-class SessionRepository(
-    private val mapper: SessionMapper,
-) : FindByIdRepository<SessionEntity, Long>, FindByCriteriaRepository<SessionEntity>, SearchRepository<SessionEntity, SessionSearchCriteria> {
+class SessionRepository(private val mapper: SessionMapper) :
+  FindByIdRepository<SessionEntity, Long>,
+  FindByCriteriaRepository<SessionEntity>,
+  SearchRepository<SessionEntity, SessionSearchCriteria> {
   override fun findOneOrNull(id: Long): SessionEntity? = SessionEntity.findById(id)
 
   fun create(session: Session): SessionEntity = SessionEntity.new { mapper.toEntity(session, this) }
 
   override fun searchForOne(criteria: SessionSearchCriteria, sort: Sort): SessionEntity? {
-    return criteria.toQuery().firstOrNull(sort, SessionEntity.sortableFields) { SessionEntity.wrapRow(it) }
+    return criteria.toQuery().firstOrNull(sort, SessionEntity.sortableFields) {
+      SessionEntity.wrapRow(it)
+    }
   }
 
   override fun search(
-      criteria: SessionSearchCriteria,
-      pageRequest: PageRequest,
-      sort: Sort,
+    criteria: SessionSearchCriteria,
+    pageRequest: PageRequest,
+    sort: Sort,
   ): Page<SessionEntity> {
-    return criteria.toQuery().paginate(pageRequest, sort, SessionEntity.sortableFields) { SessionEntity.wrapRow(it) }
+    return criteria.toQuery().paginate(pageRequest, sort, SessionEntity.sortableFields) {
+      SessionEntity.wrapRow(it)
+    }
   }
 
   fun update(session: Session): SessionEntity {
-    return SessionEntity.findByIdAndUpdate(session.id.value) { mapper.toEntity(session, it) } ?: throw NotFoundException("Session not found")
+    return SessionEntity.findByIdAndUpdate(session.id.value) { mapper.toEntity(session, it) }
+      ?: throw NotFoundException("Session not found")
   }
 
   fun options(criteria: SessionSearchCriteria): SessionOptions {
     val query = criteria.toQuery()
 
-    val cars = query.copy().adjustSelect { select(SessionTable.car) }.withDistinct().mapNotNull { it[SessionTable.car]?.let { Car(it) } }
-    val tracks = query.copy().adjustSelect { select(SessionTable.track) }.withDistinct().mapNotNull { it[SessionTable.track]?.let { Track(it) } }
-    val simulators = query.copy().adjustSelect { select(SessionTable.simulator) }.withDistinct().map { Simulator.valueOf(it[SessionTable.simulator]) }
+    val cars =
+      query
+        .copy()
+        .adjustSelect { select(SessionTable.car) }
+        .withDistinct()
+        .mapNotNull { it[SessionTable.car]?.let { Car(it) } }
+    val tracks =
+      query
+        .copy()
+        .adjustSelect { select(SessionTable.track) }
+        .withDistinct()
+        .mapNotNull { it[SessionTable.track]?.let { Track(it) } }
+    val simulators =
+      query
+        .copy()
+        .adjustSelect { select(SessionTable.simulator) }
+        .withDistinct()
+        .map { Simulator.valueOf(it[SessionTable.simulator]) }
 
     val minStartedAt = SessionTable.startedAt.min()
     val maxStartedAt = SessionTable.startedAt.max()
-    val rangeRow = query.copy()
-        .adjustSelect { select(minStartedAt, maxStartedAt) }
-        .toList()
-        .firstOrNull()
+    val rangeRow =
+      query.copy().adjustSelect { select(minStartedAt, maxStartedAt) }.toList().firstOrNull()
 
     return SessionOptions(
-        cars = cars,
-        tracks = tracks,
-        simulators = simulators,
-        from = rangeRow?.get(minStartedAt),
-        to = rangeRow?.get(maxStartedAt)
+      cars = cars,
+      tracks = tracks,
+      simulators = simulators,
+      from = rangeRow?.get(minStartedAt),
+      to = rangeRow?.get(maxStartedAt),
     )
   }
 }
 
 data class SessionOptions(
-    val cars: List<Car>,
-    val tracks: List<Track>,
-    val simulators: List<Simulator>,
-    val from: Instant?,
-    val to: Instant?,
+  val cars: List<Car>,
+  val tracks: List<Track>,
+  val simulators: List<Simulator>,
+  val from: Instant?,
+  val to: Instant?,
 )
 
 fun SessionSearchCriteria.toQuery(): Query {

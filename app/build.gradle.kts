@@ -10,6 +10,11 @@ plugins {
   alias(libs.plugins.kotlinPluginSerialization)
 }
 
+ktfmt {
+  // Google style - 2 space indentation & automatically adds/removes trailing commas
+  googleStyle()
+}
+
 dependencies {
   implementation("com.github.prule:acc-client:main-SNAPSHOT")
   implementation("com.github.prule:acc-messages:main-SNAPSHOT")

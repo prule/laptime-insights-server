@@ -10,13 +10,13 @@ import com.github.prule.laptimeinsights.tracker.utils.data.PageRequest
 import com.github.prule.laptimeinsights.tracker.utils.data.Sort
 
 class SessionPersistenceAdapter(
-    private val repository: SessionRepository,
-    private val mapper: SessionMapper,
+  private val repository: SessionRepository,
+  private val mapper: SessionMapper,
 ) : SearchSessionPort, CreateSessionPort, UpdateSessionPort {
   override fun search(
-      criteria: SessionSearchCriteria,
-      pageRequest: PageRequest,
-      sort: Sort,
+    criteria: SessionSearchCriteria,
+    pageRequest: PageRequest,
+    sort: Sort,
   ): Page<Session> {
     return repository.search(criteria, pageRequest, sort).map(mapper::toDomain)
   }

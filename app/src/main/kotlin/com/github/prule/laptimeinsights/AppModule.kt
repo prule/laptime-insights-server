@@ -33,11 +33,7 @@ class AppModule {
   inner class Lap(val session: Session) {
     val mapper = LapMapper()
 
-    val lapPort =
-        LapPersistenceAdapter(
-            LapRepository(mapper),
-            mapper,
-        )
+    val lapPort = LapPersistenceAdapter(LapRepository(mapper), mapper)
 
     val createLapUseCase = CreateLapService(lapPort, session.sessionPort, eventPort)
     val searchLapUseCase = SearchLapService(lapPort)
@@ -46,27 +42,15 @@ class AppModule {
   inner class Session {
 
     val mapper = SessionMapper()
-    val sessionPort =
-        SessionPersistenceAdapter(
-            SessionRepository(mapper),
-            mapper,
-        )
+    val sessionPort = SessionPersistenceAdapter(SessionRepository(mapper), mapper)
 
-    val startSessionUseCase =
-        StartSessionService(
-            sessionPort,
-            sessionPort,
-        )
+    val startSessionUseCase = StartSessionService(sessionPort, sessionPort)
 
     val findSessionUseCase = FindSessionService(sessionPort)
     val createSessionUseCase = CreateSessionService(sessionPort, eventPort)
     val searchSessionUseCase = SearchSessionService(sessionPort)
     val searchSessionOptionsUseCase = SearchSessionOptionsService(sessionPort)
-    val finishSessionUseCase =
-        FinishSessionService(
-            sessionPort,
-            sessionPort,
-        )
+    val finishSessionUseCase = FinishSessionService(sessionPort, sessionPort)
     val updateSessionUseCase = UpdateSessionService(sessionPort, sessionPort)
   }
 }

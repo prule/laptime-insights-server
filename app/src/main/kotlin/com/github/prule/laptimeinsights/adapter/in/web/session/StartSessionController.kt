@@ -8,8 +8,8 @@ import io.ktor.server.request.receive
 import io.ktor.server.resources.post
 import io.ktor.server.response.respond
 import io.ktor.server.routing.routing
-import kotlinx.serialization.Serializable
 import kotlin.time.Instant
+import kotlinx.serialization.Serializable
 
 class StartSessionController(application: Application, startSessionUseCase: StartSessionUseCase) {
   init {
@@ -17,15 +17,12 @@ class StartSessionController(application: Application, startSessionUseCase: Star
       post<SessionRoutes.SessionId.Start> { start ->
         val request = call.receive<StartSessionRequest>()
         call.respond(
-            SessionResource.fromDomain(
-                startSessionUseCase.startSession(
-                    StartSessionCommand(
-                        uid = Uid(start.parent.uid),
-                        startedAt = request.startedAt,
-                    ),
-                ),
-                SessionLinkFactory(application),
+          SessionResource.fromDomain(
+            startSessionUseCase.startSession(
+              StartSessionCommand(uid = Uid(start.parent.uid), startedAt = request.startedAt)
             ),
+            SessionLinkFactory(application),
+          )
         )
       }
     }

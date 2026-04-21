@@ -12,23 +12,20 @@ import com.github.prule.laptimeinsights.application.domain.model.ValidLap
 
 class LapMapper {
   fun toDomain(entity: LapEntity): Lap =
-      Lap(
-          id = LapId(entity.id.value),
-          uid = Uid(entity.uid),
-          recordedAt = entity.recordedAt,
-          carId = CarId(entity.carId),
-          lapTime = LapTimeMs(entity.lapTime),
-          lapNumber = LapNumber(entity.lapNumber),
-          valid = ValidLap(entity.valid),
-          personalBest = PersonalBest(entity.personalBest),
-          sessionId = SessionId(entity.sessionId),
-          sessionUId = Uid(entity.sessionUid),
-      )
+    Lap(
+      id = LapId(entity.id.value),
+      uid = Uid(entity.uid),
+      recordedAt = entity.recordedAt,
+      carId = CarId(entity.carId),
+      lapTime = LapTimeMs(entity.lapTime),
+      lapNumber = LapNumber(entity.lapNumber),
+      valid = ValidLap(entity.valid),
+      personalBest = PersonalBest(entity.personalBest),
+      sessionId = SessionId(entity.sessionId),
+      sessionUId = Uid(entity.sessionUid),
+    )
 
-  fun toEntity(
-      lap: Lap,
-      entity: LapEntity,
-  ) {
+  fun toEntity(lap: Lap, entity: LapEntity) {
     entity.apply {
       uid = lap.uid.value
       sessionId = lap.sessionId.value

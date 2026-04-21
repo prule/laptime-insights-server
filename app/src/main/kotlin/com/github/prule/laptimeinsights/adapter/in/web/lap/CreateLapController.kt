@@ -8,20 +8,15 @@ import io.ktor.server.resources.post
 import io.ktor.server.response.respond
 import io.ktor.server.routing.routing
 
-class CreateLapController(
-    application: Application,
-    createLapUseCase: CreateLapUseCase,
-) {
+class CreateLapController(application: Application, createLapUseCase: CreateLapUseCase) {
   init {
     application.routing {
       post<LapRoutes> {
         call.respond(
-            LapResource.fromDomain(
-                createLapUseCase.createLap(
-                    call.receive<CreateLapCommand>(),
-                ),
-                LapLinkFactory(application),
-            ),
+          LapResource.fromDomain(
+            createLapUseCase.createLap(call.receive<CreateLapCommand>()),
+            LapLinkFactory(application),
+          )
         )
       }
     }

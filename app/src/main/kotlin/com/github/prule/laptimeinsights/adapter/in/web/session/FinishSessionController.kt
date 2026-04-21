@@ -8,27 +8,24 @@ import io.ktor.server.request.receive
 import io.ktor.server.resources.post
 import io.ktor.server.response.respond
 import io.ktor.server.routing.routing
-import kotlinx.serialization.Serializable
 import kotlin.time.Instant
+import kotlinx.serialization.Serializable
 
 class FinishSessionController(
-    application: Application,
-    finishSessionUseCase: FinishSessionUseCase,
+  application: Application,
+  finishSessionUseCase: FinishSessionUseCase,
 ) {
   init {
     application.routing {
       post<SessionRoutes.SessionId.Finish> { finish ->
         val request = call.receive<FinishSessionRequest>()
         call.respond(
-            SessionResource.fromDomain(
-                finishSessionUseCase.finishSession(
-                    FinishSessionCommand(
-                        uid = Uid(finish.parent.uid),
-                        finishedAt = request.finishedAt,
-                    ),
-                ),
-                SessionLinkFactory(application),
+          SessionResource.fromDomain(
+            finishSessionUseCase.finishSession(
+              FinishSessionCommand(uid = Uid(finish.parent.uid), finishedAt = request.finishedAt)
             ),
+            SessionLinkFactory(application),
+          )
         )
       }
     }

@@ -7,9 +7,5 @@ import com.github.prule.laptimeinsights.tracker.utils.data.PageRequest
 import com.github.prule.laptimeinsights.tracker.utils.data.Sort
 
 interface SearchLapUseCase {
-  fun searchLaps(
-      criteria: LapSearchCriteria,
-      pageRequest: PageRequest,
-      sort: Sort,
-  ): Page<Lap>
+  fun searchLaps(criteria: LapSearchCriteria, pageRequest: PageRequest, sort: Sort): Page<Lap>
 }

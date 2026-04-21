@@ -4,7 +4,5 @@ import com.github.prule.laptimeinsights.adapter.out.persistence.session.SessionO
 import com.github.prule.laptimeinsights.application.domain.model.SessionSearchCriteria
 
 interface SearchSessionOptionsUseCase {
-  fun options(
-      criteria: SessionSearchCriteria,
-  ): SessionOptions
+  fun options(criteria: SessionSearchCriteria): SessionOptions
 }

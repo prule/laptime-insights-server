@@ -9,9 +9,9 @@ import com.github.prule.laptimeinsights.tracker.utils.data.Sort
 
 interface SearchSessionPort {
   fun search(
-      criteria: SessionSearchCriteria,
-      pageRequest: PageRequest = PageRequest(),
-      sort: Sort = Sort.noSort(),
+    criteria: SessionSearchCriteria,
+    pageRequest: PageRequest = PageRequest(),
+    sort: Sort = Sort.noSort(),
   ): Page<Session>
 
   fun searchForOne(criteria: SessionSearchCriteria, sort: Sort = Sort.noSort()): Session?

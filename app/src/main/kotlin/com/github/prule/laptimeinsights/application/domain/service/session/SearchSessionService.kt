@@ -9,12 +9,11 @@ import com.github.prule.laptimeinsights.tracker.utils.data.PageRequest
 import com.github.prule.laptimeinsights.tracker.utils.data.Sort
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 
-class SearchSessionService(
-    private val searchSessionPort: SearchSessionPort,
-) : SearchSessionUseCase {
+class SearchSessionService(private val searchSessionPort: SearchSessionPort) :
+  SearchSessionUseCase {
   override fun searchSessions(
-      criteria: SessionSearchCriteria,
-      pageRequest: PageRequest,
-      sort: Sort,
+    criteria: SessionSearchCriteria,
+    pageRequest: PageRequest,
+    sort: Sort,
   ): Page<Session> = transaction { searchSessionPort.search(criteria, pageRequest, sort) }
 }

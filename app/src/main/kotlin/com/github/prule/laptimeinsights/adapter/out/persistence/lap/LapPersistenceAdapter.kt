@@ -9,14 +9,12 @@ import com.github.prule.laptimeinsights.tracker.utils.data.Page
 import com.github.prule.laptimeinsights.tracker.utils.data.PageRequest
 import com.github.prule.laptimeinsights.tracker.utils.data.Sort
 
-class LapPersistenceAdapter(
-    private val repository: LapRepository,
-    private val mapper: LapMapper,
-) : SearchLapPort, CreateLapPort, UpdateLapPort {
+class LapPersistenceAdapter(private val repository: LapRepository, private val mapper: LapMapper) :
+  SearchLapPort, CreateLapPort, UpdateLapPort {
   override fun search(
-      criteria: LapSearchCriteria,
-      pageRequest: PageRequest,
-      sort: Sort,
+    criteria: LapSearchCriteria,
+    pageRequest: PageRequest,
+    sort: Sort,
   ): Page<Lap> {
     return repository.search(criteria, pageRequest, sort).map(mapper::toDomain)
   }

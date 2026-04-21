@@ -8,11 +8,9 @@ import com.github.prule.laptimeinsights.application.port.out.session.SearchSessi
 import io.ktor.server.plugins.NotFoundException
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 
-class FindSessionService(
-    private val searchSessionPort: SearchSessionPort,
-) : FindSessionUseCase {
+class FindSessionService(private val searchSessionPort: SearchSessionPort) : FindSessionUseCase {
   override fun findSession(command: FindSessionCommand): Session = transaction {
     searchSessionPort.searchForOne(SessionSearchCriteria(uid = command.uid))
-        ?: throw NotFoundException(command.uid.toString())
+      ?: throw NotFoundException(command.uid.toString())
   }
 }

@@ -8,8 +8,8 @@ import com.github.prule.laptimeinsights.tracker.utils.data.Sort
 
 interface SearchSessionUseCase {
   fun searchSessions(
-      criteria: SessionSearchCriteria,
-      pageRequest: PageRequest,
-      sort: Sort,
+    criteria: SessionSearchCriteria,
+    pageRequest: PageRequest,
+    sort: Sort,
   ): Page<Session>
 }

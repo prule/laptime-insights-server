@@ -8,18 +8,15 @@ import io.ktor.server.resources.get
 import io.ktor.server.response.respond
 import io.ktor.server.routing.routing
 
-class FindSessionController(
-    application: Application,
-    findSessionUseCase: FindSessionUseCase,
-) {
+class FindSessionController(application: Application, findSessionUseCase: FindSessionUseCase) {
   init {
     application.routing {
       get<SessionRoutes.SessionId> { id ->
         call.respond(
-            SessionResource.fromDomain(
-                findSessionUseCase.findSession(FindSessionCommand(Uid(id.uid))),
-                SessionLinkFactory(application),
-            )
+          SessionResource.fromDomain(
+            findSessionUseCase.findSession(FindSessionCommand(Uid(id.uid))),
+            SessionLinkFactory(application),
+          )
         )
       }
     }

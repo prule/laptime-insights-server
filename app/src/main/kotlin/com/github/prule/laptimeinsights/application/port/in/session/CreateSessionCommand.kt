@@ -8,8 +8,8 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class CreateSessionCommand(
-    val simulator: Simulator,
-    val sessionType: SessionType,
-    val track: Track? = null,
-    val car: Car? = null,
+  val simulator: Simulator,
+  val sessionType: SessionType,
+  val track: Track? = null,
+  val car: Car? = null,
 )

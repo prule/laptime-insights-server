@@ -5,12 +5,17 @@ import org.jetbrains.exposed.v1.core.dao.id.EntityID
 import org.jetbrains.exposed.v1.dao.LongEntity
 import org.jetbrains.exposed.v1.dao.LongEntityClass
 
-class LapEntity(
-    id: EntityID<Long>,
-) : LongEntity(id) {
+class LapEntity(id: EntityID<Long>) : LongEntity(id) {
   companion object : LongEntityClass<LapEntity>(LapTable) {
     val sortableFields =
-        SortableFields(mapOf("lapNumber" to LapTable.lapNumber, "lapTime" to LapTable.lapTime, "valid" to LapTable.valid, "carId" to LapTable.carId))
+      SortableFields(
+        mapOf(
+          "lapNumber" to LapTable.lapNumber,
+          "lapTime" to LapTable.lapTime,
+          "valid" to LapTable.valid,
+          "carId" to LapTable.carId,
+        )
+      )
   }
 
   var uid by LapTable.uid

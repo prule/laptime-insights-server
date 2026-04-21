@@ -1,10 +1,10 @@
 package com.github.prule.laptimeinsights.application.domain.model
 
-import kotlinx.serialization.Serializable
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.DurationUnit
 import kotlin.time.Instant
+import kotlinx.serialization.Serializable
 
 @Serializable @JvmInline value class LapId(val value: Long)
 
@@ -38,14 +38,14 @@ value class LapTimeMs(val value: Long) {
 
 @Serializable
 data class Lap(
-    val id: LapId,
-    val uid: Uid,
-    val sessionId: SessionId,
-    val sessionUId: Uid,
-    val carId: CarId,
-    val recordedAt: Instant,
-    val lapTime: LapTimeMs,
-    val lapNumber: LapNumber,
-    val valid: ValidLap,
-    val personalBest: PersonalBest,
+  val id: LapId,
+  val uid: Uid,
+  val sessionId: SessionId,
+  val sessionUId: Uid,
+  val carId: CarId,
+  val recordedAt: Instant,
+  val lapTime: LapTimeMs,
+  val lapNumber: LapNumber,
+  val valid: ValidLap,
+  val personalBest: PersonalBest,
 )

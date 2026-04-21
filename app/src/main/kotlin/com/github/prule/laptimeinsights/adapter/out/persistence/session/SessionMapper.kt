@@ -10,21 +10,18 @@ import com.github.prule.laptimeinsights.application.domain.model.Uid
 
 class SessionMapper {
   fun toDomain(entity: SessionEntity): Session =
-      Session(
-          id = SessionId(entity.id.value),
-          uid = Uid(entity.uid),
-          startedAt = entity.startedAt,
-          finishedAt = entity.finishedAt,
-          simulator = Simulator.valueOf(entity.simulator),
-          track = Track(entity.track ?: "Unknown"),
-          car = Car(entity.car ?: "Unknown"),
-          sessionType = SessionType(entity.sessionType),
-      )
+    Session(
+      id = SessionId(entity.id.value),
+      uid = Uid(entity.uid),
+      startedAt = entity.startedAt,
+      finishedAt = entity.finishedAt,
+      simulator = Simulator.valueOf(entity.simulator),
+      track = Track(entity.track ?: "Unknown"),
+      car = Car(entity.car ?: "Unknown"),
+      sessionType = SessionType(entity.sessionType),
+    )
 
-  fun toEntity(
-      session: Session,
-      entity: SessionEntity,
-  ) {
+  fun toEntity(session: Session, entity: SessionEntity) {
     entity.apply {
       uid = session.uid.value
       startedAt = session.startedAt()

@@ -5,9 +5,7 @@ import org.jetbrains.exposed.v1.core.dao.id.EntityID
 import org.jetbrains.exposed.v1.dao.LongEntity
 import org.jetbrains.exposed.v1.dao.LongEntityClass
 
-class SessionEntity(
-    id: EntityID<Long>,
-) : LongEntity(id) {
+class SessionEntity(id: EntityID<Long>) : LongEntity(id) {
   companion object : LongEntityClass<SessionEntity>(SessionTable) {
     val sortableFields = SortableFields(mapOf("car" to SessionTable.car))
   }

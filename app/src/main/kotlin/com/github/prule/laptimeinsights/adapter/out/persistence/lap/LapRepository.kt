@@ -16,12 +16,10 @@ import org.jetbrains.exposed.v1.jdbc.Query
 import org.jetbrains.exposed.v1.jdbc.andWhere
 import org.jetbrains.exposed.v1.jdbc.selectAll
 
-class LapRepository(
-    private val mapper: LapMapper,
-) :
-    FindByIdRepository<LapEntity, Long>,
-    FindByCriteriaRepository<LapEntity>,
-    SearchRepository<LapEntity, LapSearchCriteria> {
+class LapRepository(private val mapper: LapMapper) :
+  FindByIdRepository<LapEntity, Long>,
+  FindByCriteriaRepository<LapEntity>,
+  SearchRepository<LapEntity, LapSearchCriteria> {
   override fun findOneOrNull(id: Long): LapEntity? = LapEntity.findById(id)
 
   fun create(lap: Lap): LapEntity = LapEntity.new { mapper.toEntity(lap, this) }
@@ -31,9 +29,9 @@ class LapRepository(
   }
 
   override fun search(
-      criteria: LapSearchCriteria,
-      pageRequest: PageRequest,
-      sort: Sort,
+    criteria: LapSearchCriteria,
+    pageRequest: PageRequest,
+    sort: Sort,
   ): Page<LapEntity> {
     return criteria.toQuery().paginate(pageRequest, sort, LapEntity.sortableFields) {
       LapEntity.wrapRow(it)
@@ -42,7 +40,7 @@ class LapRepository(
 
   fun update(lap: Lap): LapEntity {
     return LapEntity.findByIdAndUpdate(lap.id.value) { mapper.toEntity(lap, it) }
-        ?: throw NotFoundException("Lap not found")
+      ?: throw NotFoundException("Lap not found")
   }
 }
 

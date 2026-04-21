@@ -11,26 +11,18 @@ import io.ktor.server.resources.get
 import io.ktor.server.response.respond
 import io.ktor.server.routing.routing
 
-class SearchLapController(
-    application: Application,
-    searchLapUseCase: SearchLapUseCase,
-) {
+class SearchLapController(application: Application, searchLapUseCase: SearchLapUseCase) {
   init {
     application.routing {
       get<LapRoutes> {
         call.respond(
-            searchLapUseCase
-                .searchLaps(
-                    LapSearchCriteria.fromParameters(call.request.queryParameters),
-                    call.request.toPageRequest(),
-                    call.request.toSort(),
-                )
-                .map {
-                  LapResource.fromDomain(
-                      it,
-                      LapLinkFactory(application),
-                  )
-                }
+          searchLapUseCase
+            .searchLaps(
+              LapSearchCriteria.fromParameters(call.request.queryParameters),
+              call.request.toPageRequest(),
+              call.request.toSort(),
+            )
+            .map { LapResource.fromDomain(it, LapLinkFactory(application)) }
         )
       }
     }
@@ -39,7 +31,7 @@ class SearchLapController(
 
 fun LapSearchCriteria.Companion.fromParameters(parameters: Parameters): LapSearchCriteria {
   return LapSearchCriteria(
-      uid = parameters["uid"]?.let { Uid(it) },
-      sessionUid = parameters["sessionUid"]?.let { Uid(it) },
+    uid = parameters["uid"]?.let { Uid(it) },
+    sessionUid = parameters["sessionUid"]?.let { Uid(it) },
   )
 }

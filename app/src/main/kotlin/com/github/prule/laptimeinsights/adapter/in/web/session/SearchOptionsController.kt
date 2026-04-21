@@ -8,19 +8,19 @@ import io.ktor.server.response.respond
 import io.ktor.server.routing.routing
 
 class SearchOptionsController(
-    application: Application,
-    searchSessionOptionsUseCase: SearchSessionOptionsUseCase,
+  application: Application,
+  searchSessionOptionsUseCase: SearchSessionOptionsUseCase,
 ) {
   init {
     application.routing {
       get<SessionRoutes.Options> {
         call.respond(
-            SessionOptionsResource.fromDomain(
-                searchSessionOptionsUseCase.options(
-                    SessionSearchCriteria.fromParameters(call.request.queryParameters),
-                ),
-                SessionOptionsLinkFactory(application),
-            )
+          SessionOptionsResource.fromDomain(
+            searchSessionOptionsUseCase.options(
+              SessionSearchCriteria.fromParameters(call.request.queryParameters)
+            ),
+            SessionOptionsLinkFactory(application),
+          )
         )
       }
     }

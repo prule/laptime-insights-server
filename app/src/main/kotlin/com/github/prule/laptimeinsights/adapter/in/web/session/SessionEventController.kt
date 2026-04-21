@@ -10,10 +10,7 @@ import io.ktor.server.routing.routing
 import io.ktor.server.websocket.sendSerialized
 import io.ktor.server.websocket.webSocket
 
-class SessionEventController(
-    application: Application,
-    eventPort: EventPort,
-) {
+class SessionEventController(application: Application, eventPort: EventPort) {
   init {
     application.routing {
       webSocket("/api/1/events") {
@@ -21,19 +18,11 @@ class SessionEventController(
           when (event) {
             is SessionCreated -> {
               sendSerialized(
-                  SessionResource.fromDomain(
-                      event.session,
-                      SessionLinkFactory(application),
-                  )
+                SessionResource.fromDomain(event.session, SessionLinkFactory(application))
               )
             }
             is LapCreated -> {
-              sendSerialized(
-                  LapResource.fromDomain(
-                      event.lap,
-                      LapLinkFactory(application)
-                  )
-              )
+              sendSerialized(LapResource.fromDomain(event.lap, LapLinkFactory(application)))
             }
             else -> {}
           }
