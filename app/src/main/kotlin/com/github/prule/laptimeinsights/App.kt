@@ -40,9 +40,9 @@ fun main(args: Array<String>): Unit = runBlocking {
 }
 
 fun Application.module(
-    configuration: ApplicationConfiguration,
-    appModule: AppModule = AppModule(),
-    jdbcUrl: String = EnvironmentVariables.jdbcUrl()
+  configuration: ApplicationConfiguration,
+  appModule: AppModule = AppModule(),
+  jdbcUrl: String = EnvironmentVariables.jdbcUrl(),
 ) {
   install(Resources)
   //    install(DefaultHeaders)

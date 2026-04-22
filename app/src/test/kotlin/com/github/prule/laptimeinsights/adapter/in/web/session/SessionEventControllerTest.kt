@@ -23,43 +23,42 @@ import org.junit.jupiter.api.Test
 
 class SessionEventControllerTest {
 
-    @Test
-    fun `should receive session created event over websocket`() = testApplication {
-        val appModule = AppModule()
-        application {
-            module(
-                configuration = ApplicationConfiguration(), 
-                appModule = appModule,
-                jdbcUrl = "jdbc:h2:mem:test;DB_CLOSE_DELAY=-1;"
-            )
-        }
-
-        val client = createClient {
-            install(WebSockets)
-        }
-
-        client.webSocket("/api/1/events") {
-            val session = Session(
-                id = SessionId(1L),
-                uid = Uid(),
-                startedAt = null,
-                finishedAt = null,
-                simulator = Simulator.ACC,
-                track = Track("Monza"),
-                car = Car("Ferrari"),
-                sessionType = SessionType("Race")
-            )
-
-            // Emit the event via the SAME appModule being used by the application
-            appModule.eventPort.emit(SessionCreated(session))
-
-            withTimeout(5.seconds) {
-                val frame = incoming.receive() as Frame.Text
-                val text = frame.readText()
-                
-                assertThat(text).contains(session.uid.value)
-                assertThat(text).contains("Monza")
-            }
-        }
+  @Test
+  fun `should receive session created event over websocket`() = testApplication {
+    val appModule = AppModule()
+    application {
+      module(
+        configuration = ApplicationConfiguration(),
+        appModule = appModule,
+        jdbcUrl = "jdbc:h2:mem:test;DB_CLOSE_DELAY=-1;",
+      )
     }
+
+    val client = createClient { install(WebSockets) }
+
+    client.webSocket("/api/1/events") {
+      val session =
+        Session(
+          id = SessionId(1L),
+          uid = Uid(),
+          startedAt = null,
+          finishedAt = null,
+          simulator = Simulator.ACC,
+          track = Track("Monza"),
+          car = Car("Ferrari"),
+          sessionType = SessionType("Race"),
+        )
+
+      // Emit the event via the SAME appModule being used by the application
+      appModule.eventPort.emit(SessionCreated(session))
+
+      withTimeout(5.seconds) {
+        val frame = incoming.receive() as Frame.Text
+        val text = frame.readText()
+
+        assertThat(text).contains(session.uid.value)
+        assertThat(text).contains("Monza")
+      }
+    }
+  }
 }

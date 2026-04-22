@@ -11,22 +11,18 @@ import org.junit.jupiter.api.BeforeEach
 
 abstract class RepositoryTest(private val tables: List<Table>) {
 
-    private lateinit var database: Database
+  private lateinit var database: Database
 
-    @BeforeEach
-    fun setup() {
-        database = Database.connect("jdbc:h2:mem:test;DB_CLOSE_DELAY=-1;", "org.h2.Driver")
-        TransactionManager.manager.defaultIsolationLevel = Connection.TRANSACTION_REPEATABLE_READ
-        
-        transaction(database) {
-            SchemaUtils.create(*tables.toTypedArray())
-        }
-    }
+  @BeforeEach
+  fun setup() {
+    database = Database.connect("jdbc:h2:mem:test;DB_CLOSE_DELAY=-1;", "org.h2.Driver")
+    TransactionManager.manager.defaultIsolationLevel = Connection.TRANSACTION_REPEATABLE_READ
 
-    @AfterEach
-    fun teardown() {
-        transaction(database) {
-            SchemaUtils.drop(*tables.toTypedArray())
-        }
-    }
+    transaction(database) { SchemaUtils.create(*tables.toTypedArray()) }
+  }
+
+  @AfterEach
+  fun teardown() {
+    transaction(database) { SchemaUtils.drop(*tables.toTypedArray()) }
+  }
 }
