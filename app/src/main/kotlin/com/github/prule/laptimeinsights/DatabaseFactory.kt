@@ -6,16 +6,16 @@ import com.zaxxer.hikari.HikariDataSource
 import org.jetbrains.exposed.v1.jdbc.Database
 
 object DatabaseFactory {
-  fun init() {
-    val datasource = hikari()
+  fun init(jdbcUrl: String = EnvironmentVariables.jdbcUrl()) {
+    val datasource = hikari(jdbcUrl)
     Database.connect(datasource)
     FlywayDatabaseMigration().migrate(datasource)
   }
 
-  private fun hikari(): HikariDataSource {
+  private fun hikari(jdbcUrl: String): HikariDataSource {
     val config = HikariConfig()
     config.driverClassName = "org.h2.Driver"
-    config.jdbcUrl = EnvironmentVariables.jdbcUrl()
+    config.jdbcUrl = jdbcUrl
     config.maximumPoolSize = 3
     config.isAutoCommit = false
     config.transactionIsolation = "TRANSACTION_REPEATABLE_READ"

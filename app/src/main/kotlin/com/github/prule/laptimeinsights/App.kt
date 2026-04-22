@@ -39,7 +39,11 @@ fun main(args: Array<String>): Unit = runBlocking {
     .start(wait = true)
 }
 
-fun Application.module(configuration: ApplicationConfiguration) {
+fun Application.module(
+    configuration: ApplicationConfiguration,
+    appModule: AppModule = AppModule(),
+    jdbcUrl: String = EnvironmentVariables.jdbcUrl()
+) {
   install(Resources)
   //    install(DefaultHeaders)
   //    install(CallLogging)
@@ -54,9 +58,8 @@ fun Application.module(configuration: ApplicationConfiguration) {
     contentConverter = io.ktor.serialization.kotlinx.KotlinxWebsocketSerializationConverter(Json)
   }
 
-  DatabaseFactory.init()
+  DatabaseFactory.init(jdbcUrl)
 
-  val appModule = AppModule()
   initializeSessionControllers(appModule)
   initializeLapControllers(appModule)
   SessionEventController(this, appModule.eventPort)

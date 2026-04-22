@@ -44,6 +44,9 @@ dependencies {
   testRuntimeOnly(libs.junit.jupiter.engine)
   testImplementation(libs.assertj.core)
   testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+
+  testImplementation(libs.ktor.server.test.host)
+  testImplementation(libs.ktor.client.websockets)
 }
 
 application { mainClass = "com.github.prule.acc.client.app.AppKt" }
