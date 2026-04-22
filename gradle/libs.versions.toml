@@ -12,6 +12,8 @@ h2 = "2.4.240"
 ktor = "3.4.1"
 logback = "1.5.32"
 flyway = "12.1.1"
+junit = "5.11.4"
+assertj = "3.27.3"
 
 [libraries]
 kotlinGradlePlugin = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }
@@ -29,6 +31,9 @@ ktor-server-content-negotiation = { module = "io.ktor:ktor-server-content-negoti
 ktor-serialization-kotlinx-json = { module = "io.ktor:ktor-serialization-kotlinx-json", version.ref = "ktor" }
 logback-classic = { module = "ch.qos.logback:logback-classic", version.ref = "logback" }
 flyway-core = { module = "org.flywaydb:flyway-core", version.ref = "flyway" }
+junit-jupiter-api = { module = "org.junit.jupiter:junit-jupiter-api", version.ref = "junit" }
+junit-jupiter-engine = { module = "org.junit.jupiter:junit-jupiter-engine", version.ref = "junit" }
+assertj-core = { module = "org.assertj:assertj-core", version.ref = "assertj" }
 
 # Libraries can be bundled together for easier import
 [bundles]

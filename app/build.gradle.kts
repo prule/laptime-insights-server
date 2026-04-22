@@ -39,6 +39,11 @@ dependencies {
   implementation("com.zaxxer:HikariCP:3.4.2")
 
   implementation(project(":utils"))
+
+  testImplementation(libs.junit.jupiter.api)
+  testRuntimeOnly(libs.junit.jupiter.engine)
+  testImplementation(libs.assertj.core)
+  testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 
 application { mainClass = "com.github.prule.acc.client.app.AppKt" }
