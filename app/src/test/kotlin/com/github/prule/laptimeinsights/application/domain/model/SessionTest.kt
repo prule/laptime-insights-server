@@ -3,6 +3,7 @@ package com.github.prule.laptimeinsights.application.domain.model
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.seconds
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
 
 class SessionTest {
@@ -44,7 +45,9 @@ class SessionTest {
       )
     val newStartTime = Clock.System.now().plus(60.seconds)
 
-    session.start(newStartTime)
+    assertThatThrownBy { session.start(newStartTime) }
+      .isInstanceOf(IllegalStateException::class.java)
+      .hasMessage("Session cannot be started")
 
     assertThat(session.isStarted()).isTrue()
     assertThat(session.startedAt()).isEqualTo(startTime) // Should remain the original start time
@@ -87,7 +90,9 @@ class SessionTest {
       )
     val finishTime = Clock.System.now().plus(3600.seconds)
 
-    session.finish(finishTime)
+    assertThatThrownBy { session.finish(finishTime) }
+      .isInstanceOf(IllegalStateException::class.java)
+      .hasMessage("Session cannot be finished")
 
     assertThat(session.isFinished()).isFalse()
     assertThat(session.finishedAt()).isNull()
@@ -110,7 +115,9 @@ class SessionTest {
       )
     val secondFinishTime = Clock.System.now().plus(7200.seconds)
 
-    session.finish(secondFinishTime)
+    assertThatThrownBy { session.finish(secondFinishTime) }
+      .isInstanceOf(IllegalStateException::class.java)
+      .hasMessage("Session cannot be finished")
 
     assertThat(session.isFinished()).isTrue()
     assertThat(session.finishedAt())

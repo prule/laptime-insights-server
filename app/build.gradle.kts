@@ -41,8 +41,12 @@ dependencies {
   implementation(project(":utils"))
 
   testImplementation(libs.junit.jupiter.api)
+  testImplementation(libs.junit.jupiter.params)
   testRuntimeOnly(libs.junit.jupiter.engine)
   testImplementation(libs.assertj.core)
+  testImplementation(libs.mockk)
+  testImplementation(libs.rest.assured)
+  testImplementation(libs.rest.assured.kotlin)
   testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 
   testImplementation(libs.ktor.server.test.host)

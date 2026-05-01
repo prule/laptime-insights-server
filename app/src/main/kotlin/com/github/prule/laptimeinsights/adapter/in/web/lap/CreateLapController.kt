@@ -2,6 +2,7 @@ package com.github.prule.laptimeinsights.adapter.`in`.web.lap
 
 import com.github.prule.laptimeinsights.application.port.`in`.lap.CreateLapCommand
 import com.github.prule.laptimeinsights.application.port.`in`.lap.CreateLapUseCase
+import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.Application
 import io.ktor.server.request.receive
 import io.ktor.server.resources.post
@@ -13,10 +14,11 @@ class CreateLapController(application: Application, createLapUseCase: CreateLapU
     application.routing {
       post<LapRoutes> {
         call.respond(
+          HttpStatusCode.Created,
           LapResource.fromDomain(
             createLapUseCase.createLap(call.receive<CreateLapCommand>()),
             LapLinkFactory(application),
-          )
+          ),
         )
       }
     }

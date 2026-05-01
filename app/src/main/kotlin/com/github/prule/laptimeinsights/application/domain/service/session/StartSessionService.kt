@@ -17,6 +17,7 @@ class StartSessionService(
     val session =
       searchSessionPort.searchForOne(SessionSearchCriteria(uid = command.uid))
         ?: throw NotFoundException()
-    updateSessionPort.update(session.copy(startedAt = command.startedAt))
+    session.start(command.startedAt)
+    updateSessionPort.update(session)
   }
 }

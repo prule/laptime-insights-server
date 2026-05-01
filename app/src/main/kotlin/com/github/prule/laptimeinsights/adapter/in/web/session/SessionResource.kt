@@ -4,6 +4,7 @@ import com.github.prule.laptimeinsights.adapter.`in`.web.LinkFactory
 import com.github.prule.laptimeinsights.application.domain.model.Car
 import com.github.prule.laptimeinsights.application.domain.model.Session
 import com.github.prule.laptimeinsights.application.domain.model.SessionType
+import com.github.prule.laptimeinsights.application.domain.model.Simulator
 import com.github.prule.laptimeinsights.application.domain.model.Track
 import com.github.prule.laptimeinsights.application.domain.model.Uid
 import io.ktor.server.application.Application
@@ -16,6 +17,7 @@ data class SessionResource(
   val uid: Uid,
   val startedAt: Instant?,
   val endedAt: Instant?,
+  val simulator: Simulator,
   val track: Track?,
   val car: Car?,
   val sessionType: SessionType,
@@ -28,6 +30,7 @@ data class SessionResource(
         uid = session.uid,
         startedAt = session.startedAt(),
         endedAt = session.finishedAt(),
+        simulator = session.simulator,
         track = session.track,
         car = session.car,
         sessionType = session.sessionType,

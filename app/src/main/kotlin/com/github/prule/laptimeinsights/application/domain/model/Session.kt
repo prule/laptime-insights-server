@@ -34,12 +34,16 @@ data class Session(
   fun start(time: Instant) {
     if (canStart()) {
       startedAt = time
+    } else {
+      throw IllegalStateException("Session cannot be started")
     }
   }
 
   fun finish(time: Instant) {
     if (canFinish()) {
       finishedAt = time
+    } else {
+      throw IllegalStateException("Session cannot be finished")
     }
   }
 
