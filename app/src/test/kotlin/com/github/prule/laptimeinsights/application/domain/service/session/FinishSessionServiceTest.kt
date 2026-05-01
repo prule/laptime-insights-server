@@ -8,10 +8,14 @@ import com.github.prule.laptimeinsights.application.domain.model.SessionType
 import com.github.prule.laptimeinsights.application.domain.model.Simulator
 import com.github.prule.laptimeinsights.application.domain.model.Track
 import com.github.prule.laptimeinsights.application.domain.model.Uid
+import com.github.prule.laptimeinsights.application.domain.model.SessionFinished
 import com.github.prule.laptimeinsights.application.port.`in`.session.FinishSessionCommand
+import com.github.prule.laptimeinsights.application.port.out.EventPort
 import com.github.prule.laptimeinsights.application.port.out.session.SearchSessionPort
 import com.github.prule.laptimeinsights.application.port.out.session.UpdateSessionPort
 import io.ktor.server.plugins.NotFoundException
+import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -25,7 +29,8 @@ class FinishSessionServiceTest {
 
   private val updateSessionPort = mockk<UpdateSessionPort>()
   private val searchSessionPort = mockk<SearchSessionPort>()
-  private val service = FinishSessionService(updateSessionPort, searchSessionPort)
+  private val eventPort = mockk<EventPort>(relaxed = true)
+  private val service = FinishSessionService(updateSessionPort, searchSessionPort, eventPort)
 
   @Test
   fun `should finish session successfully`() {
@@ -47,12 +52,14 @@ class FinishSessionServiceTest {
 
     every { searchSessionPort.searchForOne(any<SessionSearchCriteria>()) } returns existingSession
     every { updateSessionPort.update(any()) } returnsArgument 0
+    coEvery { eventPort.emit(any()) } returns Unit
 
     val result = service.finishSession(command)
 
     assertThat(result.isFinished()).isTrue()
     assertThat(result.finishedAt()).isEqualTo(finishTime)
     verify { updateSessionPort.update(match { it.finishedAt() == finishTime }) }
+    coVerify { eventPort.emit(match { it is SessionFinished && it.session.uid == uid }) }
   }
 
   @Test

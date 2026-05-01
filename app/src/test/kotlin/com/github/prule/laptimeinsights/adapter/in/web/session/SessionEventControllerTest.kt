@@ -56,6 +56,8 @@ class SessionEventControllerTest {
         val frame = incoming.receive() as Frame.Text
         val text = frame.readText()
 
+        assertThat(text).contains("\"type\":\"SessionCreated\"")
+        assertThat(text).contains("\"data\":")
         assertThat(text).contains(session.uid.value)
         assertThat(text).contains("Monza")
       }

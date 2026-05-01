@@ -4,6 +4,8 @@ import com.github.prule.laptimeinsights.adapter.`in`.web.lap.LapLinkFactory
 import com.github.prule.laptimeinsights.adapter.`in`.web.lap.LapResource
 import com.github.prule.laptimeinsights.application.domain.model.LapCreated
 import com.github.prule.laptimeinsights.application.domain.model.SessionCreated
+import com.github.prule.laptimeinsights.application.domain.model.SessionFinished
+import com.github.prule.laptimeinsights.application.domain.model.SessionUpdated
 import com.github.prule.laptimeinsights.application.port.out.EventPort
 import io.ktor.server.application.Application
 import io.ktor.server.routing.routing
@@ -13,20 +15,16 @@ import io.ktor.server.websocket.webSocket
 /**
  * Real-time event stream controller exposing **`ws://<host>:<port>/api/1/events`**.
  *
- * Clients connect via WebSocket and receive a stream of JSON-encoded resources for selected
- * domain events as they occur:
- * - On [SessionCreated] — a [SessionResource] for the newly created session.
- * - On [LapCreated] — a [LapResource] for the newly recorded lap.
+ * Clients connect via WebSocket and receive a stream of JSON-encoded [WebSocketMessage] frames
+ * for the following domain events as they occur:
+ * - [SessionCreated]  → [WebSocketMessage.SessionCreated]  carrying a [SessionResource].
+ * - [SessionUpdated]  → [WebSocketMessage.SessionUpdated]  carrying a [SessionResource].
+ * - [SessionFinished] → [WebSocketMessage.SessionFinished] carrying a [SessionResource].
+ * - [LapCreated]      → [WebSocketMessage.LapCreated]      carrying a [LapResource].
  *
- * Other domain events ([com.github.prule.laptimeinsights.application.domain.model.SessionUpdated],
- * [com.github.prule.laptimeinsights.application.domain.model.SessionFinished]) are not currently
- * forwarded to clients — they are silently dropped by the `else` branch below. Add a `when`
- * branch here if a new event type needs to be broadcast.
- *
- * Each frame is a single JSON object whose shape is identical to the corresponding REST resource
- * (including the `_links` HATEOAS field). There is no envelope and no explicit type
- * discriminator; clients distinguish messages by the resource shape (e.g. presence of `lapTime`
- * vs `simulator`). See `docs/real-time-updates.md` for the full protocol description.
+ * Each frame is wrapped in a typed envelope of the form `{ "type": "...", "data": { ... } }` so
+ * clients can dispatch by the `type` field rather than guessing from resource shape. Adding a new
+ * forwarded event type means adding both a [WebSocketMessage] subclass and a `when` branch here.
  *
  * **OpenAPI note:** OpenAPI 3.x has no first-class WebSocket support, so this endpoint does not
  * appear in `/openapi` or `/swaggerUI`. The KDoc above plus `docs/real-time-updates.md` are the
@@ -36,17 +34,23 @@ class SessionEventController(application: Application, eventPort: EventPort) {
   init {
     application.routing {
       webSocket("/api/1/events") {
+        val sessionLinks = SessionLinkFactory(application)
+        val lapLinks = LapLinkFactory(application)
         eventPort.events.collect { event ->
-          when (event) {
-            is SessionCreated -> {
-              sendSerialized(
-                SessionResource.fromDomain(event.session, SessionLinkFactory(application))
-              )
+          val message: WebSocketMessage? =
+            when (event) {
+              is SessionCreated ->
+                WebSocketMessage.SessionCreated(SessionResource.fromDomain(event.session, sessionLinks))
+              is SessionUpdated ->
+                WebSocketMessage.SessionUpdated(SessionResource.fromDomain(event.session, sessionLinks))
+              is SessionFinished ->
+                WebSocketMessage.SessionFinished(SessionResource.fromDomain(event.session, sessionLinks))
+              is LapCreated ->
+                WebSocketMessage.LapCreated(LapResource.fromDomain(event.lap, lapLinks))
+              else -> null
             }
-            is LapCreated -> {
-              sendSerialized(LapResource.fromDomain(event.lap, LapLinkFactory(application)))
-            }
-            else -> {}
+          if (message != null) {
+            sendSerialized<WebSocketMessage>(message)
           }
         }
       }

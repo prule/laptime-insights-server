@@ -7,15 +7,16 @@ Event system. This allows the web application to automatically update without ma
 
 The real-time system follows Clean Architecture principles:
 
-1. **Domain Events**: Events like `SessionCreated` and `LapCreated` are defined in the domain layer (
-   `com.github.prule.laptimeinsights.application.domain.model.DomainEvent`).
+1. **Domain Events**: Events like `SessionCreated`, `SessionUpdated`, `SessionFinished`, and `LapCreated` are defined in
+   the domain layer (`com.github.prule.laptimeinsights.application.domain.model.DomainEvent`).
 2. **Event Port**: An `EventPort` interface in the application layer defines how events are emitted and observed.
 3. **In-Memory Event Adapter**: An implementation of `EventPort` using Kotlin's `SharedFlow` to broadcast events across
    the application.
-4. **Service Integration**: Domain services (like `CreateSessionService` and `CreateLapService`) emit events to the
-   `EventPort` after successfully persisting data to the database.
+4. **Service Integration**: Domain services (`CreateSessionService`, `UpdateSessionService`, `FinishSessionService`,
+   `CreateLapService`) emit events to the `EventPort` after successfully persisting data to the database.
 5. **WebSocket Controller**: The `SessionEventController` in the web adapter layer exposes a WebSocket endpoint that
-   collects events from the `EventPort` and pushes them to connected clients.
+   collects events from the `EventPort`, wraps them in a typed `WebSocketMessage` envelope, and pushes them to
+   connected clients.
 
 ## Connecting to the Event Stream
 
@@ -29,16 +30,71 @@ Clients can subscribe to all events by connecting to the following WebSocket end
 
 ### Forwarded events
 
-Only a subset of domain events are forwarded to WebSocket clients:
+The following domain events are forwarded to WebSocket clients:
 
-| Domain event       | Frame payload      | Forwarded? |
-| ------------------ | ------------------ | ---------- |
-| `SessionCreated`   | `SessionResource`  | Yes        |
-| `LapCreated`       | `LapResource`      | Yes        |
-| `SessionUpdated`   | —                  | No         |
-| `SessionFinished`  | —                  | No         |
+| Domain event       | Envelope `type`   | `data` payload     |
+| ------------------ | ----------------- | ------------------ |
+| `SessionCreated`   | `SessionCreated`  | `SessionResource`  |
+| `SessionUpdated`   | `SessionUpdated`  | `SessionResource`  |
+| `SessionFinished`  | `SessionFinished` | `SessionResource`  |
+| `LapCreated`       | `LapCreated`      | `LapResource`      |
 
-If a new event needs to be broadcast, add a branch to the `when` in `SessionEventController`.
+To broadcast a new domain event, add a subclass to `WebSocketMessage` (in
+`adapter/in/web/session/`) and a matching branch to the `when` in `SessionEventController`.
+
+## Frame format
+
+Every frame is a single JSON object using a `type` / `data` envelope:
+
+```json
+{
+  "type": "<event name>",
+  "data": { ...resource fields... }
+}
+```
+
+The `type` field is the stable wire identifier — clients dispatch on it. The `data` field
+contains the corresponding REST resource verbatim, including its `_links` HATEOAS field.
+
+### `SessionCreated` / `SessionUpdated` / `SessionFinished`
+
+```json
+{
+  "type": "SessionCreated",
+  "data": {
+    "uid": "...",
+    "startedAt": "2026-04-12T09:55:00Z",
+    "endedAt": null,
+    "simulator": "ACC",
+    "track": "Monza",
+    "car": "Ferrari 488 GT3 Evo",
+    "sessionType": "Race",
+    "_links": {
+      "self": "/api/1/sessions/..."
+    }
+  }
+}
+```
+
+### `LapCreated`
+
+```json
+{
+  "type": "LapCreated",
+  "data": {
+    "uid": "...",
+    "sessionUid": "...",
+    "recordedAt": "2026-04-12T10:00:00Z",
+    "lapTime": 124500,
+    "lapNumber": 5,
+    "valid": true,
+    "personalBest": false,
+    "_links": {
+      "self": "/api/1/laps/..."
+    }
+  }
+}
+```
 
 ### Example Implementation (JavaScript)
 
@@ -50,23 +106,29 @@ socket.onopen = () => {
 };
 
 socket.onmessage = (event) => {
-    const data = JSON.parse(event.data);
+    const message = JSON.parse(event.data);
 
-    // Check the type of resource received
-    if (data.lapTime !== undefined) {
-        handleNewLap(data);
-    } else if (data.simulator !== undefined) {
-        handleNewSession(data);
+    switch (message.type) {
+        case 'SessionCreated':
+        case 'SessionUpdated':
+        case 'SessionFinished':
+            handleSessionEvent(message.type, message.data);
+            break;
+        case 'LapCreated':
+            handleLapEvent(message.data);
+            break;
+        default:
+            console.warn('Unknown event type:', message.type);
     }
 };
 
-function handleNewLap(lap) {
-    console.log('New Lap:', lap.lapNumber, 'Time:', lap.lapTime);
+function handleSessionEvent(type, session) {
+    console.log(type, ':', session.simulator, 'at', session.track);
     // Update your UI components
 }
 
-function handleNewSession(session) {
-    console.log('New Session Started:', session.simulator, 'at', session.track);
+function handleLapEvent(lap) {
+    console.log('New Lap:', lap.lapNumber, 'Time:', lap.lapTime);
     // Update your UI components
 }
 
@@ -77,42 +139,4 @@ socket.onerror = (error) => {
 socket.onclose = () => {
     console.log('Disconnected from event stream');
 };
-```
-
-## Event Data Structure
-
-The data sent over the WebSocket matches the standard REST API resources (`SessionResource` and
-`LapResource`). There is **no envelope and no explicit type discriminator** — clients distinguish
-messages by the resource shape (e.g. presence of `lapTime` vs `simulator`).
-
-### Lap Resource Example
-
-```json
-{
-  "uid": "...",
-  "sessionUid": "...",
-  "recordedAt": "2023-10-27T10:00:00Z",
-  "lapTime": 124500,
-  "lapNumber": 5,
-  "valid": true,
-  "personalBest": false,
-  "_links": {
-    "self": "/api/1/laps/..."
-  }
-}
-```
-
-### Session Resource Example
-
-```json
-{
-  "uid": "...",
-  "startedAt": "2023-10-27T09:55:00Z",
-  "simulator": "ACC",
-  "track": "Monza",
-  "car": "Ferrari 488 GT3 Evo",
-  "_links": {
-    "self": "/api/1/sessions/..."
-  }
-}
 ```

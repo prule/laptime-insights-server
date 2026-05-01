@@ -52,7 +52,7 @@ class AppModule {
     val createSessionUseCase = CreateSessionService(sessionPort, eventPort)
     val searchSessionUseCase = SearchSessionService(sessionPort)
     val searchSessionOptionsUseCase = SearchSessionOptionsService(sessionPort)
-    val finishSessionUseCase = FinishSessionService(sessionPort, sessionPort)
-    val updateSessionUseCase = UpdateSessionService(sessionPort, sessionPort)
+    val finishSessionUseCase = FinishSessionService(sessionPort, sessionPort, eventPort)
+    val updateSessionUseCase = UpdateSessionService(sessionPort, sessionPort, eventPort)
   }
 }
