@@ -15,12 +15,12 @@ import io.ktor.server.websocket.webSocket
 /**
  * Real-time event stream controller exposing **`ws://<host>:<port>/api/1/events`**.
  *
- * Clients connect via WebSocket and receive a stream of JSON-encoded [WebSocketMessage] frames
- * for the following domain events as they occur:
- * - [SessionCreated]  → [WebSocketMessage.SessionCreated]  carrying a [SessionResource].
- * - [SessionUpdated]  → [WebSocketMessage.SessionUpdated]  carrying a [SessionResource].
+ * Clients connect via WebSocket and receive a stream of JSON-encoded [WebSocketMessage] frames for
+ * the following domain events as they occur:
+ * - [SessionCreated] → [WebSocketMessage.SessionCreated] carrying a [SessionResource].
+ * - [SessionUpdated] → [WebSocketMessage.SessionUpdated] carrying a [SessionResource].
  * - [SessionFinished] → [WebSocketMessage.SessionFinished] carrying a [SessionResource].
- * - [LapCreated]      → [WebSocketMessage.LapCreated]      carrying a [LapResource].
+ * - [LapCreated] → [WebSocketMessage.LapCreated] carrying a [LapResource].
  *
  * Each frame is wrapped in a typed envelope of the form `{ "type": "...", "data": { ... } }` so
  * clients can dispatch by the `type` field rather than guessing from resource shape. Adding a new
@@ -40,11 +40,17 @@ class SessionEventController(application: Application, eventPort: EventPort) {
           val message: WebSocketMessage? =
             when (event) {
               is SessionCreated ->
-                WebSocketMessage.SessionCreated(SessionResource.fromDomain(event.session, sessionLinks))
+                WebSocketMessage.SessionCreated(
+                  SessionResource.fromDomain(event.session, sessionLinks)
+                )
               is SessionUpdated ->
-                WebSocketMessage.SessionUpdated(SessionResource.fromDomain(event.session, sessionLinks))
+                WebSocketMessage.SessionUpdated(
+                  SessionResource.fromDomain(event.session, sessionLinks)
+                )
               is SessionFinished ->
-                WebSocketMessage.SessionFinished(SessionResource.fromDomain(event.session, sessionLinks))
+                WebSocketMessage.SessionFinished(
+                  SessionResource.fromDomain(event.session, sessionLinks)
+                )
               is LapCreated ->
                 WebSocketMessage.LapCreated(LapResource.fromDomain(event.lap, lapLinks))
               else -> null

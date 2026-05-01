@@ -14,15 +14,14 @@ import io.ktor.utils.io.ExperimentalKtorApi
 /**
  * REST controller exposing **`GET /api/1/sessions/{uid}`** — the single-session lookup endpoint.
  *
- * The path-parameter `uid` is the public session identifier (the same value returned in the
- * `uid` field of `SessionResource` and in the `self` HATEOAS link). Internally the use case
- * resolves the UID via `SearchSessionPort.searchForOne` and raises `NotFoundException` if no
- * matching session exists; that is mapped to **404 Not Found** by the `StatusPages` plugin in
- * `App.kt`.
+ * The path-parameter `uid` is the public session identifier (the same value returned in the `uid`
+ * field of `SessionResource` and in the `self` HATEOAS link). Internally the use case resolves the
+ * UID via `SearchSessionPort.searchForOne` and raises `NotFoundException` if no matching session
+ * exists; that is mapped to **404 Not Found** by the `StatusPages` plugin in `App.kt`.
  *
  * The route is wired into Ktor's [Resources] plugin via [SessionRoutes.SessionId] and decorated
- * with the Ktor OpenAPI `describe { }` DSL so the operation is picked up by `/openapi` and
- * rendered in `/swaggerUI`.
+ * with the Ktor OpenAPI `describe { }` DSL so the operation is picked up by `/openapi` and rendered
+ * in `/swaggerUI`.
  */
 @OptIn(ExperimentalKtorApi::class)
 class FindSessionController(application: Application, findSessionUseCase: FindSessionUseCase) {
@@ -58,9 +57,7 @@ class FindSessionController(application: Application, findSessionUseCase: FindSe
 
           responses {
             HttpStatusCode.OK { description = "The session with the supplied UID." }
-            HttpStatusCode.NotFound {
-              description = "No session exists with the supplied UID."
-            }
+            HttpStatusCode.NotFound { description = "No session exists with the supplied UID." }
           }
         }
     }

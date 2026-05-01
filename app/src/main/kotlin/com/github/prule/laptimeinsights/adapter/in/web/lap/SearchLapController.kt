@@ -20,13 +20,13 @@ import io.ktor.utils.io.ExperimentalKtorApi
  * REST controller exposing **`GET /api/1/laps`** — the paginated, filterable search endpoint for
  * recorded laps.
  *
- * The most common use is to fetch every lap belonging to a single session, for example
- * `GET /api/1/laps?sessionUid=...&sort=lapNumber:ASC`, but `uid` is also supported for direct
- * single-lap lookup via the search interface.
+ * The most common use is to fetch every lap belonging to a single session, for example `GET
+ * /api/1/laps?sessionUid=...&sort=lapNumber:ASC`, but `uid` is also supported for direct single-lap
+ * lookup via the search interface.
  *
  * The route is wired into Ktor's [Resources] plugin via [LapRoutes] and decorated with the Ktor
- * OpenAPI `describe { }` DSL so the operation, its query parameters and its response are picked
- * up by `/openapi` and rendered in `/swaggerUI`.
+ * OpenAPI `describe { }` DSL so the operation, its query parameters and its response are picked up
+ * by `/openapi` and rendered in `/swaggerUI`.
  *
  * Filter parameters are parsed from the query string by [LapSearchCriteria.fromParameters]; paging
  * and sorting are parsed by [toPageRequest] / [toSort] (see `RoutingRequestExtension.kt`).

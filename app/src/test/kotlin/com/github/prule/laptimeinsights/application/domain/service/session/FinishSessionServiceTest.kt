@@ -2,13 +2,13 @@ package com.github.prule.laptimeinsights.application.domain.service.session
 
 import com.github.prule.laptimeinsights.application.domain.model.Car
 import com.github.prule.laptimeinsights.application.domain.model.Session
+import com.github.prule.laptimeinsights.application.domain.model.SessionFinished
 import com.github.prule.laptimeinsights.application.domain.model.SessionId
 import com.github.prule.laptimeinsights.application.domain.model.SessionSearchCriteria
 import com.github.prule.laptimeinsights.application.domain.model.SessionType
 import com.github.prule.laptimeinsights.application.domain.model.Simulator
 import com.github.prule.laptimeinsights.application.domain.model.Track
 import com.github.prule.laptimeinsights.application.domain.model.Uid
-import com.github.prule.laptimeinsights.application.domain.model.SessionFinished
 import com.github.prule.laptimeinsights.application.port.`in`.session.FinishSessionCommand
 import com.github.prule.laptimeinsights.application.port.out.EventPort
 import com.github.prule.laptimeinsights.application.port.out.session.SearchSessionPort
