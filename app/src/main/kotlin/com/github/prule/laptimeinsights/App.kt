@@ -1,5 +1,6 @@
 package com.github.prule.laptimeinsights
 
+import com.github.prule.laptimeinsights.adapter.`in`.web.lap.FindLapController
 import com.github.prule.laptimeinsights.adapter.`in`.web.lap.SearchLapController
 import com.github.prule.laptimeinsights.adapter.`in`.web.session.FindSessionController
 import com.github.prule.laptimeinsights.adapter.`in`.web.session.SearchOptionsController
@@ -103,4 +104,5 @@ private fun Application.initializeSessionControllers(appModule: AppModule) {
 
 private fun Application.initializeLapControllers(appModule: AppModule) {
   SearchLapController(this, appModule.lap.searchLapUseCase)
+  FindLapController(this, appModule.lap.findLapUseCase)
 }

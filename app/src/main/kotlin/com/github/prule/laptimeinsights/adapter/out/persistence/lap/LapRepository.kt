@@ -51,6 +51,7 @@ fun LapSearchCriteria.toQuery(): Query {
   uid?.let { query.andWhere { LapTable.uid eq it.value } }
 
   sessionId?.let { query.andWhere { LapTable.sessionId eq it.value } }
+  sessionUid?.let { query.andWhere { LapTable.sessionUid eq it.value } }
 
   personalBest?.let { query.andWhere { LapTable.personalBest eq it.value } }
   validLap?.let { query.andWhere { LapTable.valid eq it.value } }

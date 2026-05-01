@@ -23,6 +23,23 @@ Clients can subscribe to all events by connecting to the following WebSocket end
 
 **Endpoint:** `ws://[hostname]:[port]/api/1/events`
 
+> **Note:** WebSocket endpoints are not described in the OpenAPI document at `/openapi` or in
+> Swagger UI at `/swaggerUI` — OpenAPI 3.x has no first-class WebSocket support. The KDoc on
+> `SessionEventController` and this page are the canonical contract.
+
+### Forwarded events
+
+Only a subset of domain events are forwarded to WebSocket clients:
+
+| Domain event       | Frame payload      | Forwarded? |
+| ------------------ | ------------------ | ---------- |
+| `SessionCreated`   | `SessionResource`  | Yes        |
+| `LapCreated`       | `LapResource`      | Yes        |
+| `SessionUpdated`   | —                  | No         |
+| `SessionFinished`  | —                  | No         |
+
+If a new event needs to be broadcast, add a branch to the `when` in `SessionEventController`.
+
 ### Example Implementation (JavaScript)
 
 ```javascript
@@ -64,7 +81,9 @@ socket.onclose = () => {
 
 ## Event Data Structure
 
-The data sent over the WebSocket matches the standard REST API resources (`SessionResource` and `LapResource`).
+The data sent over the WebSocket matches the standard REST API resources (`SessionResource` and
+`LapResource`). There is **no envelope and no explicit type discriminator** — clients distinguish
+messages by the resource shape (e.g. presence of `lapTime` vs `simulator`).
 
 ### Lap Resource Example
 

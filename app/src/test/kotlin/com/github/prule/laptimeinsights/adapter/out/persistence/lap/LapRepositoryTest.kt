@@ -74,6 +74,42 @@ class LapRepositoryTest : RepositoryTest(listOf(LapTable)) {
   }
 
   @Test
+  fun `should search for valid laps`() {
+    val lap1 = createTestLap(valid = ValidLap(true))
+    val lap2 = createTestLap(valid = ValidLap(false))
+
+    transaction {
+      repository.create(lap1)
+      repository.create(lap2)
+
+      val criteria = LapSearchCriteria(validLap = ValidLap(true))
+      val result = repository.search(criteria, PageRequest(1), Sort.noSort())
+
+      assertThat(result.items).hasSize(1)
+      assertThat(result.items[0].valid).isTrue()
+    }
+  }
+
+  @Test
+  fun `should search for laps by session uid`() {
+    val sessionUid1 = Uid()
+    val sessionUid2 = Uid()
+    val lap1 = createTestLap(sessionUid = sessionUid1)
+    val lap2 = createTestLap(sessionUid = sessionUid2)
+
+    transaction {
+      repository.create(lap1)
+      repository.create(lap2)
+
+      val criteria = LapSearchCriteria(sessionUid = sessionUid1)
+      val result = repository.search(criteria, PageRequest(1), Sort.noSort())
+
+      assertThat(result.items).hasSize(1)
+      assertThat(result.items[0].sessionUid).isEqualTo(sessionUid1.value)
+    }
+  }
+
+  @Test
   fun `should update existing lap`() {
     val lap = createTestLap(valid = ValidLap(true))
 
@@ -91,6 +127,7 @@ class LapRepositoryTest : RepositoryTest(listOf(LapTable)) {
 
   private fun createTestLap(
     sessionId: SessionId = SessionId(1L),
+    sessionUid: Uid = Uid(),
     personalBest: PersonalBest = PersonalBest(false),
     valid: ValidLap = ValidLap(true),
   ) =
@@ -104,6 +141,6 @@ class LapRepositoryTest : RepositoryTest(listOf(LapTable)) {
       valid = valid,
       personalBest = personalBest,
       sessionId = sessionId,
-      sessionUId = Uid(),
+      sessionUId = sessionUid,
     )
 }

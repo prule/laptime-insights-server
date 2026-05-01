@@ -39,3 +39,7 @@ each route in its inbound adapter (e.g. `SearchSessionController`) using the exp
 `describe { }` DSL from `io.ktor.server.routing.openapi`. Whenever a route is added or its
 parameters change, update the matching `describe { }` block so the OpenAPI spec stays in sync with
 the code.
+
+The real-time WebSocket endpoint at `ws://<host>:<port>/api/1/events` is **not** part of the
+OpenAPI document (OpenAPI 3.x has no first-class WebSocket support). Its protocol is documented in
+[Real-time Updates](./docs/real-time-updates.md) and in the KDoc on `SessionEventController`.
