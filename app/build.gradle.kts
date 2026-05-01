@@ -36,7 +36,7 @@ dependencies {
   implementation(libs.bundles.exposed)
   implementation(libs.h2)
   implementation(libs.logback.classic)
-  implementation("com.zaxxer:HikariCP:3.4.5")
+  implementation("com.zaxxer:HikariCP:7.0.2")
 
   implementation(project(":utils"))
 
