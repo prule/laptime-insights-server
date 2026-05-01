@@ -1,26 +1,26 @@
 package com.github.prule.laptimeinsights
 
-import com.github.prule.laptimeinsights.adapter.`in`.web.lap.CreateLapController
 import com.github.prule.laptimeinsights.adapter.`in`.web.lap.SearchLapController
-import com.github.prule.laptimeinsights.adapter.`in`.web.session.CreateSessionController
 import com.github.prule.laptimeinsights.adapter.`in`.web.session.FindSessionController
-import com.github.prule.laptimeinsights.adapter.`in`.web.session.FinishSessionController
 import com.github.prule.laptimeinsights.adapter.`in`.web.session.SearchOptionsController
 import com.github.prule.laptimeinsights.adapter.`in`.web.session.SearchSessionController
 import com.github.prule.laptimeinsights.adapter.`in`.web.session.SessionEventController
-import com.github.prule.laptimeinsights.adapter.`in`.web.session.StartSessionController
 import com.github.prule.laptimeinsights.adapter.out.persistence.JsonFileConfigurationRepository
 import io.ktor.http.ContentType
+import io.ktor.http.HttpStatusCode
 import io.ktor.openapi.OpenApiInfo
 import io.ktor.serialization.kotlinx.json.json
 import io.ktor.server.application.Application
 import io.ktor.server.application.install
 import io.ktor.server.engine.embeddedServer
 import io.ktor.server.netty.Netty
+import io.ktor.server.plugins.NotFoundException
 import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.server.plugins.openapi.openAPI
+import io.ktor.server.plugins.statuspages.StatusPages
 import io.ktor.server.plugins.swagger.swaggerUI
 import io.ktor.server.resources.Resources
+import io.ktor.server.response.respond
 import io.ktor.server.routing.openapi.OpenApiDocSource
 import io.ktor.server.routing.routing
 import io.ktor.server.routing.routingRoot
@@ -45,8 +45,12 @@ fun Application.module(
   jdbcUrl: String = EnvironmentVariables.jdbcUrl(),
 ) {
   install(Resources)
-  //    install(DefaultHeaders)
-  //    install(CallLogging)
+  install(StatusPages) {
+    exception<IllegalStateException> { call, cause ->
+      call.respond(HttpStatusCode.BadRequest, mapOf("error" to cause.message))
+    }
+    exception<NotFoundException> { call, _ -> call.respond(HttpStatusCode.NotFound) }
+  }
 
   install(ContentNegotiation) { json(Json { encodeDefaults = true }) }
 
@@ -66,12 +70,22 @@ fun Application.module(
 
   routing {
     swaggerUI("/swaggerUI") {
-      info = OpenApiInfo("My API", "1.0")
+      info =
+        OpenApiInfo(
+          title = "Laptime Insights API",
+          version = "1.0",
+          description = "API for tracking and analyzing racing simulator lap times.",
+        )
       source = OpenApiDocSource.Routing(ContentType.Application.Json) { routingRoot.descendants() }
     }
 
     openAPI(path = "openapi") {
-      info = OpenApiInfo("My API", "1.0")
+      info =
+        OpenApiInfo(
+          title = "Laptime Insights API",
+          version = "1.0",
+          description = "API for tracking and analyzing racing simulator lap times.",
+        )
       source = OpenApiDocSource.Routing { routingRoot.descendants() }
     }
   }
@@ -83,14 +97,10 @@ fun Application.module(
 
 private fun Application.initializeSessionControllers(appModule: AppModule) {
   FindSessionController(this, appModule.session.findSessionUseCase)
-  StartSessionController(this, appModule.session.startSessionUseCase)
-  CreateSessionController(this, appModule.session.createSessionUseCase)
   SearchSessionController(this, appModule.session.searchSessionUseCase)
   SearchOptionsController(this, appModule.session.searchSessionOptionsUseCase)
-  FinishSessionController(this, appModule.session.finishSessionUseCase)
 }
 
 private fun Application.initializeLapControllers(appModule: AppModule) {
-  CreateLapController(this, appModule.lap.createLapUseCase)
   SearchLapController(this, appModule.lap.searchLapUseCase)
 }

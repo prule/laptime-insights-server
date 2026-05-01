@@ -12,9 +12,5 @@ data class SessionRoutes(val dummy: String? = null) {
 
   @Serializable
   @Resource("/{uid}")
-  data class SessionId(val parent: SessionRoutes = SessionRoutes(), val uid: String) {
-    @Serializable @Resource("/start") data class Start(val parent: SessionId)
-
-    @Serializable @Resource("/finish") data class Finish(val parent: SessionId)
-  }
+  data class SessionId(val parent: SessionRoutes = SessionRoutes(), val uid: String)
 }

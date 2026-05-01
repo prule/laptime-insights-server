@@ -42,14 +42,6 @@ data class SessionResource(
 class SessionLinkFactory(private val application: Application) : LinkFactory<Session> {
   override fun build(resource: Session): Map<String, String> {
     val session = SessionRoutes.SessionId(uid = resource.uid.value)
-    return listOfNotNull(
-        "self" to application.href(session),
-        if (resource.canStart()) "start" to application.href(SessionRoutes.SessionId.Start(session))
-        else null,
-        if (resource.canFinish())
-          "finish" to application.href(SessionRoutes.SessionId.Finish(session))
-        else null,
-      )
-      .toMap()
+    return listOfNotNull("self" to application.href(session)).toMap()
   }
 }
