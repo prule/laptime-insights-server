@@ -2,6 +2,7 @@ package com.github.prule.laptimeinsights.adapter.out.persistence.session
 
 import com.github.prule.laptimeinsights.application.domain.model.Car
 import com.github.prule.laptimeinsights.application.domain.model.Session
+import com.github.prule.laptimeinsights.application.domain.model.SessionOptions
 import com.github.prule.laptimeinsights.application.domain.model.SessionSearchCriteria
 import com.github.prule.laptimeinsights.application.domain.model.Simulator
 import com.github.prule.laptimeinsights.application.domain.model.Track
@@ -14,7 +15,6 @@ import com.github.prule.laptimeinsights.tracker.utils.data.SearchRepository
 import com.github.prule.laptimeinsights.tracker.utils.data.Sort
 import com.github.prule.laptimeinsights.tracker.utils.data.exposed.firstOrNull
 import com.github.prule.laptimeinsights.tracker.utils.data.exposed.paginate
-import kotlin.time.Instant
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.greaterEq
 import org.jetbrains.exposed.v1.core.lessEq
@@ -90,14 +90,6 @@ class SessionRepository(private val mapper: SessionMapper) :
     )
   }
 }
-
-data class SessionOptions(
-  val cars: List<Car>,
-  val tracks: List<Track>,
-  val simulators: List<Simulator>,
-  val from: Instant?,
-  val to: Instant?,
-)
 
 fun SessionSearchCriteria.toQuery(): Query {
   val query = SessionTable.selectAll()

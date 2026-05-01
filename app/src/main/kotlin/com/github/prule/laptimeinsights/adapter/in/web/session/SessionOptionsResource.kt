@@ -1,8 +1,8 @@
 package com.github.prule.laptimeinsights.adapter.`in`.web.session
 
 import com.github.prule.laptimeinsights.adapter.`in`.web.LinkFactory
-import com.github.prule.laptimeinsights.adapter.out.persistence.session.SessionOptions
 import com.github.prule.laptimeinsights.application.domain.model.Car
+import com.github.prule.laptimeinsights.application.domain.model.SessionOptions
 import com.github.prule.laptimeinsights.application.domain.model.Simulator
 import com.github.prule.laptimeinsights.application.domain.model.Track
 import io.ktor.server.application.Application

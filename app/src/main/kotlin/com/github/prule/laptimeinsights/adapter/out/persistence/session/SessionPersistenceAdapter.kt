@@ -1,6 +1,7 @@
 package com.github.prule.laptimeinsights.adapter.out.persistence.session
 
 import com.github.prule.laptimeinsights.application.domain.model.Session
+import com.github.prule.laptimeinsights.application.domain.model.SessionOptions
 import com.github.prule.laptimeinsights.application.domain.model.SessionSearchCriteria
 import com.github.prule.laptimeinsights.application.port.out.session.CreateSessionPort
 import com.github.prule.laptimeinsights.application.port.out.session.SearchSessionPort
