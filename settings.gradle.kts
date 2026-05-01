@@ -5,7 +5,7 @@
 // https://docs.gradle.org/current/userguide/settings_file_basics.html
 
 dependencyResolutionManagement {
-  versionCatalogs { create("ktorLibs") { from("io.ktor:ktor-version-catalog:3.4.1") } }
+  versionCatalogs { create("ktorLibs") { from("io.ktor:ktor-version-catalog:3.4.3") } }
 
   // Use Maven Central as the default repository (where Gradle will download dependencies) in all
   // subprojects.
