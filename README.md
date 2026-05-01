@@ -26,3 +26,16 @@ And much more hopefully!
 
 - [Clean Architecture](./docs/clean-architecture.md) - Details on the project structure and conventions.
 - [Real-time Updates](./docs/real-time-updates.md) - How real-time events and WebSockets are implemented.
+
+### REST API
+
+The REST API is self-documenting via Ktor's OpenAPI plugin. When the server is running locally:
+
+- **OpenAPI document** — `http://localhost:<port>/openapi`
+- **Swagger UI** — `http://localhost:<port>/swaggerUI`
+
+Operation-level documentation (summary, description, query parameters, responses) is attached to
+each route in its inbound adapter (e.g. `SearchSessionController`) using the experimental
+`describe { }` DSL from `io.ktor.server.routing.openapi`. Whenever a route is added or its
+parameters change, update the matching `describe { }` block so the OpenAPI spec stays in sync with
+the code.
