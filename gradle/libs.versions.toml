@@ -13,7 +13,7 @@ ktor = "3.4.3"
 logback = "1.5.32"
 flyway = "12.5.0"
 junit = "5.11.4"
-assertj = "3.27.3"
+assertj = "3.27.7"
 
 [libraries]
 kotlinGradlePlugin = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }
