@@ -11,7 +11,7 @@ exposed = "1.1.1"
 h2 = "2.4.240"
 ktor = "3.4.1"
 logback = "1.5.32"
-flyway = "12.1.1"
+flyway = "12.5.0"
 junit = "5.11.4"
 assertj = "3.27.3"
 
