@@ -14,8 +14,6 @@ import com.github.prule.laptimeinsights.application.port.out.EventPort
 import com.github.prule.laptimeinsights.application.port.out.session.SearchSessionPort
 import com.github.prule.laptimeinsights.application.port.out.session.UpdateSessionPort
 import io.ktor.server.plugins.NotFoundException
-import io.mockk.coEvery
-import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -52,14 +50,14 @@ class FinishSessionServiceTest {
 
     every { searchSessionPort.searchForOne(any<SessionSearchCriteria>()) } returns existingSession
     every { updateSessionPort.update(any()) } returnsArgument 0
-    coEvery { eventPort.emit(any()) } returns Unit
+    every { eventPort.emit(any()) } returns Unit
 
     val result = service.finishSession(command)
 
     assertThat(result.isFinished()).isTrue()
     assertThat(result.finishedAt()).isEqualTo(finishTime)
     verify { updateSessionPort.update(match { it.finishedAt() == finishTime }) }
-    coVerify { eventPort.emit(match { it is SessionFinished && it.session.uid == uid }) }
+    verify { eventPort.emit(match { it is SessionFinished && it.session.uid == uid }) }
   }
 
   @Test

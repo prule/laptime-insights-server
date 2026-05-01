@@ -9,7 +9,6 @@ import com.github.prule.laptimeinsights.application.port.out.EventPort
 import com.github.prule.laptimeinsights.application.port.out.session.SearchSessionPort
 import com.github.prule.laptimeinsights.application.port.out.session.UpdateSessionPort
 import io.ktor.server.plugins.NotFoundException
-import kotlinx.coroutines.runBlocking
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 
 class FinishSessionService(
@@ -17,13 +16,15 @@ class FinishSessionService(
   private val searchSessionPort: SearchSessionPort,
   private val eventPort: EventPort,
 ) : FinishSessionUseCase {
-  override fun finishSession(command: FinishSessionCommand): Session = transaction {
-    val session =
-      searchSessionPort.searchForOne(SessionSearchCriteria(uid = command.uid))
-        ?: throw NotFoundException()
-    session.finish(command.finishedAt)
-    val finishedSession = updateSessionPort.update(session)
-    runBlocking { eventPort.emit(SessionFinished(finishedSession)) }
-    finishedSession
+  override fun finishSession(command: FinishSessionCommand): Session {
+    val finishedSession = transaction {
+      val session =
+        searchSessionPort.searchForOne(SessionSearchCriteria(uid = command.uid))
+          ?: throw NotFoundException()
+      session.finish(command.finishedAt)
+      updateSessionPort.update(session)
+    }
+    eventPort.emit(SessionFinished(finishedSession))
+    return finishedSession
   }
 }
