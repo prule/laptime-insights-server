@@ -27,6 +27,7 @@ dependencies {
   implementation(ktorLibs.server.resources)
   implementation(ktorLibs.server.statusPages)
   implementation(ktorLibs.server.compression)
+  implementation(ktorLibs.server.cors)
   implementation(ktorLibs.server.dataConversion)
   implementation(ktorLibs.server.openapi)
   implementation(ktorLibs.server.swagger)

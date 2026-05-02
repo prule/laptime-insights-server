@@ -7,6 +7,7 @@ import com.github.prule.laptimeinsights.adapter.`in`.web.session.SearchOptionsCo
 import com.github.prule.laptimeinsights.adapter.`in`.web.session.SearchSessionController
 import com.github.prule.laptimeinsights.adapter.`in`.web.session.SessionEventController
 import com.github.prule.laptimeinsights.adapter.out.persistence.JsonFileConfigurationRepository
+import com.github.prule.laptimeinsights.adapter.out.persistence.seed.DatabaseSeeder
 import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode
 import io.ktor.openapi.OpenApiInfo
@@ -18,6 +19,7 @@ import io.ktor.server.netty.Netty
 import com.github.prule.laptimeinsights.tracker.utils.NotFoundException as DomainNotFoundException
 import io.ktor.server.plugins.NotFoundException
 import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.server.plugins.cors.routing.CORS
 import io.ktor.server.plugins.openapi.openAPI
 import io.ktor.server.plugins.statuspages.StatusPages
 import io.ktor.server.plugins.swagger.swaggerUI
@@ -47,6 +49,18 @@ fun Application.module(
   jdbcUrl: String = EnvironmentVariables.jdbcUrl(),
 ) {
   install(Resources)
+  install(CORS) {
+    // Dev: allow any origin so the Dashboard.html prototype can be served from python http.server,
+    // npx serve, vite, etc. on whatever port. Tighten for production.
+    anyHost()
+    allowHeader("Content-Type")
+    allowHeader("Authorization")
+    allowMethod(io.ktor.http.HttpMethod.Get)
+    allowMethod(io.ktor.http.HttpMethod.Post)
+    allowMethod(io.ktor.http.HttpMethod.Put)
+    allowMethod(io.ktor.http.HttpMethod.Delete)
+    allowMethod(io.ktor.http.HttpMethod.Options)
+  }
   install(StatusPages) {
     exception<IllegalStateException> { call, cause ->
       call.respond(HttpStatusCode.BadRequest, mapOf("error" to cause.message))
@@ -68,6 +82,15 @@ fun Application.module(
   }
 
   DatabaseFactory.init(jdbcUrl)
+
+  if (EnvironmentVariables.shouldSeedDatabase()) {
+    DatabaseSeeder(
+        createSessionPort = appModule.session.sessionPort,
+        updateSessionPort = appModule.session.sessionPort,
+        createLapPort = appModule.lap.lapPort,
+      )
+      .seed()
+  }
 
   initializeSessionControllers(appModule)
   initializeLapControllers(appModule)

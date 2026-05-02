@@ -13,10 +13,19 @@ fun RoutingRequest.toPageRequest(): PageRequest {
 }
 
 fun RoutingRequest.toSort(): Sort {
-  val fields = queryParameters["sort"]?.split(",")?.map { it.split(":") }
-  return if (fields != null) {
-    Sort(fields.map { SortBy(it[0], Order.valueOf(it[1])) })
-  } else {
-    Sort.noSort()
-  }
+  // `?sort=field:DIR` (single) or `?sort=field:DIR,field:DIR` (multi). Direction is
+  // case-insensitive so clients can send `desc` or `DESC`.
+  val raw = queryParameters["sort"] ?: return Sort.noSort()
+  val parts =
+    raw
+      .split(",")
+      .map { it.trim() }
+      .filter { it.isNotEmpty() }
+      .map {
+        val (field, direction) = it.split(":", limit = 2).let { p ->
+          if (p.size == 2) p[0].trim() to p[1].trim() else p[0].trim() to "ASC"
+        }
+        SortBy(field, Order.valueOf(direction.uppercase()))
+      }
+  return if (parts.isEmpty()) Sort.noSort() else Sort(parts)
 }

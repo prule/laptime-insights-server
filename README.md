@@ -27,6 +27,13 @@ And much more hopefully!
 - [Clean Architecture](./docs/clean-architecture.md) - Details on the project structure and conventions.
 - [Real-time Updates](./docs/real-time-updates.md) - How real-time events and WebSockets are implemented.
 
+### Environment variables
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `JDBC_URL` | yes | JDBC connection string for the H2 database (e.g. `jdbc:h2:./data/laptime;DB_CLOSE_DELAY=-1`). |
+| `DB_SEED` | no | Set to `true`, `1`, or `yes` to populate the database with sample sessions and laps on startup. The seeder is idempotent — it skips when data already exists. Intended for local development and demos only. |
+
 ### REST API
 
 The REST API is self-documenting via Ktor's OpenAPI plugin. When the server is running locally:

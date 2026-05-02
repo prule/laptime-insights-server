@@ -18,9 +18,8 @@ fun <T> Query.paginate(
 
   val order =
     sort.fields
-      .map {
-        val col = sortableFields.mapping[it.field]!!
-        col to SortOrder.valueOf(it.order.name)
+      .mapNotNull {
+        sortableFields.mapping[it.field]?.let { col -> col to SortOrder.valueOf(it.order.name) }
       }
       .toTypedArray()
 
