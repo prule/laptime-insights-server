@@ -1,4 +1,4 @@
-# laptimeinsights.com
+# laptimeinsights.com - An Assetto Corsa Competizione dashboard
 
 https://laptimeinsights.com
 

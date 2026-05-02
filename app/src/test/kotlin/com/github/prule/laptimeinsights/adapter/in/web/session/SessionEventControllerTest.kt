@@ -17,6 +17,7 @@ import io.ktor.server.testing.testApplication
 import io.ktor.websocket.Frame
 import io.ktor.websocket.readText
 import kotlin.time.Duration.Companion.seconds
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withTimeout
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
@@ -48,6 +49,11 @@ class SessionEventControllerTest {
           car = Car("Ferrari"),
           sessionType = SessionType("Race"),
         )
+
+      // Wait for the WebSocket handler's `eventPort.events.collect` to actually subscribe before
+      // emitting. Without this guard the test races the (now non-suspending) `tryEmit` against
+      // the server-side coroutine that starts the collection.
+      withTimeout(2.seconds) { appModule.eventPort.subscriptionCount().first { it > 0 } }
 
       // Emit the event via the SAME appModule being used by the application
       appModule.eventPort.emit(SessionCreated(session))

@@ -4,6 +4,7 @@ import com.github.prule.laptimeinsights.application.domain.model.DomainEvent
 import com.github.prule.laptimeinsights.application.port.out.EventPort
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 
 /**
@@ -26,6 +27,10 @@ class InMemoryEventAdapter : EventPort {
       onBufferOverflow = BufferOverflow.SUSPEND,
     )
   override val events = _events.asSharedFlow()
+
+  fun subscriptionCount(): StateFlow<Int> {
+    return _events.subscriptionCount
+  }
 
   override fun emit(event: DomainEvent) {
     logger.debug("Event emitted : {}", event)
