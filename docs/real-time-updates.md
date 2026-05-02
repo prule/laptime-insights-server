@@ -7,13 +7,15 @@ Event system. This allows the web application to automatically update without ma
 
 The real-time system follows Clean Architecture principles:
 
-1. **Domain Events**: Events like `SessionCreated`, `SessionUpdated`, `SessionFinished`, and `LapCreated` are defined in
-   the domain layer (`com.github.prule.laptimeinsights.application.domain.model.DomainEvent`).
+1. **Domain Events**: Events like `SessionCreated`, `SessionStarted`, `SessionUpdated`, `SessionFinished`, and
+   `LapCreated` are defined in the domain layer
+   (`com.github.prule.laptimeinsights.application.domain.model.DomainEvent`).
 2. **Event Port**: An `EventPort` interface in the application layer defines how events are emitted and observed.
 3. **In-Memory Event Adapter**: An implementation of `EventPort` using Kotlin's `SharedFlow` to broadcast events across
    the application.
-4. **Service Integration**: Domain services (`CreateSessionService`, `UpdateSessionService`, `FinishSessionService`,
-   `CreateLapService`) emit events to the `EventPort` after successfully persisting data to the database.
+4. **Service Integration**: Domain services (`CreateSessionService`, `StartSessionService`, `UpdateSessionService`,
+   `FinishSessionService`, `CreateLapService`) emit events to the `EventPort` after successfully persisting data to
+   the database.
 5. **WebSocket Controller**: The `SessionEventController` in the web adapter layer exposes a WebSocket endpoint that
    collects events from the `EventPort`, wraps them in a typed `WebSocketMessage` envelope, and pushes them to
    connected clients.
@@ -35,9 +37,15 @@ The following domain events are forwarded to WebSocket clients:
 | Domain event       | Envelope `type`   | `data` payload     |
 | ------------------ | ----------------- | ------------------ |
 | `SessionCreated`   | `SessionCreated`  | `SessionResource`  |
+| `SessionStarted`   | `SessionStarted`  | `SessionResource`  |
 | `SessionUpdated`   | `SessionUpdated`  | `SessionResource`  |
 | `SessionFinished`  | `SessionFinished` | `SessionResource`  |
 | `LapCreated`       | `LapCreated`      | `LapResource`      |
+
+`SessionCreated` is emitted immediately after persistence, when `startedAt` is still `null`.
+`SessionStarted` follows once telemetry confirms the session has begun and `startedAt` has been
+populated. Clients should treat the latter as the signal that the session is "live", not the
+former.
 
 To broadcast a new domain event, add a subclass to `WebSocketMessage` (in
 `adapter/in/web/session/`) and a matching branch to the `when` in `SessionEventController`.
@@ -56,7 +64,7 @@ Every frame is a single JSON object using a `type` / `data` envelope:
 The `type` field is the stable wire identifier — clients dispatch on it. The `data` field
 contains the corresponding REST resource verbatim, including its `_links` HATEOAS field.
 
-### `SessionCreated` / `SessionUpdated` / `SessionFinished`
+### `SessionCreated` / `SessionStarted` / `SessionUpdated` / `SessionFinished`
 
 ```json
 {
@@ -110,6 +118,7 @@ socket.onmessage = (event) => {
 
     switch (message.type) {
         case 'SessionCreated':
+        case 'SessionStarted':
         case 'SessionUpdated':
         case 'SessionFinished':
             handleSessionEvent(message.type, message.data);

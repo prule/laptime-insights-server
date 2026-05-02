@@ -4,11 +4,13 @@ import com.github.prule.laptimeinsights.application.domain.model.Car
 import com.github.prule.laptimeinsights.application.domain.model.Session
 import com.github.prule.laptimeinsights.application.domain.model.SessionId
 import com.github.prule.laptimeinsights.application.domain.model.SessionSearchCriteria
+import com.github.prule.laptimeinsights.application.domain.model.SessionStarted
 import com.github.prule.laptimeinsights.application.domain.model.SessionType
 import com.github.prule.laptimeinsights.application.domain.model.Simulator
 import com.github.prule.laptimeinsights.application.domain.model.Track
 import com.github.prule.laptimeinsights.application.domain.model.Uid
 import com.github.prule.laptimeinsights.application.port.`in`.session.StartSessionCommand
+import com.github.prule.laptimeinsights.application.port.out.EventPort
 import com.github.prule.laptimeinsights.application.port.out.session.SearchSessionPort
 import com.github.prule.laptimeinsights.application.port.out.session.UpdateSessionPort
 import com.github.prule.laptimeinsights.tracker.utils.NotFoundException
@@ -25,7 +27,8 @@ class StartSessionServiceTest {
 
   private val updateSessionPort = mockk<UpdateSessionPort>()
   private val searchSessionPort = mockk<SearchSessionPort>()
-  private val service = StartSessionService(updateSessionPort, searchSessionPort)
+  private val eventPort = mockk<EventPort>(relaxed = true)
+  private val service = StartSessionService(updateSessionPort, searchSessionPort, eventPort)
 
   @Test
   fun `should start session successfully`() {
@@ -46,12 +49,26 @@ class StartSessionServiceTest {
 
     every { searchSessionPort.searchForOne(any<SessionSearchCriteria>()) } returns existingSession
     every { updateSessionPort.update(any()) } returnsArgument 0
+    every { eventPort.emit(any()) } returns Unit
 
     val result = service.startSession(command)
 
     assertThat(result.isStarted()).isTrue()
     assertThat(result.startedAt()).isEqualTo(startTime)
     verify { updateSessionPort.update(match { it.startedAt() == startTime }) }
+    verify { eventPort.emit(match { it is SessionStarted && it.session.uid == uid }) }
+  }
+
+  @Test
+  fun `should not emit event if session does not exist`() {
+    val uid = Uid()
+    val command = StartSessionCommand(uid, Clock.System.now())
+
+    every { searchSessionPort.searchForOne(any<SessionSearchCriteria>()) } returns null
+
+    runCatching { service.startSession(command) }
+
+    verify(exactly = 0) { eventPort.emit(any()) }
   }
 
   @Test

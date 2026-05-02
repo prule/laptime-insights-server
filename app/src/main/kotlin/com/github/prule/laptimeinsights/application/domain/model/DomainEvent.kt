@@ -4,6 +4,8 @@ sealed interface DomainEvent
 
 data class SessionCreated(val session: Session) : DomainEvent
 
+data class SessionStarted(val session: Session) : DomainEvent
+
 data class LapCreated(val lap: Lap) : DomainEvent
 
 data class SessionUpdated(val session: Session) : DomainEvent

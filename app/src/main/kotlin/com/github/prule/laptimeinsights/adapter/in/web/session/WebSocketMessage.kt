@@ -27,6 +27,10 @@ sealed interface WebSocketMessage {
   data class SessionCreated(val data: SessionResource) : WebSocketMessage
 
   @Serializable
+  @SerialName("SessionStarted")
+  data class SessionStarted(val data: SessionResource) : WebSocketMessage
+
+  @Serializable
   @SerialName("SessionUpdated")
   data class SessionUpdated(val data: SessionResource) : WebSocketMessage
 

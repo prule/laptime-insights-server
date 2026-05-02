@@ -46,7 +46,7 @@ class AppModule {
     val mapper = SessionMapper()
     val sessionPort = SessionPersistenceAdapter(SessionRepository(mapper), mapper)
 
-    val startSessionUseCase = StartSessionService(sessionPort, sessionPort)
+    val startSessionUseCase = StartSessionService(sessionPort, sessionPort, eventPort)
 
     val findSessionUseCase = FindSessionService(sessionPort)
     val createSessionUseCase = CreateSessionService(sessionPort, eventPort)

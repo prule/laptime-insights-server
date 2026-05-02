@@ -5,6 +5,7 @@ import com.github.prule.laptimeinsights.adapter.`in`.web.lap.LapResource
 import com.github.prule.laptimeinsights.application.domain.model.LapCreated
 import com.github.prule.laptimeinsights.application.domain.model.SessionCreated
 import com.github.prule.laptimeinsights.application.domain.model.SessionFinished
+import com.github.prule.laptimeinsights.application.domain.model.SessionStarted
 import com.github.prule.laptimeinsights.application.domain.model.SessionUpdated
 import com.github.prule.laptimeinsights.application.port.out.EventPort
 import io.ktor.server.application.Application
@@ -18,6 +19,7 @@ import io.ktor.server.websocket.webSocket
  * Clients connect via WebSocket and receive a stream of JSON-encoded [WebSocketMessage] frames for
  * the following domain events as they occur:
  * - [SessionCreated] → [WebSocketMessage.SessionCreated] carrying a [SessionResource].
+ * - [SessionStarted] → [WebSocketMessage.SessionStarted] carrying a [SessionResource].
  * - [SessionUpdated] → [WebSocketMessage.SessionUpdated] carrying a [SessionResource].
  * - [SessionFinished] → [WebSocketMessage.SessionFinished] carrying a [SessionResource].
  * - [LapCreated] → [WebSocketMessage.LapCreated] carrying a [LapResource].
@@ -41,6 +43,10 @@ class SessionEventController(application: Application, eventPort: EventPort) {
             when (event) {
               is SessionCreated ->
                 WebSocketMessage.SessionCreated(
+                  SessionResource.fromDomain(event.session, sessionLinks)
+                )
+              is SessionStarted ->
+                WebSocketMessage.SessionStarted(
                   SessionResource.fromDomain(event.session, sessionLinks)
                 )
               is SessionUpdated ->
