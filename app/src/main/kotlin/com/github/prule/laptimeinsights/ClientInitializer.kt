@@ -23,6 +23,7 @@ import com.github.prule.laptimeinsights.application.port.`in`.car.FindCarCommand
 import com.github.prule.laptimeinsights.application.port.`in`.lap.CreateLapCommand
 import com.github.prule.laptimeinsights.application.port.`in`.session.CreateSessionCommand
 import com.github.prule.laptimeinsights.application.port.`in`.session.FinishSessionCommand
+import com.github.prule.laptimeinsights.application.port.`in`.session.StartSessionCommand
 import com.github.prule.laptimeinsights.application.port.`in`.session.UpdateSessionCommand
 import kotlin.reflect.KClass
 import kotlin.time.Clock
@@ -91,6 +92,10 @@ class ClientInitializer(private val appModule: AppModule) {
                       car,
                     )
                   )
+
+                appModule.session.startSessionUseCase.startSession(
+                  StartSessionCommand(session!!.uid, Clock.System.now())
+                )
                 logger.info("Session started")
               }
 
