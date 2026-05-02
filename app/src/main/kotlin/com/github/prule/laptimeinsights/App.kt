@@ -15,6 +15,7 @@ import io.ktor.server.application.Application
 import io.ktor.server.application.install
 import io.ktor.server.engine.embeddedServer
 import io.ktor.server.netty.Netty
+import com.github.prule.laptimeinsights.tracker.utils.NotFoundException as DomainNotFoundException
 import io.ktor.server.plugins.NotFoundException
 import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.server.plugins.openapi.openAPI
@@ -50,7 +51,10 @@ fun Application.module(
     exception<IllegalStateException> { call, cause ->
       call.respond(HttpStatusCode.BadRequest, mapOf("error" to cause.message))
     }
+    // Ktor itself raises this for things like missing Resources routes; keep it mapped.
     exception<NotFoundException> { call, _ -> call.respond(HttpStatusCode.NotFound) }
+    // The application layer raises its own `NotFoundException` so it doesn't depend on Ktor.
+    exception<DomainNotFoundException> { call, _ -> call.respond(HttpStatusCode.NotFound) }
   }
 
   install(ContentNegotiation) { json(Json { encodeDefaults = true }) }

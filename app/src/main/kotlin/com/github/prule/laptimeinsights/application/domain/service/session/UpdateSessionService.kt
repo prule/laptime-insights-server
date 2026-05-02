@@ -8,7 +8,7 @@ import com.github.prule.laptimeinsights.application.port.`in`.session.UpdateSess
 import com.github.prule.laptimeinsights.application.port.out.EventPort
 import com.github.prule.laptimeinsights.application.port.out.session.SearchSessionPort
 import com.github.prule.laptimeinsights.application.port.out.session.UpdateSessionPort
-import io.ktor.server.plugins.NotFoundException
+import com.github.prule.laptimeinsights.tracker.utils.NotFoundException
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.slf4j.LoggerFactory
 

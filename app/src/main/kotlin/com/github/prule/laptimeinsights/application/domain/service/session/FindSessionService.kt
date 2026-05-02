@@ -5,7 +5,7 @@ import com.github.prule.laptimeinsights.application.domain.model.SessionSearchCr
 import com.github.prule.laptimeinsights.application.port.`in`.session.FindSessionCommand
 import com.github.prule.laptimeinsights.application.port.`in`.session.FindSessionUseCase
 import com.github.prule.laptimeinsights.application.port.out.session.SearchSessionPort
-import io.ktor.server.plugins.NotFoundException
+import com.github.prule.laptimeinsights.tracker.utils.NotFoundException
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 
 class FindSessionService(private val searchSessionPort: SearchSessionPort) : FindSessionUseCase {

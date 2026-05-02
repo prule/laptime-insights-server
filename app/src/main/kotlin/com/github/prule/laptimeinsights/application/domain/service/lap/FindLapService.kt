@@ -5,7 +5,7 @@ import com.github.prule.laptimeinsights.application.domain.model.LapSearchCriter
 import com.github.prule.laptimeinsights.application.port.`in`.lap.FindLapCommand
 import com.github.prule.laptimeinsights.application.port.`in`.lap.FindLapUseCase
 import com.github.prule.laptimeinsights.application.port.out.lap.SearchLapPort
-import io.ktor.server.plugins.NotFoundException
+import com.github.prule.laptimeinsights.tracker.utils.NotFoundException
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 
 class FindLapService(private val searchLapPort: SearchLapPort) : FindLapUseCase {

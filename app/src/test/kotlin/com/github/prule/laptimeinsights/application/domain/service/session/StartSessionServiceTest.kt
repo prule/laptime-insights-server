@@ -11,7 +11,7 @@ import com.github.prule.laptimeinsights.application.domain.model.Uid
 import com.github.prule.laptimeinsights.application.port.`in`.session.StartSessionCommand
 import com.github.prule.laptimeinsights.application.port.out.session.SearchSessionPort
 import com.github.prule.laptimeinsights.application.port.out.session.UpdateSessionPort
-import io.ktor.server.plugins.NotFoundException
+import com.github.prule.laptimeinsights.tracker.utils.NotFoundException
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
