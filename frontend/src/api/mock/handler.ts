@@ -88,12 +88,28 @@ export async function mockHandler(path: string): Promise<unknown> {
     const personalBest = query.get("personalBest");
     const validLap = query.get("validLap");
     const uid = query.get("uid");
+    const car = query.get("car");
+    const track = query.get("track");
+    const simulator = query.get("simulator");
     if (uid) items = items.filter((l) => l.uid === uid);
     if (sessionUid) items = items.filter((l) => l.sessionUid === sessionUid);
     if (personalBest === "true") items = items.filter((l) => l.personalBest);
     if (personalBest === "false") items = items.filter((l) => !l.personalBest);
     if (validLap === "true") items = items.filter((l) => l.valid);
     if (validLap === "false") items = items.filter((l) => !l.valid);
+    if (car || track || simulator) {
+      // Mirror the backend's SESSION join: filter laps by their owning
+      // session's car / track / simulator.
+      const sessionsByUid = new Map(SESSIONS.map((s) => [s.uid, s] as const));
+      items = items.filter((lap) => {
+        const session = sessionsByUid.get(lap.sessionUid);
+        if (!session) return false;
+        if (car && session.car !== car) return false;
+        if (track && session.track !== track) return false;
+        if (simulator && session.simulator !== simulator) return false;
+        return true;
+      });
+    }
     items = items.sort(compareLaps(query.get("sort")));
     return delay<Page<LapResource>>(paged(items, page, size));
   }

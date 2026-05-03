@@ -1,0 +1,23 @@
+meta {
+  name: Search lap by car
+  type: http
+  seq: 7
+}
+
+get {
+  url: http://localhost:8000/api/1/laps?size=10&page=1&car=Ferrari 488 GT3&validLap=true&sort=lapTime:ASC
+  body: none
+  auth: inherit
+}
+
+params:query {
+  size: 10
+  page: 1
+  car: Ferrari 488 GT3
+  validLap: true
+  sort: lapTime:ASC
+}
+
+settings {
+  encodeUrl: true
+}

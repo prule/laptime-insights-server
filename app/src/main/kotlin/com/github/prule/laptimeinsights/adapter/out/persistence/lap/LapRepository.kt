@@ -1,5 +1,6 @@
 package com.github.prule.laptimeinsights.adapter.out.persistence.lap
 
+import com.github.prule.laptimeinsights.adapter.out.persistence.session.SessionTable
 import com.github.prule.laptimeinsights.application.domain.model.Lap
 import com.github.prule.laptimeinsights.application.domain.model.LapSearchCriteria
 import com.github.prule.laptimeinsights.tracker.utils.NotFoundException
@@ -11,6 +12,7 @@ import com.github.prule.laptimeinsights.tracker.utils.data.SearchRepository
 import com.github.prule.laptimeinsights.tracker.utils.data.Sort
 import com.github.prule.laptimeinsights.tracker.utils.data.exposed.firstOrNull
 import com.github.prule.laptimeinsights.tracker.utils.data.exposed.paginate
+import org.jetbrains.exposed.v1.core.JoinType
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.jdbc.Query
 import org.jetbrains.exposed.v1.jdbc.andWhere
@@ -45,7 +47,21 @@ class LapRepository(private val mapper: LapMapper) :
 }
 
 fun LapSearchCriteria.toQuery(): Query {
-  val query = LapTable.selectAll()
+  // Only join the SESSION table when a session-scoped facet is in play. Avoids
+  // the join cost on the common path (e.g. listing laps for a known session).
+  val needsSessionJoin = car != null || track != null || simulator != null
+  val source =
+    if (needsSessionJoin) {
+      LapTable.join(
+        SessionTable,
+        JoinType.INNER,
+        onColumn = LapTable.sessionUid,
+        otherColumn = SessionTable.uid,
+      )
+    } else {
+      LapTable
+    }
+  val query = source.selectAll()
 
   id?.let { query.andWhere { LapTable.id eq it.value } }
   uid?.let { query.andWhere { LapTable.uid eq it.value } }
@@ -55,6 +71,10 @@ fun LapSearchCriteria.toQuery(): Query {
 
   personalBest?.let { query.andWhere { LapTable.personalBest eq it.value } }
   validLap?.let { query.andWhere { LapTable.valid eq it.value } }
+
+  car?.let { query.andWhere { SessionTable.car eq it.value } }
+  track?.let { query.andWhere { SessionTable.track eq it.value } }
+  simulator?.let { query.andWhere { SessionTable.simulator eq it.name } }
 
   return query
 }

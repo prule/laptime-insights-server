@@ -2,8 +2,11 @@ package com.github.prule.laptimeinsights.adapter.`in`.web.lap
 
 import com.github.prule.laptimeinsights.adapter.`in`.web.toPageRequest
 import com.github.prule.laptimeinsights.adapter.`in`.web.toSort
+import com.github.prule.laptimeinsights.application.domain.model.Car
 import com.github.prule.laptimeinsights.application.domain.model.LapSearchCriteria
 import com.github.prule.laptimeinsights.application.domain.model.PersonalBest
+import com.github.prule.laptimeinsights.application.domain.model.Simulator
+import com.github.prule.laptimeinsights.application.domain.model.Track
 import com.github.prule.laptimeinsights.application.domain.model.Uid
 import com.github.prule.laptimeinsights.application.domain.model.ValidLap
 import com.github.prule.laptimeinsights.application.port.`in`.lap.SearchLapUseCase
@@ -89,6 +92,24 @@ class SearchLapController(application: Application, searchLapUseCase: SearchLapU
                   "as a strict boolean are silently ignored."
               required = false
             }
+            query("car") {
+              description =
+                "Exact car name of the owning session, e.g. `Ferrari 488 GT3`. Triggers a " +
+                  "join to SESSION at the persistence layer."
+              required = false
+            }
+            query("track") {
+              description =
+                "Exact track name of the owning session, e.g. `Snetterton`. Triggers a " +
+                  "join to SESSION at the persistence layer."
+              required = false
+            }
+            query("simulator") {
+              description =
+                "Simulator of the owning session. Allowed values: `ACC`, `F1`. Triggers a " +
+                  "join to SESSION at the persistence layer."
+              required = false
+            }
             query("page") {
               description = "1-based page number to return. Defaults to `1` when omitted."
               required = false
@@ -124,5 +145,8 @@ fun LapSearchCriteria.Companion.fromParameters(parameters: Parameters): LapSearc
     sessionUid = parameters["sessionUid"]?.let { Uid(it) },
     personalBest = parameters["personalBest"]?.toBooleanStrictOrNull()?.let { PersonalBest(it) },
     validLap = parameters["validLap"]?.toBooleanStrictOrNull()?.let { ValidLap(it) },
+    car = parameters["car"]?.let { Car(it) },
+    track = parameters["track"]?.let { Track(it) },
+    simulator = parameters["simulator"]?.let { Simulator.valueOf(it) },
   )
 }

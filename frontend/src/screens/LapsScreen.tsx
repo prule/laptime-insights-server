@@ -19,16 +19,10 @@ interface SessionFacets {
 /**
  * Lap-search screen.
  *
- * The backend's lap endpoint filters by `sessionUid` only — it has no concept
- * of `car`/`track`/`simulator`. We bridge that gap on the client:
- *
- *   1. fetch sessions matching the facet filters,
- *   2. fetch laps with paging + lap-level filters (valid / PB),
- *   3. only show laps whose `sessionUid` is in the filtered session set,
- *   4. enrich each row with the session's car/track for display.
- *
- * The `useSessions` query is cached separately from `useLaps`, so the join is
- * essentially free after the first fetch.
+ * `car` / `track` / `simulator` are sent to the backend as query params; the
+ * Ktor controller joins SESSION at the persistence layer so pagination is
+ * accurate. The local sessions query is only used to enrich rows with
+ * track/car/sim labels for display.
  */
 export function LapsScreen() {
   const navigate = useNavigate();
@@ -38,9 +32,8 @@ export function LapsScreen() {
   const [facets, setFacets] = useState<SessionFacets>({});
 
   const optionsQuery = useSessionOptions();
-  // Pull every session matching the facets so we can both populate the join
-  // map and know whether a lap belongs to a filtered session.
-  const sessionsQuery = useSessions({ ...facets, size: 500, sort: "startedAt:DESC" });
+  // Used solely to look up car/track/simulator strings per visible lap row.
+  const sessionsQuery = useSessions({ size: 500, sort: "startedAt:DESC" });
 
   const lapsQuery = useLaps({
     page,
@@ -48,6 +41,9 @@ export function LapsScreen() {
     sort: "lapTime:ASC",
     validLap: validOnly ? true : undefined,
     personalBest: pbOnly ? true : undefined,
+    car: facets.car,
+    track: facets.track,
+    simulator: facets.simulator,
   });
 
   const sessionsByUid = useMemo(() => {
@@ -56,30 +52,18 @@ export function LapsScreen() {
     return map;
   }, [sessionsQuery.data]);
 
-  const facetsActive = !!(facets.car || facets.track || facets.simulator);
-
-  const visibleLaps = useMemo(() => {
-    const all = lapsQuery.data?.items ?? [];
-    if (!facetsActive) return all;
-    return all.filter((lap) => sessionsByUid.has(lap.sessionUid));
-  }, [lapsQuery.data, sessionsByUid, facetsActive]);
-
   const setFacet = (key: keyof SessionFacets, value: string | undefined) => {
     setFacets((prev) => ({ ...prev, [key]: value }));
     setPage(1);
   };
 
+  const facetsActive = !!(facets.car || facets.track || facets.simulator);
+  const items = lapsQuery.data?.items ?? [];
+
   return (
     <div className="h-full overflow-y-auto px-8 py-7">
       <Card className="mb-4">
-        <SectionHeader
-          title="Filter"
-          sub={
-            facetsActive
-              ? "Car/track/simulator filter sessions client-side; lap-level toggles hit the API"
-              : "Lap-level filters hit /api/1/laps directly"
-          }
-        />
+        <SectionHeader title="Filter" sub="All filters hit /api/1/laps directly — pagination reflects the filtered total" />
         <div className="flex flex-wrap items-end gap-3">
           <FilterSelect
             label="Track"
@@ -99,8 +83,8 @@ export function LapsScreen() {
             options={optionsQuery.data?.simulators ?? []}
             onChange={(v) => setFacet("simulator", v)}
           />
-          <Toggle label="Valid only" value={validOnly} onChange={setValidOnly} />
-          <Toggle label="Personal bests" value={pbOnly} onChange={setPbOnly} />
+          <Toggle label="Valid only" value={validOnly} onChange={(v) => { setValidOnly(v); setPage(1); }} />
+          <Toggle label="Personal bests" value={pbOnly} onChange={(v) => { setPbOnly(v); setPage(1); }} />
           {(facetsActive || pbOnly || !validOnly) && (
             <button
               onClick={() => {
@@ -120,25 +104,19 @@ export function LapsScreen() {
       <Card>
         <SectionHeader
           title="Fastest laps"
-          sub={
-            lapsQuery.data
-              ? facetsActive
-                ? `${visibleLaps.length} on this page · ${lapsQuery.data.total} total before facet filter`
-                : `${lapsQuery.data.total} total · page ${page}`
-              : undefined
-          }
+          sub={lapsQuery.data ? `${lapsQuery.data.total} match · page ${page}` : undefined}
         />
-        {(lapsQuery.isLoading || sessionsQuery.isLoading) && <LoadingState />}
+        {lapsQuery.isLoading && <LoadingState />}
         {lapsQuery.isError && (
           <ErrorState error={lapsQuery.error} onRetry={() => lapsQuery.refetch()} />
         )}
-        {lapsQuery.data && visibleLaps.length === 0 && (
+        {lapsQuery.data && items.length === 0 && (
           <EmptyState
             title="No laps match"
             description={facetsActive ? "Try clearing the car/track/simulator filters." : "Loosen the toggles or seed the database."}
           />
         )}
-        {visibleLaps.length > 0 && (
+        {items.length > 0 && (
           <>
             <div className="overflow-hidden rounded border border-border">
               <div className="grid grid-cols-[50px_120px_1fr_1fr_90px_110px_70px] items-center gap-3 border-b border-border bg-surface-active px-3 py-2 font-mono text-[10px] uppercase tracking-[0.08em] text-text-muted">
@@ -150,7 +128,7 @@ export function LapsScreen() {
                 <div>Recorded</div>
                 <div>Status</div>
               </div>
-              {visibleLaps.map((lap, i) => {
+              {items.map((lap, i) => {
                 const session = sessionsByUid.get(lap.sessionUid);
                 return (
                   <button

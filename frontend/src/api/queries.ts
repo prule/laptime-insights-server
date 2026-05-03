@@ -92,6 +92,12 @@ export function useSessionLaps(sessionUid: string | undefined, paging: PagingAnd
 export interface LapFilters {
   validLap?: boolean;
   personalBest?: boolean;
+  /** Owning-session car name. Backend joins SESSION when set. */
+  car?: string;
+  /** Owning-session track name. Backend joins SESSION when set. */
+  track?: string;
+  /** Owning-session simulator. Backend joins SESSION when set. */
+  simulator?: string;
 }
 
 export function useLaps(params: LapFilters & PagingAndSort = {}) {
@@ -104,6 +110,9 @@ export function useLaps(params: LapFilters & PagingAndSort = {}) {
         `/api/1/laps${buildQuery({
           validLap: params.validLap,
           personalBest: params.personalBest,
+          car: params.car,
+          track: params.track,
+          simulator: params.simulator,
           page: params.page ?? 1,
           size: params.size ?? 50,
           sort: params.sort ?? "lapTime:ASC",
