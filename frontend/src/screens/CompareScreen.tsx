@@ -1,8 +1,7 @@
 import { useMemo } from "react";
-import { useLapComparison, useSessionOptions } from "../api/queries";
+import { useLapComparison } from "../api/queries";
 import { Card } from "../components/ui/Card";
 import { ErrorState, LoadingState, EmptyState } from "../components/ui/States";
-import { FilterSelect } from "../components/ui/FilterSelect";
 import { GearMismatchStrip } from "../components/ui/GearMismatchStrip";
 import { LapPicker } from "../components/LapPicker";
 import { SectionHeader } from "../components/ui/SectionHeader";
@@ -17,12 +16,14 @@ const COLOR_LAP2 = "#e8212a";
 /**
  * Lap-comparison screen.
  *
- * URL state owns `track`, `lap1`, `lap2`. Reload-safe and shareable. The
- * picker constrains laps to a single track so the spline-position overlay
- * stays meaningful.
+ * URL state owns `track`, `lap1`, `lap2`. Reload-safe and shareable.
+ *
+ * Each lap slot is a `LapPicker` — a button that pops a modal with the same
+ * track/car/PB filters and pagination as the Laps screen. The optional
+ * `track` URL param pre-fills the picker's track filter so jumps from
+ * SessionDetail's "vs best" / "vs PB" buttons land on the right context.
  */
 export function CompareScreen() {
-  const optionsQuery = useSessionOptions();
   const [params, setParam, setMany] = useUrlState();
 
   const track = getString(params, "track");
@@ -42,24 +43,25 @@ export function CompareScreen() {
   return (
     <div className="h-full overflow-y-auto px-8 py-7">
       <Card className="mb-4">
-        <SectionHeader title="Pick laps to compare" sub="State is mirrored to the URL — share or bookmark the link" />
+        <SectionHeader
+          title="Pick laps to compare"
+          sub="Both pickers open a searchable list — filter by track/car, paginate, click to pick. URL stays in sync so the comparison is shareable."
+        />
         <div className="flex flex-wrap items-end gap-3">
-          <FilterSelect
-            label="Track"
-            value={track}
-            options={optionsQuery.data?.tracks ?? []}
-            onChange={(v) => setMany({ track: v, lap1: undefined, lap2: undefined })}
-          />
           <LapPicker
-            label="Lap 1 (cyan)"
-            trackFilter={track}
+            label="Lap 1"
+            accentColor={COLOR_LAP1}
+            defaultTrack={track}
             selectedUid={lap1Uid}
+            disabledLapUid={lap2Uid}
             onSelect={(v) => setParam("lap1", v)}
           />
           <LapPicker
-            label="Lap 2 (red)"
-            trackFilter={track}
+            label="Lap 2"
+            accentColor={COLOR_LAP2}
+            defaultTrack={track}
             selectedUid={lap2Uid}
+            disabledLapUid={lap1Uid}
             onSelect={(v) => setParam("lap2", v)}
           />
           {(lap1Uid || lap2Uid || track) && (
@@ -77,11 +79,13 @@ export function CompareScreen() {
         <Card>
           <EmptyState
             title="Pick two laps"
-            description="Choose a track first; lap 2 defaults to the same track to keep the spline alignment meaningful."
+            description="Use the pickers above. Tip: from a session detail page, the per-row 'vs best' or 'vs PB' buttons land here with both laps preselected."
           />
         </Card>
       ) : comparisonQuery.isLoading ? (
-        <Card><LoadingState /></Card>
+        <Card>
+          <LoadingState />
+        </Card>
       ) : comparisonQuery.isError ? (
         <Card>
           <ErrorState error={comparisonQuery.error} onRetry={() => comparisonQuery.refetch()} />
@@ -170,4 +174,3 @@ function LapHeader({
     </div>
   );
 }
-
