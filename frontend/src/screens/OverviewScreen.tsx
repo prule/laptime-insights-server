@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { useLaps, useSessions } from "../api/queries";
+import { useLaps, useSessionOptions, useSessions } from "../api/queries";
 import { type BucketPlan, useTimeRange } from "../providers/TimeRangeProvider";
 import { Card } from "../components/ui/Card";
 import { SectionHeader } from "../components/ui/SectionHeader";
@@ -8,6 +8,7 @@ import { StatCard } from "../components/ui/StatCard";
 import { BarChart } from "../components/ui/BarChart";
 import { ErrorState, LoadingState } from "../components/ui/States";
 import { SessionRow } from "../components/SessionRow";
+import { TrackPracticeChart } from "../components/ui/TrackPracticeChart";
 import { formatLapTime, formatNumber } from "../lib/format";
 
 const ONE_DAY_MS = 86_400_000;
@@ -63,6 +64,10 @@ export function OverviewScreen() {
   const from = fromIso ?? undefined;
   const sessionsQuery = useSessions({ size: 100, sort: "startedAt:DESC", from });
   const lapsQuery = useLaps({ size: 1000, sort: "lapTime:ASC", from });
+  // Full universe of tracks the user has *ever* visited — feeds the practice
+  // chart so tracks with zero laps in range still render as "haven't been here
+  // lately" placeholders. Not bound to the active range on purpose.
+  const optionsQuery = useSessionOptions();
 
   const stats = useMemo(() => {
     const sessions = sessionsQuery.data?.items ?? [];
@@ -106,6 +111,30 @@ export function OverviewScreen() {
     bucketPlan.unit === "week"
       ? `last ${bucketPlan.count} weeks`
       : `last ${bucketPlan.count} months`;
+
+  // Bubble-per-track view. Lap rows don't carry track directly, so we join
+  // through the in-range sessions: sessionUid → track. Tracks present in
+  // session-options but absent from the join surface as zero-count placeholders
+  // so the user can see what they *haven't* practiced lately. NOTE: bounded by
+  // the page-size of `lapsQuery` (1000) — for ranges with more laps than that
+  // the counts undercount; a dedicated `/laps/aggregate?groupBy=track` endpoint
+  // would be the next step.
+  const trackPractice = useMemo(() => {
+    const allTracks = optionsQuery.data?.tracks ?? [];
+    const sessions = sessionsQuery.data?.items ?? [];
+    const laps = lapsQuery.data?.items ?? [];
+    const sessionTrack = new Map<string, string | null>();
+    for (const s of sessions) sessionTrack.set(s.uid, s.track);
+
+    const counts = new Map<string, number>();
+    for (const t of allTracks) counts.set(t, 0);
+    for (const l of laps) {
+      const track = sessionTrack.get(l.sessionUid);
+      if (!track) continue;
+      counts.set(track, (counts.get(track) ?? 0) + 1);
+    }
+    return Array.from(counts, ([track, count]) => ({ track, count }));
+  }, [optionsQuery.data, sessionsQuery.data, lapsQuery.data]);
 
   if (sessionsQuery.isLoading || lapsQuery.isLoading) {
     return <div className="p-8"><LoadingState /></div>;
@@ -155,6 +184,14 @@ export function OverviewScreen() {
           <BarChart data={sessionBuckets} colorClass="accent" height={90} />
         </Card>
       </div>
+
+      <Card className="mb-6">
+        <SectionHeader
+          title="Tracks practiced"
+          sub="Bubble area ∝ laps in range · dashed = no laps yet"
+        />
+        <TrackPracticeChart items={trackPractice} />
+      </Card>
 
       <Card>
         <SectionHeader title="Recent sessions" action="View all" onAction={() => navigate("/sessions")} />
