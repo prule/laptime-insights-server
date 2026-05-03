@@ -11,6 +11,7 @@ import type {
   Page,
   SessionOptionsResource,
   SessionResource,
+  TelemetrySample,
 } from "../types";
 
 interface Profile {
@@ -117,6 +118,79 @@ export const SESSIONS: SessionResource[] = buildSessions();
 
 export const LAPS: LapResource[] = SESSIONS.flatMap((s, i) =>
   buildLapsFor(s, PROFILES[i]!, 0x200 + i),
+);
+
+const SAMPLES_PER_LAP = 150;
+
+const TRACK_CORNERS: Record<string, number> = {
+  Monza: 11,
+  "Spa-Francorchamps": 19,
+  Nurburgring: 16,
+  Silverstone: 18,
+  Snetterton: 12,
+  "Brands Hatch": 9,
+  Monaco: 19,
+  Suzuka: 18,
+};
+
+/**
+ * Generate a synthetic telemetry trace for a single lap. Mirrors the backend
+ * seeder's algorithm so that mock-mode and live-mode look broadly similar.
+ */
+function buildTelemetry(track: string, baseLapMs: number, lapTimeMs: number, lapNumber: number): TelemetrySample[] {
+  const cornerCount = TRACK_CORNERS[track] ?? 8;
+  const paceFactor = 1 + (baseLapMs - lapTimeMs) / 50_000;
+  const lapJitter = ((lapNumber * 17) % 7) * 0.4;
+  const trackSeed = baseLapMs % 31;
+
+  const speeds: number[] = [];
+  for (let i = 0; i < SAMPLES_PER_LAP; i++) {
+    const t = i / SAMPLES_PER_LAP;
+    const cornerWave = Math.sin(2 * Math.PI * cornerCount * t + trackSeed * 0.1);
+    const secondaryWave = Math.cos(4 * Math.PI * t + lapJitter);
+    const baseline = 180 + 60 * cornerWave + 25 * secondaryWave;
+    speeds.push(Math.max(60, baseline * paceFactor));
+  }
+
+  return speeds.map((speed, i): TelemetrySample => {
+    const next = speeds[Math.min(SAMPLES_PER_LAP - 1, i + 1)]!;
+    const gradient = next - speed;
+    let throttle: number;
+    if (gradient > 1) throttle = Math.min(1, 0.7 + gradient / 20);
+    else if (gradient > -0.5) throttle = 0.6;
+    else throttle = Math.max(0, 0.3 + gradient / 30);
+    const brake = gradient < -2 ? Math.min(1, -gradient / 8) : 0;
+    let gear = 6;
+    if (speed < 90) gear = 2;
+    else if (speed < 130) gear = 3;
+    else if (speed < 170) gear = 4;
+    else if (speed < 210) gear = 5;
+    return {
+      splinePosition: i / SAMPLES_PER_LAP,
+      speedKph: speed,
+      gear,
+      throttle,
+      brake,
+    };
+  });
+}
+
+/**
+ * Map of `lapUid → telemetry samples`. Built lazily on first access in the
+ * mock handler — generating ~26k samples eagerly costs ~30ms on cold load.
+ */
+export const TELEMETRY_BY_LAP_UID: Map<string, TelemetrySample[]> = new Map(
+  LAPS.map((lap, idx) => {
+    // Find the profile the lap belongs to via its session's track.
+    const session = SESSIONS.find((s) => s.uid === lap.sessionUid)!;
+    const profile = PROFILES.find(
+      (p) => p.track === session.track && p.car === session.car,
+    ) ?? PROFILES[0]!;
+    return [
+      lap.uid,
+      buildTelemetry(profile.track, profile.baseLapMs, lap.lapTime, idx + 1),
+    ] as const;
+  }),
 );
 
 export const OPTIONS: SessionOptionsResource = {

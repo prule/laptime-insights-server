@@ -1,5 +1,6 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 import { AppShell } from "./components/layout/AppShell";
+import { CompareScreen } from "./screens/CompareScreen";
 import { OverviewScreen } from "./screens/OverviewScreen";
 import { SessionsScreen } from "./screens/SessionsScreen";
 import { SessionDetailScreen } from "./screens/SessionDetailScreen";
@@ -13,6 +14,7 @@ export function App() {
         <Route path="sessions" element={<SessionsScreen />} />
         <Route path="sessions/:uid" element={<SessionDetailScreen />} />
         <Route path="laps" element={<LapsScreen />} />
+        <Route path="compare" element={<CompareScreen />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </AppShell>

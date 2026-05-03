@@ -5,6 +5,10 @@ import com.github.prule.laptimeinsights.adapter.out.persistence.lap.LapMapper
 import com.github.prule.laptimeinsights.adapter.out.persistence.lap.LapPersistenceAdapter
 import com.github.prule.laptimeinsights.adapter.out.persistence.lap.LapRepository
 import com.github.prule.laptimeinsights.adapter.out.persistence.lap.LapTable
+import com.github.prule.laptimeinsights.adapter.out.persistence.lap.LapTelemetryMapper
+import com.github.prule.laptimeinsights.adapter.out.persistence.lap.LapTelemetryPersistenceAdapter
+import com.github.prule.laptimeinsights.adapter.out.persistence.lap.LapTelemetryRepository
+import com.github.prule.laptimeinsights.adapter.out.persistence.lap.LapTelemetryTable
 import com.github.prule.laptimeinsights.adapter.out.persistence.session.SessionMapper
 import com.github.prule.laptimeinsights.adapter.out.persistence.session.SessionPersistenceAdapter
 import com.github.prule.laptimeinsights.adapter.out.persistence.session.SessionRepository
@@ -19,12 +23,15 @@ import org.assertj.core.api.Assertions.assertThat
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.junit.jupiter.api.Test
 
-class DatabaseSeederTest : RepositoryTest(listOf(SessionTable, LapTable)) {
+class DatabaseSeederTest : RepositoryTest(listOf(SessionTable, LapTable, LapTelemetryTable)) {
   private val sessionMapper = SessionMapper()
   private val lapMapper = LapMapper()
+  private val telemetryMapper = LapTelemetryMapper()
   private val sessionPort =
     SessionPersistenceAdapter(SessionRepository(sessionMapper), sessionMapper)
   private val lapPort = LapPersistenceAdapter(LapRepository(lapMapper), lapMapper)
+  private val telemetryPort =
+    LapTelemetryPersistenceAdapter(LapTelemetryRepository(telemetryMapper))
 
   private val fixedClock = { Instant.parse("2026-05-03T12:00:00Z") }
 
@@ -33,6 +40,7 @@ class DatabaseSeederTest : RepositoryTest(listOf(SessionTable, LapTable)) {
       createSessionPort = sessionPort,
       updateSessionPort = sessionPort,
       createLapPort = lapPort,
+      createLapTelemetryPort = telemetryPort,
       clock = fixedClock,
       random = Random(42),
     )
@@ -54,6 +62,29 @@ class DatabaseSeederTest : RepositoryTest(listOf(SessionTable, LapTable)) {
       assertThat(sessions.all { it.isFinished() }).isTrue
       assertThat(laps).isNotEmpty
       assertThat(laps.any { it.personalBest.value }).isTrue
+    }
+  }
+
+  @Test
+  fun `seeds telemetry samples for every lap`() {
+    newSeeder().seed()
+
+    transaction {
+      val laps = lapPort.search(LapSearchCriteria(), PageRequest(1, 1000), Sort.noSort()).items
+      assertThat(laps).isNotEmpty
+      // Spot-check first lap: samples ordered, monotonically increasing
+      // splinePosition, plausible telemetry values.
+      val first = laps.first()
+      val samples = telemetryPort.findByLapUid(first.uid)
+      assertThat(samples).hasSizeGreaterThan(50)
+      assertThat(samples.first().splinePosition).isLessThan(samples.last().splinePosition)
+      assertThat(samples).allSatisfy {
+        assertThat(it.splinePosition).isBetween(0.0, 1.0)
+        assertThat(it.speedKph).isPositive()
+        assertThat(it.gear).isBetween(1, 7)
+        assertThat(it.throttle).isBetween(0.0, 1.0)
+        assertThat(it.brake).isBetween(0.0, 1.0)
+      }
     }
   }
 

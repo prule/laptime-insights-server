@@ -1,6 +1,8 @@
 package com.github.prule.laptimeinsights
 
+import com.github.prule.laptimeinsights.adapter.`in`.web.lap.CompareLapsController
 import com.github.prule.laptimeinsights.adapter.`in`.web.lap.FindLapController
+import com.github.prule.laptimeinsights.adapter.`in`.web.lap.FindLapTelemetryController
 import com.github.prule.laptimeinsights.adapter.`in`.web.lap.SearchLapController
 import com.github.prule.laptimeinsights.adapter.`in`.web.session.FindSessionController
 import com.github.prule.laptimeinsights.adapter.`in`.web.session.SearchOptionsController
@@ -88,6 +90,7 @@ fun Application.module(
         createSessionPort = appModule.session.sessionPort,
         updateSessionPort = appModule.session.sessionPort,
         createLapPort = appModule.lap.lapPort,
+        createLapTelemetryPort = appModule.lap.telemetryPort,
       )
       .seed()
   }
@@ -131,5 +134,9 @@ private fun Application.initializeSessionControllers(appModule: AppModule) {
 
 private fun Application.initializeLapControllers(appModule: AppModule) {
   SearchLapController(this, appModule.lap.searchLapUseCase)
+  // `Compare` must be registered before `LapId` so the `/compare` literal wins
+  // over the `/{uid}` placeholder when the router resolves a request.
+  CompareLapsController(this, appModule.lap.compareLapsUseCase)
   FindLapController(this, appModule.lap.findLapUseCase)
+  FindLapTelemetryController(this, appModule.lap.findLapTelemetryUseCase)
 }

@@ -13,12 +13,19 @@ import com.github.prule.laptimeinsights.application.domain.model.Session
 import com.github.prule.laptimeinsights.application.domain.model.SessionId
 import com.github.prule.laptimeinsights.application.domain.model.SessionType
 import com.github.prule.laptimeinsights.application.domain.model.Simulator
+import com.github.prule.laptimeinsights.application.domain.model.TelemetrySample
 import com.github.prule.laptimeinsights.application.domain.model.Track
 import com.github.prule.laptimeinsights.application.domain.model.Uid
 import com.github.prule.laptimeinsights.application.domain.model.ValidLap
 import com.github.prule.laptimeinsights.application.port.out.lap.CreateLapPort
+import com.github.prule.laptimeinsights.application.port.out.lap.CreateLapTelemetryPort
 import com.github.prule.laptimeinsights.application.port.out.session.CreateSessionPort
 import com.github.prule.laptimeinsights.application.port.out.session.UpdateSessionPort
+import kotlin.math.PI
+import kotlin.math.cos
+import kotlin.math.max
+import kotlin.math.min
+import kotlin.math.sin
 import kotlin.random.Random
 import kotlin.time.Clock
 import kotlin.time.Duration
@@ -43,6 +50,7 @@ class DatabaseSeeder(
   private val createSessionPort: CreateSessionPort,
   private val updateSessionPort: UpdateSessionPort,
   private val createLapPort: CreateLapPort,
+  private val createLapTelemetryPort: CreateLapTelemetryPort,
   private val clock: () -> Instant = { Clock.System.now() },
   private val random: Random = Random(42),
 ) {
@@ -71,7 +79,14 @@ class DatabaseSeeder(
         updateSessionPort.update(saved)
 
         val laps = generateLaps(profile, saved, startedAt)
-        laps.forEach { createLapPort.create(it) }
+        laps.forEach { lap ->
+          val savedLap = createLapPort.create(lap)
+          createLapTelemetryPort.create(
+            lapId = savedLap.id,
+            lapUid = savedLap.uid,
+            samples = generateTelemetry(profile, lap.lapTime.value, lap.lapNumber.value),
+          )
+        }
         totalLaps += laps.size
 
         saved.finish(startedAt + profile.baseLapTime.times(laps.size))
@@ -79,6 +94,72 @@ class DatabaseSeeder(
       }
 
       logger.info("Seeded ${SAMPLE_PROFILES.size} sessions and $totalLaps laps")
+    }
+  }
+
+  /**
+   * Synthesizes a smooth, lap-specific telemetry trace.
+   *
+   * Speed follows a sum of sinusoids so each track gets its own corner pattern
+   * (driven by the profile's base lap time as the seed). Faster laps sit
+   * uniformly slightly higher on the speed envelope; slower laps drop a touch.
+   * Gear is derived from speed buckets; throttle/brake are derived from the
+   * speed gradient — accelerating ⇒ throttle high, decelerating ⇒ brake high.
+   */
+  private fun generateTelemetry(
+    profile: SeedProfile,
+    lapTimeMs: Long,
+    lapNumber: Int,
+  ): List<TelemetrySample> {
+    val samples = SAMPLES_PER_LAP
+    val trackSeed = profile.baseLapTime.inWholeMilliseconds
+    val cornerCount = TRACK_CORNERS[profile.track] ?: 8
+    // Faster lap ⇒ slightly higher overall speed envelope.
+    val paceFactor =
+      1.0 + (profile.baseLapTime.inWholeMilliseconds - lapTimeMs).toDouble() / 50_000.0
+    val lapJitter = (lapNumber * 17 % 7) * 0.4
+
+    val speeds = DoubleArray(samples)
+    for (i in 0 until samples) {
+      val t = i.toDouble() / samples
+      // Track-specific corner pattern.
+      val cornerWave = sin(2.0 * PI * cornerCount * t + (trackSeed % 31) * 0.1)
+      val secondaryWave = cos(4.0 * PI * t + lapJitter)
+      val baseline = 180.0 + 60.0 * cornerWave + 25.0 * secondaryWave
+      speeds[i] = max(60.0, baseline * paceFactor)
+    }
+
+    return List(samples) { i ->
+      val splinePosition = i.toDouble() / samples
+      val speed = speeds[i]
+      val nextSpeed = speeds[min(samples - 1, i + 1)]
+      val gradient = nextSpeed - speed
+      val throttle =
+        when {
+          gradient > 1.0 -> min(1.0, 0.7 + gradient / 20.0)
+          gradient > -0.5 -> 0.6
+          else -> max(0.0, 0.3 + gradient / 30.0)
+        }
+      val brake =
+        when {
+          gradient < -2.0 -> min(1.0, -gradient / 8.0)
+          else -> 0.0
+        }
+      val gear =
+        when {
+          speed < 90 -> 2
+          speed < 130 -> 3
+          speed < 170 -> 4
+          speed < 210 -> 5
+          else -> 6
+        }
+      TelemetrySample(
+        splinePosition = splinePosition,
+        speedKph = speed,
+        gear = gear,
+        throttle = throttle,
+        brake = brake,
+      )
     }
   }
 
@@ -141,6 +222,21 @@ class DatabaseSeeder(
   )
 
   companion object {
+    private const val SAMPLES_PER_LAP = 150
+
+    /** Rough corner count per track, used to shape the synthetic speed trace. */
+    private val TRACK_CORNERS: Map<Track, Int> =
+      mapOf(
+        Track("Monza") to 11,
+        Track("Spa-Francorchamps") to 19,
+        Track("Nurburgring") to 16,
+        Track("Silverstone") to 18,
+        Track("Snetterton") to 12,
+        Track("Brands Hatch") to 9,
+        Track("Monaco") to 19,
+        Track("Suzuka") to 18,
+      )
+
     private val SAMPLE_PROFILES =
       listOf(
         SeedProfile(

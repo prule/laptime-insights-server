@@ -4,8 +4,15 @@
  * Returns `undefined` when no handler matches, which the caller turns into a
  * 404. Adding a new endpoint? Add a branch here that mirrors the Ktor route.
  */
-import { LAPS, OPTIONS, SESSIONS, paged } from "./data";
-import type { LapResource, Page, SessionResource, SessionOptionsResource } from "../types";
+import { LAPS, OPTIONS, SESSIONS, TELEMETRY_BY_LAP_UID, paged } from "./data";
+import type {
+  LapComparisonResource,
+  LapResource,
+  LapTelemetryResource,
+  Page,
+  SessionResource,
+  SessionOptionsResource,
+} from "../types";
 
 const SIMULATE_LATENCY_MS = 120;
 
@@ -79,6 +86,48 @@ export async function mockHandler(path: string): Promise<unknown> {
     const session = SESSIONS.find((s) => s.uid === sessionMatch[1]);
     if (!session) return undefined;
     return delay(session);
+  }
+
+  // /api/1/laps/compare must be matched before the /api/1/laps/{uid} pattern.
+  if (pathname === "/api/1/laps/compare") {
+    const lap1Uid = query.get("lap1Uid");
+    const lap2Uid = query.get("lap2Uid");
+    if (!lap1Uid || !lap2Uid) return undefined;
+    const lap1 = LAPS.find((l) => l.uid === lap1Uid);
+    const lap2 = LAPS.find((l) => l.uid === lap2Uid);
+    if (!lap1 || !lap2) return undefined;
+    const sideOf = (lap: LapResource) => ({
+      lapUid: lap.uid,
+      sessionUid: lap.sessionUid,
+      lapNumber: lap.lapNumber,
+      lapTimeMs: lap.lapTime,
+      valid: lap.valid,
+      personalBest: lap.personalBest,
+      samples: TELEMETRY_BY_LAP_UID.get(lap.uid) ?? [],
+    });
+    return delay<LapComparisonResource>({
+      lap1: sideOf(lap1),
+      lap2: sideOf(lap2),
+      _links: {
+        self: `/api/1/laps/compare?lap1Uid=${lap1Uid}&lap2Uid=${lap2Uid}`,
+        lap1: `/api/1/laps/${lap1Uid}`,
+        lap2: `/api/1/laps/${lap2Uid}`,
+      },
+    });
+  }
+
+  const telemetryMatch = pathname.match(/^\/api\/1\/laps\/([^/]+)\/telemetry$/);
+  if (telemetryMatch) {
+    const lapUid = telemetryMatch[1]!;
+    if (!LAPS.some((l) => l.uid === lapUid)) return undefined;
+    return delay<LapTelemetryResource>({
+      lapUid,
+      samples: TELEMETRY_BY_LAP_UID.get(lapUid) ?? [],
+      _links: {
+        self: `/api/1/laps/${lapUid}/telemetry`,
+        lap: `/api/1/laps/${lapUid}`,
+      },
+    });
   }
 
   if (pathname === "/api/1/laps") {

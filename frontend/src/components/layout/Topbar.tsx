@@ -6,6 +6,7 @@ const SCREEN_LABELS: Record<string, string> = {
   "/": "Overview",
   "/sessions": "Sessions",
   "/laps": "Lap Search",
+  "/compare": "Lap Comparison",
 };
 
 export function Topbar() {

@@ -12,7 +12,9 @@
 import { useQuery } from "@tanstack/react-query";
 import { apiGet, buildQuery, type ApiContext } from "./client";
 import type {
+  LapComparisonResource,
   LapResource,
+  LapTelemetryResource,
   Page,
   PagingAndSort,
   SessionFilters,
@@ -34,6 +36,10 @@ const KEYS = {
     ["session", ctx.mode, ctx.apiBase, uid] as const,
   laps: (ctx: ApiContext, params: { sessionUid?: string } & PagingAndSort) =>
     ["laps", ctx.mode, ctx.apiBase, params] as const,
+  lapTelemetry: (ctx: ApiContext, lapUid: string | undefined) =>
+    ["lap-telemetry", ctx.mode, ctx.apiBase, lapUid] as const,
+  compare: (ctx: ApiContext, lap1Uid: string | undefined, lap2Uid: string | undefined) =>
+    ["compare-laps", ctx.mode, ctx.apiBase, lap1Uid, lap2Uid] as const,
 };
 
 export function useSessionOptions() {
@@ -86,6 +92,31 @@ export function useSessionLaps(sessionUid: string | undefined, paging: PagingAnd
         })}`,
       ),
     enabled: !!sessionUid,
+  });
+}
+
+export function useLapTelemetry(lapUid: string | undefined) {
+  const ctx = useApiContext();
+  return useQuery({
+    queryKey: KEYS.lapTelemetry(ctx, lapUid),
+    queryFn: () => apiGet<LapTelemetryResource>(ctx, `/api/1/laps/${lapUid}/telemetry`),
+    enabled: !!lapUid,
+    // Telemetry is immutable for a given lap — keep it cached longer.
+    staleTime: 5 * 60_000,
+  });
+}
+
+export function useLapComparison(lap1Uid: string | undefined, lap2Uid: string | undefined) {
+  const ctx = useApiContext();
+  return useQuery({
+    queryKey: KEYS.compare(ctx, lap1Uid, lap2Uid),
+    queryFn: () =>
+      apiGet<LapComparisonResource>(
+        ctx,
+        `/api/1/laps/compare?lap1Uid=${lap1Uid}&lap2Uid=${lap2Uid}`,
+      ),
+    enabled: !!lap1Uid && !!lap2Uid,
+    staleTime: 5 * 60_000,
   });
 }
 

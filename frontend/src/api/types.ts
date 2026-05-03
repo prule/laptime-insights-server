@@ -24,6 +24,37 @@ export interface SessionResource {
   _links: Links;
 }
 
+export interface TelemetrySample {
+  splinePosition: number;
+  speedKph: number;
+  gear: number;
+  throttle: number;
+  brake: number;
+}
+
+export interface LapTelemetryResource {
+  lapUid: Uid;
+  samples: TelemetrySample[];
+  _links: Links;
+}
+
+export interface LapComparisonSide {
+  lapUid: Uid;
+  sessionUid: Uid;
+  lapNumber: number;
+  /** Lap time in milliseconds. */
+  lapTimeMs: number;
+  valid: boolean;
+  personalBest: boolean;
+  samples: TelemetrySample[];
+}
+
+export interface LapComparisonResource {
+  lap1: LapComparisonSide;
+  lap2: LapComparisonSide;
+  _links: Links;
+}
+
 export interface LapResource {
   uid: Uid;
   sessionUid: Uid;

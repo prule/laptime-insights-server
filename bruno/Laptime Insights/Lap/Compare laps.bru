@@ -1,0 +1,20 @@
+meta {
+  name: Compare laps
+  type: http
+  seq: 9
+}
+
+get {
+  url: http://localhost:8000/api/1/laps/compare?lap1Uid={{lap1Uid}}&lap2Uid={{lap2Uid}}
+  body: none
+  auth: inherit
+}
+
+params:query {
+  lap1Uid: {{lap1Uid}}
+  lap2Uid: {{lap2Uid}}
+}
+
+settings {
+  encodeUrl: true
+}

@@ -93,17 +93,18 @@ export function SessionDetailScreen() {
         {lapsQuery.data && laps.length === 0 && <EmptyState title="No laps recorded" />}
         {laps.length > 0 && (
           <div className="overflow-hidden rounded border border-border">
-            <div className="grid grid-cols-[60px_1fr_120px_100px_100px] items-center gap-3 border-b border-border bg-surface-active px-3 py-2 font-mono text-[10px] uppercase tracking-[0.08em] text-text-muted">
+            <div className="grid grid-cols-[60px_1fr_120px_100px_90px_90px] items-center gap-3 border-b border-border bg-surface-active px-3 py-2 font-mono text-[10px] uppercase tracking-[0.08em] text-text-muted">
               <div>Lap</div>
               <div>Recorded</div>
               <div>Lap time</div>
               <div>Δ to best</div>
               <div>Status</div>
+              <div></div>
             </div>
             {laps.map((lap) => (
               <div
                 key={lap.uid}
-                className="grid grid-cols-[60px_1fr_120px_100px_100px] items-center gap-3 border-b border-border/40 px-3 py-2 last:border-b-0 hover:bg-surface-hover"
+                className="grid grid-cols-[60px_1fr_120px_100px_90px_90px] items-center gap-3 border-b border-border/40 px-3 py-2 last:border-b-0 hover:bg-surface-hover"
               >
                 <div className="font-mono text-xs text-text-muted">#{lap.lapNumber}</div>
                 <div className="font-mono text-xs text-text-muted">{formatTime(lap.recordedAt)}</div>
@@ -116,6 +117,17 @@ export function SessionDetailScreen() {
                 <div className="font-mono text-[11px]">
                   {lap.personalBest && <span className="text-ok">PB</span>}
                   {!lap.valid && <span className="text-accent">INVALID</span>}
+                </div>
+                <div>
+                  {lap.valid && (
+                    <button
+                      onClick={() => navigate(`/compare?track=${encodeURIComponent(session.track ?? "")}&lap1=${lap.uid}`)}
+                      className="rounded border border-border px-2 py-1 font-mono text-[10px] uppercase tracking-[0.08em] text-text-muted hover:border-cyan/40 hover:text-cyan"
+                      title="Compare this lap against another"
+                    >
+                      Compare
+                    </button>
+                  )}
                 </div>
               </div>
             ))}

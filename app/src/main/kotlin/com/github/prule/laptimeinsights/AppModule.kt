@@ -5,12 +5,17 @@ import com.github.prule.laptimeinsights.adapter.out.event.InMemoryEventAdapter
 import com.github.prule.laptimeinsights.adapter.out.persistence.lap.LapMapper
 import com.github.prule.laptimeinsights.adapter.out.persistence.lap.LapPersistenceAdapter
 import com.github.prule.laptimeinsights.adapter.out.persistence.lap.LapRepository
+import com.github.prule.laptimeinsights.adapter.out.persistence.lap.LapTelemetryMapper
+import com.github.prule.laptimeinsights.adapter.out.persistence.lap.LapTelemetryPersistenceAdapter
+import com.github.prule.laptimeinsights.adapter.out.persistence.lap.LapTelemetryRepository
 import com.github.prule.laptimeinsights.adapter.out.persistence.session.SessionMapper
 import com.github.prule.laptimeinsights.adapter.out.persistence.session.SessionPersistenceAdapter
 import com.github.prule.laptimeinsights.adapter.out.persistence.session.SessionRepository
 import com.github.prule.laptimeinsights.application.domain.service.car.FindCarService
+import com.github.prule.laptimeinsights.application.domain.service.lap.CompareLapsService
 import com.github.prule.laptimeinsights.application.domain.service.lap.CreateLapService
 import com.github.prule.laptimeinsights.application.domain.service.lap.FindLapService
+import com.github.prule.laptimeinsights.application.domain.service.lap.FindLapTelemetryService
 import com.github.prule.laptimeinsights.application.domain.service.lap.SearchLapService
 import com.github.prule.laptimeinsights.application.domain.service.session.CreateSessionService
 import com.github.prule.laptimeinsights.application.domain.service.session.FindSessionService
@@ -36,9 +41,14 @@ class AppModule {
 
     val lapPort = LapPersistenceAdapter(LapRepository(mapper), mapper)
 
+    val telemetryMapper = LapTelemetryMapper()
+    val telemetryPort = LapTelemetryPersistenceAdapter(LapTelemetryRepository(telemetryMapper))
+
     val createLapUseCase = CreateLapService(lapPort, session.sessionPort, eventPort)
     val searchLapUseCase = SearchLapService(lapPort)
     val findLapUseCase = FindLapService(lapPort)
+    val findLapTelemetryUseCase = FindLapTelemetryService(lapPort, telemetryPort)
+    val compareLapsUseCase = CompareLapsService(lapPort, telemetryPort)
   }
 
   inner class Session {

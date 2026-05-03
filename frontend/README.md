@@ -76,6 +76,23 @@ npm run typecheck
 npm run build
 ```
 
+## Lap comparison
+
+The `/compare` screen overlays two laps' telemetry traces against
+`splinePosition`. Implementation:
+
+- `useLapComparison(lap1Uid, lap2Uid)` hits `GET /api/1/laps/compare`. The
+  backend returns raw samples for both laps in one round trip.
+- `TelemetryTrace` overlays multiple series on the same axis (used for speed,
+  throttle, brake). `SpeedDeltaTrace` resamples both laps to 100 buckets and
+  plots the per-bucket KPH delta. `GearMismatchStrip` highlights buckets
+  where the two laps were in different gears.
+- `LapPicker` lists laps grouped by session (uses `useLaps` with
+  `track` + `validLap=true`). Pinning a track keeps the spline alignment
+  meaningful.
+- Filter state (`track`, `lap1`, `lap2`) is mirrored to the URL via
+  `useUrlState`, so a comparison link is shareable.
+
 ## URL state
 
 Filter and pagination state for screens with searchable lists is mirrored to
