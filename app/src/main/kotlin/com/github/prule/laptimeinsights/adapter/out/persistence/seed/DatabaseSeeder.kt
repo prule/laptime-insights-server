@@ -88,6 +88,31 @@ class DatabaseSeeder(
         }
         totalLaps += laps.size
 
+        // For Race and Qualifying sessions add 2 competitor cars at slightly
+        // different pace so the session detail screen has cross-car laps to show.
+        if (profile.sessionType.value in listOf("Race", "Qualifying")) {
+          COMPETITOR_OFFSETS.forEachIndexed { idx, paceOffsetMs ->
+            val competitorCarId = CarId(profile.carId.value + idx + 1)
+            val competitorLaps = generateLaps(
+              profile.copy(
+                carId = competitorCarId,
+                baseLapTime = profile.baseLapTime + paceOffsetMs.milliseconds,
+              ),
+              saved,
+              startedAt,
+            )
+            competitorLaps.forEach { lap ->
+              val savedLap = createLapPort.create(lap)
+              createLapTelemetryPort.create(
+                lapId = savedLap.id,
+                lapUid = savedLap.uid,
+                samples = generateTelemetry(profile, lap.lapTime.value, lap.lapNumber.value),
+              )
+            }
+            totalLaps += competitorLaps.size
+          }
+        }
+
         saved.finish(startedAt + profile.baseLapTime.times(laps.size))
         updateSessionPort.update(saved)
       }
@@ -228,6 +253,13 @@ class DatabaseSeeder(
 
   companion object {
     private const val SAMPLES_PER_LAP = 150
+
+    /**
+     * Pace offsets (ms) added to the player's base lap time for each competitor
+     * car in Race/Qualifying sessions. Two competitors: one slightly faster,
+     * one slightly slower.
+     */
+    private val COMPETITOR_OFFSETS = listOf(+1_800L, -900L)
 
     /** Rough corner count per track, used to shape the synthetic speed trace. */
     private val TRACK_CORNERS: Map<Track, Int> =

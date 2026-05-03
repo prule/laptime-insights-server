@@ -131,6 +131,8 @@ export function useLapComparison(lap1Uid: string | undefined, lap2Uid: string | 
 }
 
 export interface LapFilters {
+  /** Integer car number within the session. */
+  carId?: number;
   validLap?: boolean;
   personalBest?: boolean;
   /** Owning-session car name. Backend joins SESSION when set. */
@@ -207,6 +209,7 @@ export function useLaps(params: LapFilters & PagingAndSort = {}) {
       apiGet<Page<LapResource>>(
         ctx,
         `/api/1/laps${buildQuery({
+          carId: params.carId,
           validLap: params.validLap,
           personalBest: params.personalBest,
           car: params.car,

@@ -58,6 +58,8 @@ export interface LapComparisonResource {
 export interface LapResource {
   uid: Uid;
   sessionUid: Uid;
+  /** Integer car number within the session (e.g. ACC car index). */
+  carId: number;
   recordedAt: Iso8601;
   /** lap time in milliseconds. */
   lapTime: number;

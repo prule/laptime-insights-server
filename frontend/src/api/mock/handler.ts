@@ -134,6 +134,7 @@ export async function mockHandler(path: string): Promise<unknown> {
     const { page, size } = pickPagingAndSort(query);
     let items = LAPS.slice();
     const sessionUid = query.get("sessionUid");
+    const carIdParam = query.get("carId");
     const personalBest = query.get("personalBest");
     const validLap = query.get("validLap");
     const uid = query.get("uid");
@@ -142,6 +143,10 @@ export async function mockHandler(path: string): Promise<unknown> {
     const simulator = query.get("simulator");
     if (uid) items = items.filter((l) => l.uid === uid);
     if (sessionUid) items = items.filter((l) => l.sessionUid === sessionUid);
+    if (carIdParam !== null) {
+      const carIdNum = Number.parseInt(carIdParam, 10);
+      items = items.filter((l) => l.carId === carIdNum);
+    }
     if (personalBest === "true") items = items.filter((l) => l.personalBest);
     if (personalBest === "false") items = items.filter((l) => !l.personalBest);
     if (validLap === "true") items = items.filter((l) => l.valid);

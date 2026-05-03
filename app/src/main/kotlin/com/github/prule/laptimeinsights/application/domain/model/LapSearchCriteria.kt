@@ -18,6 +18,7 @@ data class LapSearchCriteria(
   val uid: Uid? = null,
   val sessionId: SessionId? = null,
   val sessionUid: Uid? = null,
+  val carId: CarId? = null,
   val personalBest: PersonalBest? = null,
   val validLap: ValidLap? = null,
   val car: Car? = null,

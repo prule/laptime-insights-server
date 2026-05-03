@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   useSession,
@@ -24,16 +24,52 @@ export function SessionDetailScreen() {
   const sessionBestQuery = useSessionBestLap(uid);
   const trackBestQuery = useTrackBestLap(sessionQuery.data?.track ?? null);
 
-  const stats = useMemo(() => {
+  // null = all cars shown
+  const [selectedCarId, setSelectedCarId] = useState<number | null>(null);
+
+  // Player's carId = carId of the first lap in the session.
+  const playerCarId = useMemo<number | null>(() => {
     const laps = lapsQuery.data?.items ?? [];
-    const valid = laps.filter((l) => l.valid);
+    return laps.length > 0 ? laps[0]!.carId : null;
+  }, [lapsQuery.data]);
+
+  // Distinct car numbers present in this session (player first).
+  const carIds = useMemo(() => {
+    const laps = lapsQuery.data?.items ?? [];
+    const all = Array.from(new Set(laps.map((l) => l.carId)));
+    all.sort((a, b) => (a === playerCarId ? -1 : b === playerCarId ? 1 : a - b));
+    return all;
+  }, [lapsQuery.data, playerCarId]);
+
+  const hasCompetitors = carIds.length > 1;
+
+  // Laps visible after car filter.
+  const visibleLaps = useMemo(() => {
+    const laps = lapsQuery.data?.items ?? [];
+    return selectedCarId !== null ? laps.filter((l) => l.carId === selectedCarId) : laps;
+  }, [lapsQuery.data, selectedCarId]);
+
+  // Stats reflect the currently filtered car (or player car when showing all).
+  const stats = useMemo(() => {
+    const scopedLaps =
+      selectedCarId !== null
+        ? visibleLaps
+        : visibleLaps.filter((l) => playerCarId === null || l.carId === playerCarId);
+    const valid = scopedLaps.filter((l) => l.valid);
     const best = valid.reduce<number | null>(
       (acc, l) => (acc === null || l.lapTime < acc ? l.lapTime : acc),
       null,
     );
     const avg = valid.length > 0 ? valid.reduce((s, l) => s + l.lapTime, 0) / valid.length : null;
-    return { lapCount: laps.length, validCount: valid.length, best, avg };
-  }, [lapsQuery.data]);
+    return { lapCount: scopedLaps.length, validCount: valid.length, best, avg };
+  }, [visibleLaps, selectedCarId, playerCarId]);
+
+  // Best valid lap among all visible laps — used as the Δ reference in each row.
+  const visibleBest = useMemo(() => {
+    return visibleLaps
+      .filter((l) => l.valid)
+      .reduce<number | null>((acc, l) => (acc === null || l.lapTime < acc ? l.lapTime : acc), null);
+  }, [visibleLaps]);
 
   if (sessionQuery.isLoading) return <div className="p-8"><LoadingState /></div>;
   if (sessionQuery.isError)
@@ -45,7 +81,7 @@ export function SessionDetailScreen() {
   if (!sessionQuery.data) return <div className="p-8"><EmptyState title="Session not found" /></div>;
 
   const session = sessionQuery.data;
-  const laps = lapsQuery.data?.items ?? [];
+  const allLaps = lapsQuery.data?.items ?? [];
   const sessionBest = sessionBestQuery.data ?? null;
   const trackBest = trackBestQuery.data ?? null;
 
@@ -92,73 +128,183 @@ export function SessionDetailScreen() {
           title="Laps"
           action="Trend"
           sub={
-            laps.length > 0 ? (
+            allLaps.length > 0 ? (
               <span className="text-text-dim">
-                <Sparkline values={laps.filter((l) => l.valid).map((l) => l.lapTime)} color="#00d4ff" />
+                <Sparkline
+                  values={visibleLaps.filter((l) => l.valid).map((l) => l.lapTime)}
+                  color="#00d4ff"
+                />
               </span>
             ) : undefined
           }
         />
+
+        {/* Car filter pills — only when multiple cars present */}
+        {hasCompetitors && allLaps.length > 0 && (
+          <div className="mb-3 flex items-center gap-1.5 flex-wrap">
+            <CarFilterPill
+              label="All"
+              active={selectedCarId === null}
+              onClick={() => setSelectedCarId(null)}
+            />
+            {carIds.map((id) => (
+              <CarFilterPill
+                key={id}
+                label={`Car ${id}${id === playerCarId ? " (you)" : ""}`}
+                active={selectedCarId === id}
+                isPlayer={id === playerCarId}
+                onClick={() => setSelectedCarId(selectedCarId === id ? null : id)}
+              />
+            ))}
+          </div>
+        )}
+
         {lapsQuery.isLoading && <LoadingState />}
         {lapsQuery.isError && (
           <ErrorState error={lapsQuery.error} onRetry={() => lapsQuery.refetch()} />
         )}
-        {lapsQuery.data && laps.length === 0 && <EmptyState title="No laps recorded" />}
-        {laps.length > 0 && (
-          <div className="overflow-hidden rounded border border-border">
-            <div className="grid grid-cols-[60px_120px_120px_100px_90px_200px] items-center gap-3 border-b border-border bg-surface-active px-3 py-2 font-mono text-[10px] uppercase tracking-[0.08em] text-text-muted">
-              <div>Lap</div>
-              <div>Recorded</div>
-              <div>Lap time</div>
-              <div>Δ to best</div>
-              <div>Status</div>
-              <div>Compare</div>
+        {lapsQuery.data && allLaps.length === 0 && <EmptyState title="No laps recorded" />}
+        {visibleLaps.length === 0 && allLaps.length > 0 && (
+          <EmptyState title="No laps for this car" />
+        )}
+        {visibleLaps.length > 0 && (
+          <>
+            <div className="overflow-hidden rounded border border-border">
+              <div
+                className={`grid items-center gap-3 border-b border-border bg-surface-active px-3 py-2 font-mono text-[10px] uppercase tracking-[0.08em] text-text-muted ${
+                  hasCompetitors && selectedCarId === null
+                    ? "grid-cols-[60px_56px_120px_120px_100px_90px_1fr]"
+                    : "grid-cols-[60px_120px_120px_100px_90px_1fr]"
+                }`}
+              >
+                <div>Lap</div>
+                {hasCompetitors && selectedCarId === null && <div>Car</div>}
+                <div>Recorded</div>
+                <div>Lap time</div>
+                <div>Δ to best</div>
+                <div>Status</div>
+                <div>Compare</div>
+              </div>
+              {visibleLaps.map((lap) => (
+                <LapRow
+                  key={lap.uid}
+                  lap={lap}
+                  isPlayerCar={playerCarId === null || lap.carId === playerCarId}
+                  showCarColumn={hasCompetitors && selectedCarId === null}
+                  bestSoFar={visibleBest}
+                  sessionBest={sessionBest}
+                  trackBest={trackBest}
+                  onCompare={(other) => navigate(compareUrl(lap.uid, other))}
+                  onCompareOpen={() =>
+                    navigate(
+                      `/compare?track=${encodeURIComponent(session.track ?? "")}&lap1=${lap.uid}`,
+                    )
+                  }
+                />
+              ))}
             </div>
-            {laps.map((lap) => (
-              <LapRow
-                key={lap.uid}
-                lap={lap}
-                bestSoFar={stats.best}
-                sessionBest={sessionBest}
-                trackBest={trackBest}
-                onCompare={(other) => navigate(compareUrl(lap.uid, other))}
-              />
-            ))}
-          </div>
+            {hasCompetitors && selectedCarId === null && (
+              <div className="mt-2 flex items-center gap-4 px-1">
+                <div className="flex items-center gap-1.5">
+                  <span className="inline-block h-2 w-2 rounded-full bg-cyan" />
+                  <span className="font-mono text-[10px] text-text-muted">
+                    Your car ({playerCarId})
+                  </span>
+                </div>
+                {carIds
+                  .filter((id) => id !== playerCarId)
+                  .map((id) => (
+                    <div key={id} className="flex items-center gap-1.5">
+                      <span className="inline-block h-2 w-2 rounded-full border border-border bg-surface-active" />
+                      <span className="font-mono text-[10px] text-text-muted">Car {id}</span>
+                    </div>
+                  ))}
+              </div>
+            )}
+          </>
         )}
       </Card>
     </div>
   );
 }
 
+function CarFilterPill({
+  label,
+  active,
+  isPlayer,
+  onClick,
+}: {
+  label: string;
+  active: boolean;
+  isPlayer?: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`flex items-center gap-1.5 rounded border px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.08em] transition-colors ${
+        active
+          ? "border-cyan/50 bg-cyan/10 text-cyan"
+          : "border-border text-text-muted hover:border-cyan/30 hover:text-text"
+      }`}
+    >
+      {isPlayer !== undefined && (
+        <span
+          className={`inline-block h-1.5 w-1.5 flex-shrink-0 rounded-full ${
+            isPlayer ? "bg-cyan" : "bg-text-dim"
+          }`}
+        />
+      )}
+      {label}
+    </button>
+  );
+}
+
 function LapRow({
   lap,
+  isPlayerCar,
+  showCarColumn,
   bestSoFar,
   sessionBest,
   trackBest,
   onCompare,
+  onCompareOpen,
 }: {
   lap: LapResource;
+  isPlayerCar: boolean;
+  showCarColumn: boolean;
   bestSoFar: number | null;
   sessionBest: LapResource | null;
   trackBest: LapResource | null;
   onCompare: (otherLapUid: string) => void;
+  onCompareOpen: () => void;
 }) {
-  // "vs session best" — only meaningful for valid laps that aren't already the
-  // session's best. "vs track PB" — same rule, plus the track PB must exist
-  // and (rarely) might be this very lap.
   const sessionBestUid = sessionBest?.uid;
   const trackBestUid = trackBest?.uid;
-  const canVsSessionBest =
-    lap.valid && !!sessionBestUid && sessionBestUid !== lap.uid;
-  const canVsTrackBest =
-    lap.valid && !!trackBestUid && trackBestUid !== lap.uid;
+  const canVsSessionBest = lap.valid && !!sessionBestUid && sessionBestUid !== lap.uid;
+  const canVsTrackBest = lap.valid && !!trackBestUid && trackBestUid !== lap.uid;
 
   return (
-    <div className="grid grid-cols-[60px_120px_120px_100px_90px_200px] items-center gap-3 border-b border-border/40 px-3 py-2 last:border-b-0 hover:bg-surface-hover">
+    <div
+      className={`grid items-center gap-3 border-b border-border/40 px-3 py-2 last:border-b-0 hover:bg-surface-hover ${
+        showCarColumn
+          ? "grid-cols-[60px_56px_120px_120px_100px_90px_1fr]"
+          : "grid-cols-[60px_120px_120px_100px_90px_1fr]"
+      } ${!isPlayerCar ? "opacity-75" : ""}`}
+    >
       <div className="font-mono text-xs text-text-muted">#{lap.lapNumber}</div>
+      {showCarColumn && (
+        <div className="flex items-center gap-1.5">
+          <span
+            className={`inline-block h-1.5 w-1.5 flex-shrink-0 rounded-full ${
+              isPlayerCar ? "bg-cyan" : "bg-text-dim"
+            }`}
+          />
+          <span className="font-mono text-xs text-text-muted">{lap.carId}</span>
+        </div>
+      )}
       <div className="font-mono text-xs text-text-muted">{formatTime(lap.recordedAt)}</div>
-      <div className={`font-mono text-sm ${lap.personalBest ? "text-ok" : "text-text"}`}>
+      <div className={`font-mono text-sm ${lap.personalBest && isPlayerCar ? "text-ok" : "text-text"}`}>
         {lap.valid ? formatLapTime(lap.lapTime) : <span className="text-text-dim">INVAL</span>}
       </div>
       <div>
@@ -169,10 +315,10 @@ function LapRow({
         )}
       </div>
       <div className="font-mono text-[11px]">
-        {lap.personalBest && <span className="text-ok">PB</span>}
+        {lap.personalBest && isPlayerCar && <span className="text-ok">PB</span>}
         {!lap.valid && <span className="text-accent">INVALID</span>}
       </div>
-      <div className="flex gap-1">
+      <div className="flex gap-1 flex-wrap">
         <CompareButton
           label="vs best"
           title={
@@ -192,6 +338,12 @@ function LapRow({
           }
           enabled={canVsTrackBest}
           onClick={() => trackBestUid && onCompare(trackBestUid)}
+        />
+        <CompareButton
+          label="pick…"
+          title="Open compare screen with this lap pre-selected — pick any other lap to compare against"
+          enabled={true}
+          onClick={onCompareOpen}
         />
       </div>
     </div>

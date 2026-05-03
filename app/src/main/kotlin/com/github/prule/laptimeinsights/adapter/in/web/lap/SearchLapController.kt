@@ -3,6 +3,7 @@ package com.github.prule.laptimeinsights.adapter.`in`.web.lap
 import com.github.prule.laptimeinsights.adapter.`in`.web.toPageRequest
 import com.github.prule.laptimeinsights.adapter.`in`.web.toSort
 import com.github.prule.laptimeinsights.application.domain.model.Car
+import com.github.prule.laptimeinsights.application.domain.model.CarId
 import com.github.prule.laptimeinsights.application.domain.model.LapSearchCriteria
 import com.github.prule.laptimeinsights.application.domain.model.PersonalBest
 import com.github.prule.laptimeinsights.application.domain.model.Simulator
@@ -93,6 +94,12 @@ class SearchLapController(application: Application, searchLapUseCase: SearchLapU
                   "as a strict boolean are silently ignored."
               required = false
             }
+            query("carId") {
+              description =
+                "Integer car number. Restricts results to laps recorded by the specified car " +
+                  "within a session. Non-integer values are silently ignored."
+              required = false
+            }
             query("car") {
               description =
                 "Exact car name of the owning session, e.g. `Ferrari 488 GT3`. Triggers a " +
@@ -156,6 +163,7 @@ fun LapSearchCriteria.Companion.fromParameters(parameters: Parameters): LapSearc
   return LapSearchCriteria(
     uid = parameters["uid"]?.let { Uid(it) },
     sessionUid = parameters["sessionUid"]?.let { Uid(it) },
+    carId = parameters["carId"]?.toIntOrNull()?.let { CarId(it) },
     personalBest = parameters["personalBest"]?.toBooleanStrictOrNull()?.let { PersonalBest(it) },
     validLap = parameters["validLap"]?.toBooleanStrictOrNull()?.let { ValidLap(it) },
     car = parameters["car"]?.let { Car(it) },

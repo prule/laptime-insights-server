@@ -18,23 +18,28 @@ interface Profile {
   simulator: "ACC" | "F1";
   track: string;
   car: string;
+  /** Player's car number within the session. */
+  carId: number;
   sessionType: string;
   lapCount: number;
   baseLapMs: number;
 }
 
 const PROFILES: Profile[] = [
-  { simulator: "ACC", track: "Monza",             car: "Ferrari 488 GT3",      sessionType: "Practice",    lapCount: 12, baseLapMs: 107_000 },
-  { simulator: "ACC", track: "Spa-Francorchamps", car: "Porsche 991 II GT3 R", sessionType: "Qualifying",  lapCount: 8,  baseLapMs: 136_500 },
-  { simulator: "ACC", track: "Nurburgring",       car: "Mercedes-AMG GT3",     sessionType: "Race",        lapCount: 18, baseLapMs: 114_200 },
-  { simulator: "ACC", track: "Silverstone",       car: "Audi R8 LMS Evo",      sessionType: "Practice",    lapCount: 14, baseLapMs: 118_800 },
-  { simulator: "ACC", track: "Snetterton",        car: "McLaren 720S GT3",     sessionType: "Race",        lapCount: 20, baseLapMs: 105_100 },
-  { simulator: "ACC", track: "Brands Hatch",      car: "BMW M4 GT3",           sessionType: "Qualifying",  lapCount: 10, baseLapMs: 83_200  },
-  { simulator: "F1",  track: "Monaco",            car: "F1 2026",              sessionType: "Practice",    lapCount: 15, baseLapMs: 72_500  },
-  { simulator: "F1",  track: "Suzuka",            car: "F1 2026",              sessionType: "Race",        lapCount: 25, baseLapMs: 91_900  },
-  { simulator: "ACC", track: "Monza",             car: "Porsche 991 II GT3 R", sessionType: "Race",        lapCount: 22, baseLapMs: 108_400 },
-  { simulator: "ACC", track: "Spa-Francorchamps", car: "Ferrari 488 GT3",      sessionType: "Practice",    lapCount: 16, baseLapMs: 137_800 },
+  { simulator: "ACC", track: "Monza",             car: "Ferrari 488 GT3",      carId: 20, sessionType: "Practice",    lapCount: 12, baseLapMs: 107_000 },
+  { simulator: "ACC", track: "Spa-Francorchamps", car: "Porsche 991 II GT3 R", carId: 23, sessionType: "Qualifying",  lapCount: 8,  baseLapMs: 136_500 },
+  { simulator: "ACC", track: "Nurburgring",       car: "Mercedes-AMG GT3",     carId: 1,  sessionType: "Race",        lapCount: 18, baseLapMs: 114_200 },
+  { simulator: "ACC", track: "Silverstone",       car: "Audi R8 LMS Evo",      carId: 31, sessionType: "Practice",    lapCount: 14, baseLapMs: 118_800 },
+  { simulator: "ACC", track: "Snetterton",        car: "McLaren 720S GT3",     carId: 30, sessionType: "Race",        lapCount: 20, baseLapMs: 105_100 },
+  { simulator: "ACC", track: "Brands Hatch",      car: "BMW M4 GT3",           carId: 30, sessionType: "Qualifying",  lapCount: 10, baseLapMs: 83_200  },
+  { simulator: "F1",  track: "Monaco",            car: "F1 2026",              carId: 0,  sessionType: "Practice",    lapCount: 15, baseLapMs: 72_500  },
+  { simulator: "F1",  track: "Suzuka",            car: "F1 2026",              carId: 0,  sessionType: "Race",        lapCount: 25, baseLapMs: 91_900  },
+  { simulator: "ACC", track: "Monza",             car: "Porsche 991 II GT3 R", carId: 23, sessionType: "Race",        lapCount: 22, baseLapMs: 108_400 },
+  { simulator: "ACC", track: "Spa-Francorchamps", car: "Ferrari 488 GT3",      carId: 20, sessionType: "Practice",    lapCount: 16, baseLapMs: 137_800 },
 ];
+
+/** Pace offsets (ms) for competitor cars added to Race/Qualifying sessions. */
+const COMPETITOR_OFFSETS = [+1_800, -900];
 
 // Deterministic PRNG so mock data is stable across reloads.
 function mulberry32(seed: number): () => number {
@@ -82,6 +87,8 @@ function buildSessions(): SessionResource[] {
 function buildLapsFor(
   session: SessionResource,
   profile: Profile,
+  carId: number,
+  baseLapMs: number,
   seed: number,
 ): LapResource[] {
   const rand = mulberry32(seed);
@@ -92,9 +99,9 @@ function buildLapsFor(
   for (let lapIndex = 1; lapIndex <= profile.lapCount; lapIndex++) {
     const variation =
       lapIndex === 1
-        ? Math.round(profile.baseLapMs / 12)
+        ? Math.round(baseLapMs / 12)
         : Math.round((rand() - 0.4) * 3500);
-    const lapTime = profile.baseLapMs + variation;
+    const lapTime = baseLapMs + variation;
     const valid = Math.floor(rand() * 20) !== 0;
     const personalBest = valid && lapTime < bestSoFar;
     if (personalBest) bestSoFar = lapTime;
@@ -103,6 +110,7 @@ function buildLapsFor(
     out.push({
       uid: lapUid,
       sessionUid: session.uid,
+      carId,
       recordedAt: new Date(recordedAt).toISOString(),
       lapTime,
       lapNumber: lapIndex,
@@ -116,9 +124,22 @@ function buildLapsFor(
 
 export const SESSIONS: SessionResource[] = buildSessions();
 
-export const LAPS: LapResource[] = SESSIONS.flatMap((s, i) =>
-  buildLapsFor(s, PROFILES[i]!, 0x200 + i),
-);
+export const LAPS: LapResource[] = SESSIONS.flatMap((s, i) => {
+  const profile = PROFILES[i]!;
+  const playerLaps = buildLapsFor(s, profile, profile.carId, profile.baseLapMs, 0x200 + i);
+
+  // Add competitor laps for Race/Qualifying sessions.
+  const competitorLaps =
+    profile.sessionType === "Race" || profile.sessionType === "Qualifying"
+      ? COMPETITOR_OFFSETS.flatMap((offsetMs, cIdx) => {
+          const compCarId = profile.carId + cIdx + 1;
+          const compBase = profile.baseLapMs + offsetMs;
+          return buildLapsFor(s, profile, compCarId, compBase, 0x400 + i * 10 + cIdx);
+        })
+      : [];
+
+  return [...playerLaps, ...competitorLaps];
+});
 
 const SAMPLES_PER_LAP = 150;
 

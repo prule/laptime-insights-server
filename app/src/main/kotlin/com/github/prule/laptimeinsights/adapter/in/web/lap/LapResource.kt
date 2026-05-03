@@ -1,6 +1,7 @@
 package com.github.prule.laptimeinsights.adapter.`in`.web.lap
 
 import com.github.prule.laptimeinsights.adapter.`in`.web.LinkFactory
+import com.github.prule.laptimeinsights.application.domain.model.CarId
 import com.github.prule.laptimeinsights.application.domain.model.Lap
 import com.github.prule.laptimeinsights.application.domain.model.LapNumber
 import com.github.prule.laptimeinsights.application.domain.model.LapTimeMs
@@ -15,6 +16,7 @@ import kotlinx.serialization.Serializable
 data class LapResource(
   val uid: Uid,
   val sessionUid: Uid,
+  val carId: CarId,
   val recordedAt: String,
   val lapTime: LapTimeMs,
   val lapNumber: LapNumber,
@@ -28,6 +30,7 @@ data class LapResource(
       LapResource(
         uid = lap.uid,
         sessionUid = lap.sessionUId,
+        carId = lap.carId,
         recordedAt = lap.recordedAt.toString(),
         lapTime = lap.lapTime,
         lapNumber = lap.lapNumber,
