@@ -68,6 +68,16 @@ export function useSessions(filters: SessionFilters & PagingAndSort = {}) {
   });
 }
 
+export function useLap(uid: string | undefined) {
+  const ctx = useApiContext();
+  return useQuery({
+    queryKey: ["lap", ctx.mode, ctx.apiBase, uid] as const,
+    queryFn: () => apiGet<LapResource>(ctx, `/api/1/laps/${uid}`),
+    enabled: !!uid,
+    staleTime: 60_000,
+  });
+}
+
 export function useSession(uid: string | undefined) {
   const ctx = useApiContext();
   return useQuery({
@@ -129,6 +139,60 @@ export interface LapFilters {
   track?: string;
   /** Owning-session simulator. Backend joins SESSION when set. */
   simulator?: string;
+}
+
+/**
+ * Returns the fastest valid lap of the supplied session, or `undefined` while
+ * loading / when the session has no valid laps yet. Cheap — `size=1` with a
+ * server-side sort.
+ */
+export function useSessionBestLap(sessionUid: string | undefined) {
+  const ctx = useApiContext();
+  return useQuery({
+    queryKey: ["session-best-lap", ctx.mode, ctx.apiBase, sessionUid] as const,
+    queryFn: async () => {
+      const page = await apiGet<Page<LapResource>>(
+        ctx,
+        `/api/1/laps${buildQuery({
+          sessionUid,
+          validLap: true,
+          page: 1,
+          size: 1,
+          sort: "lapTime:ASC",
+        })}`,
+      );
+      return page.items[0] ?? null;
+    },
+    enabled: !!sessionUid,
+    staleTime: 60_000,
+  });
+}
+
+/**
+ * Returns the fastest valid lap recorded at the supplied track across every
+ * session — i.e. the all-time PB at that track. Backend join handles the
+ * `track` filter.
+ */
+export function useTrackBestLap(track: string | null | undefined) {
+  const ctx = useApiContext();
+  return useQuery({
+    queryKey: ["track-best-lap", ctx.mode, ctx.apiBase, track] as const,
+    queryFn: async () => {
+      const page = await apiGet<Page<LapResource>>(
+        ctx,
+        `/api/1/laps${buildQuery({
+          track: track ?? undefined,
+          validLap: true,
+          page: 1,
+          size: 1,
+          sort: "lapTime:ASC",
+        })}`,
+      );
+      return page.items[0] ?? null;
+    },
+    enabled: !!track,
+    staleTime: 60_000,
+  });
 }
 
 export function useLaps(params: LapFilters & PagingAndSort = {}) {

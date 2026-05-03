@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useLaps, useSessionOptions, useSessions } from "../api/queries";
 import { Card } from "../components/ui/Card";
@@ -17,10 +17,9 @@ const PAGE_SIZE = 50;
  * Filters and pagination live in the URL querystring (e.g.
  * `/laps?track=Monza&validOnly=true&page=2`) — reload-safe and shareable.
  *
- * `car` / `track` / `simulator` are sent to the backend as query params; the
- * Ktor controller joins SESSION at the persistence layer so pagination is
- * accurate. The local sessions query is only used to enrich rows with
- * track/car/sim labels for display.
+ * Includes a "select mode" so users can pick exactly two laps from the
+ * filtered, paginated list and jump straight into the compare screen.
+ * Selection is local component state — the URL only carries filter state.
  */
 export function LapsScreen() {
   const navigate = useNavigate();
@@ -31,16 +30,18 @@ export function LapsScreen() {
     car: getString(params, "car"),
     simulator: getString(params, "simulator"),
   };
-  // Default-on flags use the inverted url key so the default URL stays empty:
-  // `?invalid=true` shows invalid laps too; absence keeps validOnly enabled.
   const showInvalid = getBool(params, "invalid", false);
   const validOnly = !showInvalid;
   const pbOnly = getBool(params, "pb", false);
   const page = getInt(params, "page", 1);
   const facetsActive = !!(facets.track || facets.car || facets.simulator);
 
+  // Multi-select state for compare. We deliberately keep this in component
+  // state, not the URL — selection is a transient pre-action, not a view.
+  const [selectMode, setSelectMode] = useState(false);
+  const [selected, setSelected] = useState<string[]>([]);
+
   const optionsQuery = useSessionOptions();
-  // Used solely to look up car/track/simulator strings per visible lap row.
   const sessionsQuery = useSessions({ size: 500, sort: "startedAt:DESC" });
 
   const lapsQuery = useLaps({
@@ -62,10 +63,26 @@ export function LapsScreen() {
 
   const items = lapsQuery.data?.items ?? [];
 
-  // Always reset paging when the filter set changes — page 2 of the old
-  // result would point to nonsense rows after the filters narrow.
   const updateFacet = (key: "track" | "car" | "simulator", value: string | undefined) => {
     setMany({ [key]: value, page: undefined });
+  };
+
+  const toggleSelect = (lapUid: string) => {
+    setSelected((prev) => {
+      if (prev.includes(lapUid)) return prev.filter((u) => u !== lapUid);
+      // Cap at 2: drop the older selection so the most recent two clicks win.
+      if (prev.length >= 2) return [prev[1]!, lapUid];
+      return [...prev, lapUid];
+    });
+  };
+
+  const compareSelected = () => {
+    if (selected.length !== 2) return;
+    const [lap1, lap2] = selected as [string, string];
+    // Track is preserved in URL only when the user picked one — otherwise
+    // /compare infers it from the chosen laps.
+    const trackParam = facets.track ? `&track=${encodeURIComponent(facets.track)}` : "";
+    navigate(`/compare?lap1=${lap1}&lap2=${lap2}${trackParam}`);
   };
 
   return (
@@ -122,10 +139,48 @@ export function LapsScreen() {
       </Card>
 
       <Card>
-        <SectionHeader
-          title="Fastest laps"
-          sub={lapsQuery.data ? `${lapsQuery.data.total} match · page ${page}` : undefined}
-        />
+        <div className="mb-4 flex items-baseline justify-between">
+          <div>
+            <div className="font-sans text-sm font-medium text-text">Fastest laps</div>
+            <div className="font-sans text-xs text-text-muted">
+              {lapsQuery.data ? `${lapsQuery.data.total} match · page ${page}` : "—"}
+              {selectMode && (
+                <span className="ml-2 text-cyan">
+                  · select mode: {selected.length}/2 picked
+                </span>
+              )}
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            {selectMode ? (
+              <>
+                <button
+                  onClick={compareSelected}
+                  disabled={selected.length !== 2}
+                  className="rounded border border-cyan/40 bg-cyan/10 px-3 py-1 font-mono text-[11px] uppercase tracking-[0.08em] text-cyan transition-colors disabled:cursor-not-allowed disabled:opacity-30"
+                >
+                  Compare selected
+                </button>
+                <button
+                  onClick={() => {
+                    setSelected([]);
+                    setSelectMode(false);
+                  }}
+                  className="rounded border border-border px-3 py-1 font-mono text-[11px] uppercase tracking-[0.08em] text-text-muted hover:text-text"
+                >
+                  Cancel
+                </button>
+              </>
+            ) : (
+              <button
+                onClick={() => setSelectMode(true)}
+                className="rounded border border-border px-3 py-1 font-mono text-[11px] uppercase tracking-[0.08em] text-text-muted hover:border-cyan/40 hover:text-cyan"
+              >
+                Select to compare
+              </button>
+            )}
+          </div>
+        </div>
         {lapsQuery.isLoading && <LoadingState />}
         {lapsQuery.isError && (
           <ErrorState error={lapsQuery.error} onRetry={() => lapsQuery.refetch()} />
@@ -139,44 +194,21 @@ export function LapsScreen() {
         {items.length > 0 && (
           <>
             <div className="overflow-hidden rounded border border-border">
-              <div className="grid grid-cols-[50px_120px_1fr_1fr_90px_110px_70px] items-center gap-3 border-b border-border bg-surface-active px-3 py-2 font-mono text-[10px] uppercase tracking-[0.08em] text-text-muted">
-                <div>#</div>
-                <div>Lap time</div>
-                <div>Track</div>
-                <div>Car</div>
-                <div>Sim</div>
-                <div>Recorded</div>
-                <div>Status</div>
-              </div>
+              <Header selectMode={selectMode} />
               {items.map((lap, i) => {
                 const session = sessionsByUid.get(lap.sessionUid);
+                const isSelected = selected.includes(lap.uid);
                 return (
-                  <button
+                  <LapRow
                     key={lap.uid}
-                    onClick={() => navigate(`/sessions/${lap.sessionUid}`)}
-                    className="grid w-full grid-cols-[50px_120px_1fr_1fr_90px_110px_70px] items-center gap-3 border-b border-border/40 px-3 py-2 text-left last:border-b-0 hover:bg-surface-hover"
-                  >
-                    <div className="font-mono text-xs text-text-muted">
-                      {(page - 1) * PAGE_SIZE + i + 1}
-                    </div>
-                    <div className={`font-mono text-sm ${lap.personalBest ? "text-ok" : "text-text"}`}>
-                      {formatLapTime(lap.lapTime)}
-                    </div>
-                    <div className="truncate font-sans text-[13px] text-text">
-                      {session?.track ?? <span className="text-text-dim">unknown</span>}
-                    </div>
-                    <div className="truncate font-sans text-[12px] text-text-muted">
-                      {session?.car ?? <span className="text-text-dim">unknown</span>}
-                    </div>
-                    <div className="font-mono text-[11px] uppercase tracking-[0.05em] text-text-muted">
-                      {session?.simulator ?? "—"}
-                    </div>
-                    <div className="font-mono text-xs text-text-muted">{formatTime(lap.recordedAt)}</div>
-                    <div className="font-mono text-[11px]">
-                      {lap.personalBest && <span className="text-ok">PB</span>}
-                      {!lap.valid && <span className="text-accent">INVAL</span>}
-                    </div>
-                  </button>
+                    index={(page - 1) * PAGE_SIZE + i + 1}
+                    lap={lap}
+                    session={session}
+                    selectMode={selectMode}
+                    selected={isSelected}
+                    onToggleSelect={() => toggleSelect(lap.uid)}
+                    onOpen={() => navigate(`/sessions/${lap.sessionUid}`)}
+                  />
                 );
               })}
             </div>
@@ -200,6 +232,88 @@ export function LapsScreen() {
         )}
       </Card>
     </div>
+  );
+}
+
+const COL_TEMPLATE_NORMAL = "grid-cols-[50px_120px_1fr_1fr_90px_110px_70px]";
+const COL_TEMPLATE_SELECT = "grid-cols-[36px_50px_120px_1fr_1fr_90px_110px_70px]";
+
+function Header({ selectMode }: { selectMode: boolean }) {
+  return (
+    <div
+      className={`grid items-center gap-3 border-b border-border bg-surface-active px-3 py-2 font-mono text-[10px] uppercase tracking-[0.08em] text-text-muted ${selectMode ? COL_TEMPLATE_SELECT : COL_TEMPLATE_NORMAL}`}
+    >
+      {selectMode && <div></div>}
+      <div>#</div>
+      <div>Lap time</div>
+      <div>Track</div>
+      <div>Car</div>
+      <div>Sim</div>
+      <div>Recorded</div>
+      <div>Status</div>
+    </div>
+  );
+}
+
+function LapRow({
+  index,
+  lap,
+  session,
+  selectMode,
+  selected,
+  onToggleSelect,
+  onOpen,
+}: {
+  index: number;
+  lap: { uid: string; lapTime: number; recordedAt: string; valid: boolean; personalBest: boolean; sessionUid: string };
+  session: SessionResource | undefined;
+  selectMode: boolean;
+  selected: boolean;
+  onToggleSelect: () => void;
+  onOpen: () => void;
+}) {
+  const onClick = selectMode ? onToggleSelect : onOpen;
+  return (
+    <button
+      onClick={onClick}
+      className={[
+        "grid w-full items-center gap-3 border-b border-border/40 px-3 py-2 text-left last:border-b-0",
+        selectMode ? COL_TEMPLATE_SELECT : COL_TEMPLATE_NORMAL,
+        selected ? "bg-cyan/10 hover:bg-cyan/15" : "hover:bg-surface-hover",
+      ].join(" ")}
+    >
+      {selectMode && (
+        <div className="flex items-center justify-center">
+          <span
+            aria-hidden
+            className={[
+              "flex h-4 w-4 items-center justify-center rounded border font-mono text-[10px]",
+              selected ? "border-cyan bg-cyan/20 text-cyan" : "border-border text-transparent",
+            ].join(" ")}
+          >
+            ✓
+          </span>
+        </div>
+      )}
+      <div className="font-mono text-xs text-text-muted">{index}</div>
+      <div className={`font-mono text-sm ${lap.personalBest ? "text-ok" : "text-text"}`}>
+        {formatLapTime(lap.lapTime)}
+      </div>
+      <div className="truncate font-sans text-[13px] text-text">
+        {session?.track ?? <span className="text-text-dim">unknown</span>}
+      </div>
+      <div className="truncate font-sans text-[12px] text-text-muted">
+        {session?.car ?? <span className="text-text-dim">unknown</span>}
+      </div>
+      <div className="font-mono text-[11px] uppercase tracking-[0.05em] text-text-muted">
+        {session?.simulator ?? "—"}
+      </div>
+      <div className="font-mono text-xs text-text-muted">{formatTime(lap.recordedAt)}</div>
+      <div className="font-mono text-[11px]">
+        {lap.personalBest && <span className="text-ok">PB</span>}
+        {!lap.valid && <span className="text-accent">INVAL</span>}
+      </div>
+    </button>
   );
 }
 

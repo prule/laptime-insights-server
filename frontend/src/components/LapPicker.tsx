@@ -1,79 +1,83 @@
-import { useMemo } from "react";
-import { useLaps, useSessions } from "../api/queries";
-import type { LapResource, SessionResource } from "../api/types";
-import { formatLapTime } from "../lib/format";
+import { useState } from "react";
+import { useLap, useSession } from "../api/queries";
+import { LapBrowser } from "./LapBrowser";
+import { Modal } from "./ui/Modal";
+import { formatDate, formatLapTime } from "../lib/format";
 
 export interface LapPickerProps {
   label: string;
-  /** Constrain the lap list to a single track to keep comparisons sensible. */
-  trackFilter?: string;
+  /** Pre-fill the browser's track filter when no lap is selected yet. */
+  defaultTrack?: string;
   selectedUid: string | undefined;
   onSelect: (uid: string | undefined) => void;
+  /** UID to grey out in the browser — used to prevent picking lap1 == lap2. */
+  disabledLapUid?: string;
+  accentColor?: string;
 }
 
 /**
- * Single dropdown that lists laps grouped by their owning session. Optional
- * track filter — comparing two laps from different tracks is supported by
- * the backend but the spline-position alignment is meaningless, so the
- * caller usually pins to one track.
+ * Button + modal lap picker. Replaces the old `<select>` dropdown — the
+ * browser inside the modal supports the same filters/pagination as the Laps
+ * screen, so this scales to thousands of laps.
+ *
+ * The button itself shows the current selection's lap time + track + date so
+ * users can confirm at a glance without re-opening the modal.
  */
-export function LapPicker({ label, trackFilter, selectedUid, onSelect }: LapPickerProps) {
-  const sessionsQuery = useSessions({ track: trackFilter, size: 200, sort: "startedAt:DESC" });
-  const lapsQuery = useLaps({
-    size: 1000,
-    sort: "lapTime:ASC",
-    track: trackFilter,
-    validLap: true,
-  });
+export function LapPicker({
+  label,
+  defaultTrack,
+  selectedUid,
+  onSelect,
+  disabledLapUid,
+  accentColor,
+}: LapPickerProps) {
+  const [open, setOpen] = useState(false);
+  const lapQuery = useLap(selectedUid);
+  const sessionQuery = useSession(lapQuery.data?.sessionUid);
 
-  const sessionsByUid = useMemo(() => {
-    const m = new Map<string, SessionResource>();
-    for (const s of sessionsQuery.data?.items ?? []) m.set(s.uid, s);
-    return m;
-  }, [sessionsQuery.data]);
+  const lap = lapQuery.data;
+  const session = sessionQuery.data;
 
-  const grouped = useMemo(() => {
-    const laps = lapsQuery.data?.items ?? [];
-    const groups = new Map<string, LapResource[]>();
-    for (const lap of laps) {
-      const list = groups.get(lap.sessionUid) ?? [];
-      list.push(lap);
-      groups.set(lap.sessionUid, list);
-    }
-    // Stable order: most recent session first.
-    return Array.from(groups.entries()).sort(([uidA], [uidB]) => {
-      const a = sessionsByUid.get(uidA)?.startedAt ?? "";
-      const b = sessionsByUid.get(uidB)?.startedAt ?? "";
-      return b.localeCompare(a);
-    });
-  }, [lapsQuery.data, sessionsByUid]);
+  const summary = lap
+    ? `${formatLapTime(lap.lapTime)} · ${session?.track ?? "?"} · ${formatDate(session?.startedAt)}`
+    : "— pick a lap —";
 
   return (
-    <label className="flex flex-col gap-1">
+    <div className="flex flex-col gap-1">
       <span className="font-mono text-[10px] uppercase tracking-[0.08em] text-text-muted">{label}</span>
-      <select
-        value={selectedUid ?? ""}
-        onChange={(e) => onSelect(e.target.value || undefined)}
-        className="rounded border border-border bg-surface px-3 py-2 font-sans text-[13px] text-text outline-none focus:border-cyan/40"
-      >
-        <option value="">— select a lap —</option>
-        {grouped.map(([sessionUid, laps]) => {
-          const session = sessionsByUid.get(sessionUid);
-          const labelText = session
-            ? `${session.track ?? "?"} · ${session.car ?? "?"} · ${(session.startedAt ?? "").slice(0, 10)}`
-            : sessionUid;
-          return (
-            <optgroup key={sessionUid} label={labelText}>
-              {laps.map((lap) => (
-                <option key={lap.uid} value={lap.uid}>
-                  Lap {lap.lapNumber} · {formatLapTime(lap.lapTime)}
-                  {lap.personalBest ? " · PB" : ""}
-                </option>
-              ))}
-            </optgroup>
-          );
-        })}
-      </select>
-    </label>
+      <div className="flex items-stretch gap-1">
+        <button
+          onClick={() => setOpen(true)}
+          className="min-w-[260px] flex-1 rounded border border-border bg-surface px-3 py-2 text-left font-sans text-[13px] text-text hover:border-cyan/40"
+        >
+          <div className="flex items-center gap-2">
+            {accentColor && (
+              <span className="h-2 w-2 flex-shrink-0 rounded-full" style={{ background: accentColor }} />
+            )}
+            <span className={lap ? "" : "text-text-muted"}>{summary}</span>
+          </div>
+        </button>
+        {selectedUid && (
+          <button
+            onClick={() => onSelect(undefined)}
+            title="Clear"
+            className="rounded border border-border px-2 font-mono text-[12px] text-text-muted hover:text-text"
+          >
+            ×
+          </button>
+        )}
+      </div>
+
+      <Modal open={open} onClose={() => setOpen(false)} title={label}>
+        <LapBrowser
+          defaultTrack={defaultTrack}
+          disabledLapUid={disabledLapUid}
+          onPick={(uid) => {
+            onSelect(uid);
+            setOpen(false);
+          }}
+        />
+      </Modal>
+    </div>
   );
 }
