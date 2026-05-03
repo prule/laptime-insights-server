@@ -5,6 +5,7 @@ import { FilterSelect } from "../components/ui/FilterSelect";
 import { SectionHeader } from "../components/ui/SectionHeader";
 import { SessionRow } from "../components/SessionRow";
 import { getString, useUrlState } from "../hooks/useUrlState";
+import { useTimeRange } from "../providers/TimeRangeProvider";
 
 /**
  * Filters live in the URL querystring. Reload-safe and shareable: a link
@@ -22,7 +23,13 @@ export function SessionsScreen() {
   };
   const facetsActive = !!(filters.track || filters.car || filters.simulator);
 
-  const sessionsQuery = useSessions({ ...filters, size: 50, sort: "startedAt:DESC" });
+  const { fromIso } = useTimeRange();
+  const sessionsQuery = useSessions({
+    ...filters,
+    from: fromIso ?? undefined,
+    size: 50,
+    sort: "startedAt:DESC",
+  });
 
   return (
     <div className="h-full overflow-y-auto px-8 py-7">

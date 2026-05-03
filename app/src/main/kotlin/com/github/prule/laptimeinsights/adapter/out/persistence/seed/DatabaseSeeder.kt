@@ -71,9 +71,8 @@ class DatabaseSeeder(
       val now = clock()
       var totalLaps = 0
 
-      SAMPLE_PROFILES.forEachIndexed { index, profile ->
-        val daysAgo = (index + 1).toLong()
-        val startedAt = now - daysAgo.days
+      SAMPLE_PROFILES.forEach { profile ->
+        val startedAt = now - profile.daysAgo.days
         val saved = createSessionPort.create(buildSession(profile))
         saved.start(startedAt)
         updateSessionPort.update(saved)
@@ -211,6 +210,11 @@ class DatabaseSeeder(
     return laps
   }
 
+  /**
+   * @param daysAgo session start, expressed as days back from `clock()`. Values
+   *   are deliberately spread across every dashboard time-range bucket
+   *   (1m / 3m / 6m / 1y / all) so the selector visibly changes the dataset.
+   */
   private data class SeedProfile(
     val simulator: Simulator,
     val track: Track,
@@ -219,6 +223,7 @@ class DatabaseSeeder(
     val sessionType: SessionType,
     val lapCount: Int,
     val baseLapTime: Duration,
+    val daysAgo: Long,
   )
 
   companion object {
@@ -237,8 +242,16 @@ class DatabaseSeeder(
         Track("Suzuka") to 18,
       )
 
+    // Sessions are distributed across every dashboard time-range bucket so
+    // the selector demonstrably changes the dataset:
+    //   1m  (0–30 d)    → 4 sessions
+    //   3m  (30–90 d)   → 3 sessions
+    //   6m  (90–180 d)  → 2 sessions
+    //   1y  (180–365 d) → 2 sessions
+    //   all (>365 d)    → 2 sessions
     private val SAMPLE_PROFILES =
       listOf(
+        // ── 1 month bucket ─────────────────────────────────────────────
         SeedProfile(
           Simulator.ACC,
           Track("Monza"),
@@ -247,6 +260,7 @@ class DatabaseSeeder(
           SessionType("Practice"),
           12,
           1.minutes + 47000.milliseconds,
+          daysAgo = 2,
         ),
         SeedProfile(
           Simulator.ACC,
@@ -256,33 +270,7 @@ class DatabaseSeeder(
           SessionType("Qualifying"),
           8,
           2.minutes + 16500.milliseconds,
-        ),
-        SeedProfile(
-          Simulator.ACC,
-          Track("Nurburgring"),
-          Car("Mercedes-AMG GT3"),
-          CarId(1),
-          SessionType("Race"),
-          18,
-          1.minutes + 54200.milliseconds,
-        ),
-        SeedProfile(
-          Simulator.ACC,
-          Track("Silverstone"),
-          Car("Audi R8 LMS Evo"),
-          CarId(31),
-          SessionType("Practice"),
-          14,
-          1.minutes + 58800.milliseconds,
-        ),
-        SeedProfile(
-          Simulator.ACC,
-          Track("Snetterton"),
-          Car("McLaren 720S GT3"),
-          CarId(30),
-          SessionType("Race"),
-          20,
-          1.minutes + 45100.milliseconds,
+          daysAgo = 8,
         ),
         SeedProfile(
           Simulator.ACC,
@@ -292,6 +280,7 @@ class DatabaseSeeder(
           SessionType("Qualifying"),
           10,
           1.minutes + 23200.milliseconds,
+          daysAgo = 16,
         ),
         SeedProfile(
           Simulator.F1,
@@ -301,7 +290,40 @@ class DatabaseSeeder(
           SessionType("Practice"),
           15,
           1.minutes + 12500.milliseconds,
+          daysAgo = 25,
         ),
+        // ── 3 month bucket ─────────────────────────────────────────────
+        SeedProfile(
+          Simulator.ACC,
+          Track("Nurburgring"),
+          Car("Mercedes-AMG GT3"),
+          CarId(1),
+          SessionType("Race"),
+          18,
+          1.minutes + 54200.milliseconds,
+          daysAgo = 42,
+        ),
+        SeedProfile(
+          Simulator.ACC,
+          Track("Silverstone"),
+          Car("Audi R8 LMS Evo"),
+          CarId(31),
+          SessionType("Practice"),
+          14,
+          1.minutes + 58800.milliseconds,
+          daysAgo = 60,
+        ),
+        SeedProfile(
+          Simulator.ACC,
+          Track("Snetterton"),
+          Car("McLaren 720S GT3"),
+          CarId(30),
+          SessionType("Race"),
+          20,
+          1.minutes + 45100.milliseconds,
+          daysAgo = 80,
+        ),
+        // ── 6 month bucket ─────────────────────────────────────────────
         SeedProfile(
           Simulator.F1,
           Track("Suzuka"),
@@ -310,6 +332,7 @@ class DatabaseSeeder(
           SessionType("Race"),
           25,
           1.minutes + 31900.milliseconds,
+          daysAgo = 120,
         ),
         SeedProfile(
           Simulator.ACC,
@@ -319,7 +342,9 @@ class DatabaseSeeder(
           SessionType("Race"),
           22,
           1.minutes + 48400.milliseconds,
+          daysAgo = 165,
         ),
+        // ── 1 year bucket ──────────────────────────────────────────────
         SeedProfile(
           Simulator.ACC,
           Track("Spa-Francorchamps"),
@@ -328,6 +353,38 @@ class DatabaseSeeder(
           SessionType("Practice"),
           16,
           2.minutes + 17800.milliseconds,
+          daysAgo = 220,
+        ),
+        SeedProfile(
+          Simulator.ACC,
+          Track("Silverstone"),
+          Car("BMW M4 GT3"),
+          CarId(30),
+          SessionType("Race"),
+          18,
+          1.minutes + 59500.milliseconds,
+          daysAgo = 310,
+        ),
+        // ── all-time bucket (>1 year) ──────────────────────────────────
+        SeedProfile(
+          Simulator.ACC,
+          Track("Nurburgring"),
+          Car("Audi R8 LMS Evo"),
+          CarId(31),
+          SessionType("Qualifying"),
+          12,
+          1.minutes + 55600.milliseconds,
+          daysAgo = 450,
+        ),
+        SeedProfile(
+          Simulator.F1,
+          Track("Monaco"),
+          Car("F1 2026"),
+          CarId(0),
+          SessionType("Race"),
+          24,
+          1.minutes + 13800.milliseconds,
+          daysAgo = 640,
         ),
       )
   }

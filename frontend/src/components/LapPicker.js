@@ -12,7 +12,7 @@ import { formatDate, formatLapTime } from "../lib/format";
  * The button itself shows the current selection's lap time + track + date so
  * users can confirm at a glance without re-opening the modal.
  */
-export function LapPicker({ label, defaultTrack, selectedUid, onSelect, disabledLapUid, accentColor, trackFilter, }) {
+export function LapPicker({ label, defaultTrack, selectedUid, onSelect, disabledLapUid, accentColor, }) {
     const [open, setOpen] = useState(false);
     const lapQuery = useLap(selectedUid);
     const sessionQuery = useSession(lapQuery.data?.sessionUid);
@@ -21,7 +21,7 @@ export function LapPicker({ label, defaultTrack, selectedUid, onSelect, disabled
     const summary = lap
         ? `${formatLapTime(lap.lapTime)} · ${session?.track ?? "?"} · ${formatDate(session?.startedAt)}`
         : "— pick a lap —";
-    return (_jsxs("div", { className: "flex flex-col gap-1", children: [_jsx("span", { className: "font-mono text-[10px] uppercase tracking-[0.08em] text-text-muted", children: label }), _jsxs("div", { className: "flex items-stretch gap-1", children: [_jsx("button", { onClick: () => setOpen(true), className: "min-w-[260px] flex-1 rounded border border-border bg-surface px-3 py-2 text-left font-sans text-[13px] text-text hover:border-cyan/40", children: _jsxs("div", { className: "flex items-center gap-2", children: [accentColor && (_jsx("span", { className: "h-2 w-2 flex-shrink-0 rounded-full", style: { background: accentColor } })), _jsx("span", { className: lap ? "" : "text-text-muted", children: summary })] }) }), selectedUid && (_jsx("button", { onClick: () => onSelect(undefined), title: "Clear", className: "rounded border border-border px-2 font-mono text-[12px] text-text-muted hover:text-text", children: "\u00D7" }))] }), _jsx(Modal, { open: open, onClose: () => setOpen(false), title: label, children: _jsx(LapBrowser, { defaultTrack: trackFilter || defaultTrack, disabledLapUid: disabledLapUid, onPick: (uid) => {
+    return (_jsxs("div", { className: "flex flex-col gap-1", children: [_jsx("span", { className: "font-mono text-[10px] uppercase tracking-[0.08em] text-text-muted", children: label }), _jsxs("div", { className: "flex items-stretch gap-1", children: [_jsx("button", { onClick: () => setOpen(true), className: "min-w-[260px] flex-1 rounded border border-border bg-surface px-3 py-2 text-left font-sans text-[13px] text-text hover:border-cyan/40", children: _jsxs("div", { className: "flex items-center gap-2", children: [accentColor && (_jsx("span", { className: "h-2 w-2 flex-shrink-0 rounded-full", style: { background: accentColor } })), _jsx("span", { className: lap ? "" : "text-text-muted", children: summary })] }) }), selectedUid && (_jsx("button", { onClick: () => onSelect(undefined), title: "Clear", className: "rounded border border-border px-2 font-mono text-[12px] text-text-muted hover:text-text", children: "\u00D7" }))] }), _jsx(Modal, { open: open, onClose: () => setOpen(false), title: label, children: _jsx(LapBrowser, { defaultTrack: defaultTrack, disabledLapUid: disabledLapUid, onPick: (uid) => {
                         onSelect(uid);
                         setOpen(false);
                     } }) })] }));

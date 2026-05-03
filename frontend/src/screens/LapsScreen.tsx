@@ -8,6 +8,7 @@ import { SectionHeader } from "../components/ui/SectionHeader";
 import type { SessionResource } from "../api/types";
 import { formatLapTime, formatTime } from "../lib/format";
 import { getBool, getInt, getString, useUrlState } from "../hooks/useUrlState";
+import { useTimeRange } from "../providers/TimeRangeProvider";
 
 const PAGE_SIZE = 50;
 
@@ -41,8 +42,14 @@ export function LapsScreen() {
   const [selectMode, setSelectMode] = useState(false);
   const [selected, setSelected] = useState<string[]>([]);
 
+  const { fromIso } = useTimeRange();
+  const from = fromIso ?? undefined;
+
   const optionsQuery = useSessionOptions();
-  const sessionsQuery = useSessions({ size: 500, sort: "startedAt:DESC" });
+  // Sessions list is used as a lookup (uid → track/car/sim) for laps that fall
+  // inside the active range — restrict it to the same window so we never
+  // render lap rows whose owning session was filtered out client-side.
+  const sessionsQuery = useSessions({ size: 500, sort: "startedAt:DESC", from });
 
   const lapsQuery = useLaps({
     page,
@@ -53,6 +60,7 @@ export function LapsScreen() {
     car: facets.car,
     track: facets.track,
     simulator: facets.simulator,
+    from,
   });
 
   const sessionsByUid = useMemo(() => {

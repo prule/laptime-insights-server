@@ -1,12 +1,11 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
-import path from "path"; // Changed from "node:path"
-import { fileURLToPath } from "url"; // Added this import
+import path from "node:path";
 export default defineConfig({
     plugins: [react()],
     resolve: {
         alias: {
-            "@": path.resolve(path.dirname(fileURLToPath(import.meta.url)), "src"), // Replaced __dirname
+            "@": path.resolve(__dirname, "src"),
         },
     },
     server: {

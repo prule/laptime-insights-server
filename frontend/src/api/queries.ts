@@ -139,6 +139,10 @@ export interface LapFilters {
   track?: string;
   /** Owning-session simulator. Backend joins SESSION when set. */
   simulator?: string;
+  /** Inclusive lower bound on lap.recordedAt as ISO-8601 instant. */
+  from?: string;
+  /** Inclusive upper bound on lap.recordedAt as ISO-8601 instant. */
+  to?: string;
 }
 
 /**
@@ -208,6 +212,8 @@ export function useLaps(params: LapFilters & PagingAndSort = {}) {
           car: params.car,
           track: params.track,
           simulator: params.simulator,
+          from: params.from,
+          to: params.to,
           page: params.page ?? 1,
           size: params.size ?? 50,
           sort: params.sort ?? "lapTime:ASC",

@@ -18,6 +18,7 @@ import com.github.prule.laptimeinsights.application.domain.model.SessionSearchCr
 import com.github.prule.laptimeinsights.tracker.utils.data.PageRequest
 import com.github.prule.laptimeinsights.tracker.utils.data.Sort
 import kotlin.random.Random
+import kotlin.time.Duration.Companion.days
 import kotlin.time.Instant
 import org.assertj.core.api.Assertions.assertThat
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
@@ -85,6 +86,34 @@ class DatabaseSeederTest : RepositoryTest(listOf(SessionTable, LapTable, LapTele
         assertThat(it.throttle).isBetween(0.0, 1.0)
         assertThat(it.brake).isBetween(0.0, 1.0)
       }
+    }
+  }
+
+  @Test
+  fun `seeds sessions across every dashboard time-range bucket`() {
+    newSeeder().seed()
+
+    transaction {
+      val now = fixedClock()
+      val sessions =
+        sessionPort
+          .search(SessionSearchCriteria(), PageRequest(1, 100), Sort.noSort())
+          .items
+          .mapNotNull { it.startedAt() }
+
+      // One bucket per dashboard preset — every preset must light up so the
+      // selector visibly changes the dataset on a freshly seeded DB.
+      val inOneMonth = sessions.count { it >= now - 30.days }
+      val inThreeMonths = sessions.count { it >= now - 90.days }
+      val inSixMonths = sessions.count { it >= now - 180.days }
+      val inOneYear = sessions.count { it >= now - 365.days }
+      val all = sessions.size
+
+      assertThat(inOneMonth).isGreaterThan(0)
+      assertThat(inThreeMonths).isGreaterThan(inOneMonth)
+      assertThat(inSixMonths).isGreaterThan(inThreeMonths)
+      assertThat(inOneYear).isGreaterThan(inSixMonths)
+      assertThat(all).isGreaterThan(inOneYear)
     }
   }
 
