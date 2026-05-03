@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useLaps, useSessionOptions, useSessions } from "../api/queries";
 import { Card } from "../components/ui/Card";
@@ -7,17 +7,15 @@ import { FilterSelect } from "../components/ui/FilterSelect";
 import { SectionHeader } from "../components/ui/SectionHeader";
 import type { SessionResource } from "../api/types";
 import { formatLapTime, formatTime } from "../lib/format";
+import { getBool, getInt, getString, useUrlState } from "../hooks/useUrlState";
 
 const PAGE_SIZE = 50;
 
-interface SessionFacets {
-  car?: string;
-  track?: string;
-  simulator?: string;
-}
-
 /**
  * Lap-search screen.
+ *
+ * Filters and pagination live in the URL querystring (e.g.
+ * `/laps?track=Monza&validOnly=true&page=2`) — reload-safe and shareable.
  *
  * `car` / `track` / `simulator` are sent to the backend as query params; the
  * Ktor controller joins SESSION at the persistence layer so pagination is
@@ -26,10 +24,20 @@ interface SessionFacets {
  */
 export function LapsScreen() {
   const navigate = useNavigate();
-  const [page, setPage] = useState(1);
-  const [validOnly, setValidOnly] = useState(true);
-  const [pbOnly, setPbOnly] = useState(false);
-  const [facets, setFacets] = useState<SessionFacets>({});
+  const [params, setParam, setMany] = useUrlState();
+
+  const facets = {
+    track: getString(params, "track"),
+    car: getString(params, "car"),
+    simulator: getString(params, "simulator"),
+  };
+  // Default-on flags use the inverted url key so the default URL stays empty:
+  // `?invalid=true` shows invalid laps too; absence keeps validOnly enabled.
+  const showInvalid = getBool(params, "invalid", false);
+  const validOnly = !showInvalid;
+  const pbOnly = getBool(params, "pb", false);
+  const page = getInt(params, "page", 1);
+  const facetsActive = !!(facets.track || facets.car || facets.simulator);
 
   const optionsQuery = useSessionOptions();
   // Used solely to look up car/track/simulator strings per visible lap row.
@@ -52,47 +60,59 @@ export function LapsScreen() {
     return map;
   }, [sessionsQuery.data]);
 
-  const setFacet = (key: keyof SessionFacets, value: string | undefined) => {
-    setFacets((prev) => ({ ...prev, [key]: value }));
-    setPage(1);
-  };
-
-  const facetsActive = !!(facets.car || facets.track || facets.simulator);
   const items = lapsQuery.data?.items ?? [];
+
+  // Always reset paging when the filter set changes — page 2 of the old
+  // result would point to nonsense rows after the filters narrow.
+  const updateFacet = (key: "track" | "car" | "simulator", value: string | undefined) => {
+    setMany({ [key]: value, page: undefined });
+  };
 
   return (
     <div className="h-full overflow-y-auto px-8 py-7">
       <Card className="mb-4">
-        <SectionHeader title="Filter" sub="All filters hit /api/1/laps directly — pagination reflects the filtered total" />
+        <SectionHeader title="Filter" sub="All filters hit /api/1/laps directly · state is mirrored to the URL" />
         <div className="flex flex-wrap items-end gap-3">
           <FilterSelect
             label="Track"
             value={facets.track}
             options={optionsQuery.data?.tracks ?? []}
-            onChange={(v) => setFacet("track", v)}
+            onChange={(v) => updateFacet("track", v)}
           />
           <FilterSelect
             label="Car"
             value={facets.car}
             options={optionsQuery.data?.cars ?? []}
-            onChange={(v) => setFacet("car", v)}
+            onChange={(v) => updateFacet("car", v)}
           />
           <FilterSelect
             label="Simulator"
             value={facets.simulator}
             options={optionsQuery.data?.simulators ?? []}
-            onChange={(v) => setFacet("simulator", v)}
+            onChange={(v) => updateFacet("simulator", v)}
           />
-          <Toggle label="Valid only" value={validOnly} onChange={(v) => { setValidOnly(v); setPage(1); }} />
-          <Toggle label="Personal bests" value={pbOnly} onChange={(v) => { setPbOnly(v); setPage(1); }} />
+          <Toggle
+            label="Valid only"
+            value={validOnly}
+            onChange={(v) => setMany({ invalid: v ? undefined : true, page: undefined })}
+          />
+          <Toggle
+            label="Personal bests"
+            value={pbOnly}
+            onChange={(v) => setMany({ pb: v ? true : undefined, page: undefined })}
+          />
           {(facetsActive || pbOnly || !validOnly) && (
             <button
-              onClick={() => {
-                setFacets({});
-                setValidOnly(true);
-                setPbOnly(false);
-                setPage(1);
-              }}
+              onClick={() =>
+                setMany({
+                  track: undefined,
+                  car: undefined,
+                  simulator: undefined,
+                  invalid: undefined,
+                  pb: undefined,
+                  page: undefined,
+                })
+              }
               className="self-end rounded border border-border px-3 py-2 font-mono text-[11px] uppercase tracking-[0.08em] text-text-muted hover:text-text"
             >
               Reset
@@ -163,14 +183,14 @@ export function LapsScreen() {
             <div className="mt-3 flex items-center gap-2">
               <button
                 disabled={page === 1}
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                onClick={() => setParam("page", page > 2 ? page - 1 : undefined)}
                 className="rounded border border-border px-3 py-1 font-mono text-[11px] uppercase tracking-[0.08em] text-text-muted disabled:opacity-30"
               >
                 Prev
               </button>
               <button
                 disabled={!lapsQuery.data || page * PAGE_SIZE >= lapsQuery.data.total}
-                onClick={() => setPage((p) => p + 1)}
+                onClick={() => setParam("page", page + 1)}
                 className="rounded border border-border px-3 py-1 font-mono text-[11px] uppercase tracking-[0.08em] text-text-muted disabled:opacity-30"
               >
                 Next

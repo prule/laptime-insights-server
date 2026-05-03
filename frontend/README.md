@@ -76,6 +76,23 @@ npm run typecheck
 npm run build
 ```
 
+## URL state
+
+Filter and pagination state for screens with searchable lists is mirrored to
+the URL querystring. Reload-safe and shareable: `/laps?track=Monza&pb=true&page=2`
+restores the same view. Implemented in `src/hooks/useUrlState.ts`:
+
+```ts
+const [params, setParam, setMany] = useUrlState();
+const track = getString(params, "track");
+const page  = getInt(params, "page", 1);
+setParam("track", "Monza");        // → ?track=Monza
+setMany({ track: undefined, page: undefined });  // strip both
+```
+
+When adding a new screen with filters, **always** drive state from
+`useUrlState` rather than `useState` so deep-linking keeps working.
+
 ## Adding a new endpoint
 
 1. Add a handler to `src/api/mock/handler.ts` that mirrors the Ktor route.
