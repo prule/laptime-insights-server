@@ -4,14 +4,14 @@ import com.github.prule.laptimeinsights.application.domain.model.LapSearchCriter
 import com.github.prule.laptimeinsights.application.domain.model.Uid
 import com.github.prule.laptimeinsights.application.port.`in`.lap.CompareLapsUseCase
 import com.github.prule.laptimeinsights.application.port.`in`.lap.LapComparison
-import com.github.prule.laptimeinsights.application.port.out.lap.FindLapTelemetryPort
+import com.github.prule.laptimeinsights.application.port.out.car.FindRealtimeCarUpdateByLapPort
 import com.github.prule.laptimeinsights.application.port.out.lap.SearchLapPort
 import com.github.prule.laptimeinsights.tracker.utils.NotFoundException
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 
 class CompareLapsService(
   private val searchLapPort: SearchLapPort,
-  private val findLapTelemetryPort: FindLapTelemetryPort,
+  private val findRealtimeCarUpdateByLapPort: FindRealtimeCarUpdateByLapPort,
 ) : CompareLapsUseCase {
   override fun compare(lap1Uid: Uid, lap2Uid: Uid): LapComparison = transaction {
     val lap1 =
@@ -22,9 +22,9 @@ class CompareLapsService(
         ?: throw NotFoundException("Lap:${lap2Uid.value}")
     LapComparison(
       lap1 = lap1,
-      lap1Samples = findLapTelemetryPort.findByLapUid(lap1Uid),
+      lap1Samples = findRealtimeCarUpdateByLapPort.findByLapUid(lap1Uid),
       lap2 = lap2,
-      lap2Samples = findLapTelemetryPort.findByLapUid(lap2Uid),
+      lap2Samples = findRealtimeCarUpdateByLapPort.findByLapUid(lap2Uid),
     )
   }
 }

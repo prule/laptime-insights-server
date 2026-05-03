@@ -11,8 +11,8 @@ import io.ktor.server.routing.routing
 import io.ktor.utils.io.ExperimentalKtorApi
 
 /**
- * REST controller exposing **`GET /api/1/laps/{uid}/telemetry`** — the full
- * spline-position-indexed telemetry trace for a single lap.
+ * REST controller exposing **`GET /api/1/laps/{uid}/telemetry`** — the full spline-position-indexed
+ * telemetry trace for a single lap.
  */
 @OptIn(ExperimentalKtorApi::class)
 class FindLapTelemetryController(

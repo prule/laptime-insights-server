@@ -28,8 +28,6 @@ export interface TelemetrySample {
   splinePosition: number;
   speedKph: number;
   gear: number;
-  throttle: number;
-  brake: number;
 }
 
 export interface LapTelemetryResource {

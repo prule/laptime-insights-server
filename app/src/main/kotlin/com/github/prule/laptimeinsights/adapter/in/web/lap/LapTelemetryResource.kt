@@ -10,9 +10,9 @@ import kotlinx.serialization.Serializable
 /**
  * Wire format for `GET /api/1/laps/{uid}/telemetry`.
  *
- * The samples are returned in spline-position order. `_links.self` is the
- * canonical URL of this telemetry trace; `_links.lap` points back at the
- * owning lap so HATEOAS clients can navigate without URL construction.
+ * The samples are returned in spline-position order. `_links.self` is the canonical URL of this
+ * telemetry trace; `_links.lap` points back at the owning lap so HATEOAS clients can navigate
+ * without URL construction.
  */
 @Serializable
 data class LapTelemetryResource(
@@ -26,11 +26,7 @@ data class LapTelemetryResource(
       samples: List<TelemetrySample>,
       linkFactory: LapTelemetryLinkFactory,
     ): LapTelemetryResource =
-      LapTelemetryResource(
-        lapUid = lapUid,
-        samples = samples,
-        _links = linkFactory.build(lapUid),
-      )
+      LapTelemetryResource(lapUid = lapUid, samples = samples, _links = linkFactory.build(lapUid))
   }
 }
 

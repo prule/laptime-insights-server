@@ -144,13 +144,22 @@ class LapRepositoryTest : RepositoryTest(listOf(LapTable, SessionTable)) {
       val porscheSession = sessionRepository.create(buildSession(car = Car("Porsche 991 II GT3 R")))
 
       repository.create(
-        createTestLap(sessionUid = Uid(ferrariSession.uid), sessionId = SessionId(ferrariSession.id.value))
+        createTestLap(
+          sessionUid = Uid(ferrariSession.uid),
+          sessionId = SessionId(ferrariSession.id.value),
+        )
       )
       repository.create(
-        createTestLap(sessionUid = Uid(ferrariSession.uid), sessionId = SessionId(ferrariSession.id.value))
+        createTestLap(
+          sessionUid = Uid(ferrariSession.uid),
+          sessionId = SessionId(ferrariSession.id.value),
+        )
       )
       repository.create(
-        createTestLap(sessionUid = Uid(porscheSession.uid), sessionId = SessionId(porscheSession.id.value))
+        createTestLap(
+          sessionUid = Uid(porscheSession.uid),
+          sessionId = SessionId(porscheSession.id.value),
+        )
       )
 
       val result =

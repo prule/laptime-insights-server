@@ -9,22 +9,21 @@ import com.github.prule.laptimeinsights.application.domain.model.LapId
 import com.github.prule.laptimeinsights.application.domain.model.LapNumber
 import com.github.prule.laptimeinsights.application.domain.model.LapTimeMs
 import com.github.prule.laptimeinsights.application.domain.model.PersonalBest
+import com.github.prule.laptimeinsights.application.domain.model.RealtimeCarUpdate
 import com.github.prule.laptimeinsights.application.domain.model.Session
 import com.github.prule.laptimeinsights.application.domain.model.SessionId
 import com.github.prule.laptimeinsights.application.domain.model.SessionType
 import com.github.prule.laptimeinsights.application.domain.model.Simulator
-import com.github.prule.laptimeinsights.application.domain.model.TelemetrySample
 import com.github.prule.laptimeinsights.application.domain.model.Track
 import com.github.prule.laptimeinsights.application.domain.model.Uid
 import com.github.prule.laptimeinsights.application.domain.model.ValidLap
+import com.github.prule.laptimeinsights.application.port.out.car.CreateRealtimeCarUpdatePort
 import com.github.prule.laptimeinsights.application.port.out.lap.CreateLapPort
-import com.github.prule.laptimeinsights.application.port.out.lap.CreateLapTelemetryPort
 import com.github.prule.laptimeinsights.application.port.out.session.CreateSessionPort
 import com.github.prule.laptimeinsights.application.port.out.session.UpdateSessionPort
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.max
-import kotlin.math.min
 import kotlin.math.sin
 import kotlin.random.Random
 import kotlin.time.Clock
@@ -38,7 +37,7 @@ import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.slf4j.LoggerFactory
 
 /**
- * Populates the database with sample sessions and laps.
+ * Populates the database with sample sessions, laps and realtime car updates.
  *
  * Only intended for local development and demos. The seeder is idempotent: it skips seeding when
  * the tables already contain data.
@@ -50,7 +49,7 @@ class DatabaseSeeder(
   private val createSessionPort: CreateSessionPort,
   private val updateSessionPort: UpdateSessionPort,
   private val createLapPort: CreateLapPort,
-  private val createLapTelemetryPort: CreateLapTelemetryPort,
+  private val createRealtimeCarUpdatePort: CreateRealtimeCarUpdatePort,
   private val clock: () -> Instant = { Clock.System.now() },
   private val random: Random = Random(42),
 ) {
@@ -80,10 +79,8 @@ class DatabaseSeeder(
         val laps = generateLaps(profile, saved, startedAt)
         laps.forEach { lap ->
           val savedLap = createLapPort.create(lap)
-          createLapTelemetryPort.create(
-            lapId = savedLap.id,
-            lapUid = savedLap.uid,
-            samples = generateTelemetry(profile, lap.lapTime.value, lap.lapNumber.value),
+          createRealtimeCarUpdatePort.batchCreate(
+            generateRealtimeCarUpdates(profile, savedLap, saved)
           )
         }
         totalLaps += laps.size
@@ -93,20 +90,19 @@ class DatabaseSeeder(
         if (profile.sessionType.value in listOf("Race", "Qualifying")) {
           COMPETITOR_OFFSETS.forEachIndexed { idx, paceOffsetMs ->
             val competitorCarId = CarId(profile.carId.value + idx + 1)
-            val competitorLaps = generateLaps(
-              profile.copy(
-                carId = competitorCarId,
-                baseLapTime = profile.baseLapTime + paceOffsetMs.milliseconds,
-              ),
-              saved,
-              startedAt,
-            )
+            val competitorLaps =
+              generateLaps(
+                profile.copy(
+                  carId = competitorCarId,
+                  baseLapTime = profile.baseLapTime + paceOffsetMs.milliseconds,
+                ),
+                saved,
+                startedAt,
+              )
             competitorLaps.forEach { lap ->
               val savedLap = createLapPort.create(lap)
-              createLapTelemetryPort.create(
-                lapId = savedLap.id,
-                lapUid = savedLap.uid,
-                samples = generateTelemetry(profile, lap.lapTime.value, lap.lapNumber.value),
+              createRealtimeCarUpdatePort.batchCreate(
+                generateRealtimeCarUpdates(profile, savedLap, saved)
               )
             }
             totalLaps += competitorLaps.size
@@ -122,31 +118,29 @@ class DatabaseSeeder(
   }
 
   /**
-   * Synthesizes a smooth, lap-specific telemetry trace.
+   * Synthesizes a smooth, lap-specific set of [RealtimeCarUpdate] frames.
    *
-   * Speed follows a sum of sinusoids so each track gets its own corner pattern
-   * (driven by the profile's base lap time as the seed). Faster laps sit
-   * uniformly slightly higher on the speed envelope; slower laps drop a touch.
-   * Gear is derived from speed buckets; throttle/brake are derived from the
-   * speed gradient — accelerating ⇒ throttle high, decelerating ⇒ brake high.
+   * Speed follows a sum of sinusoids so each track gets its own corner pattern. Faster laps sit
+   * uniformly slightly higher on the speed envelope. Gear is derived from speed buckets.
+   *
+   * World position and other ACC-specific fields are set to neutral synthetic values since this is
+   * dev seed data only.
    */
-  private fun generateTelemetry(
+  private fun generateRealtimeCarUpdates(
     profile: SeedProfile,
-    lapTimeMs: Long,
-    lapNumber: Int,
-  ): List<TelemetrySample> {
+    lap: Lap,
+    session: Session,
+  ): List<RealtimeCarUpdate> {
     val samples = SAMPLES_PER_LAP
     val trackSeed = profile.baseLapTime.inWholeMilliseconds
     val cornerCount = TRACK_CORNERS[profile.track] ?: 8
-    // Faster lap ⇒ slightly higher overall speed envelope.
     val paceFactor =
-      1.0 + (profile.baseLapTime.inWholeMilliseconds - lapTimeMs).toDouble() / 50_000.0
-    val lapJitter = (lapNumber * 17 % 7) * 0.4
+      1.0 + (profile.baseLapTime.inWholeMilliseconds - lap.lapTime.value).toDouble() / 50_000.0
+    val lapJitter = (lap.lapNumber.value * 17 % 7) * 0.4
 
     val speeds = DoubleArray(samples)
     for (i in 0 until samples) {
       val t = i.toDouble() / samples
-      // Track-specific corner pattern.
       val cornerWave = sin(2.0 * PI * cornerCount * t + (trackSeed % 31) * 0.1)
       val secondaryWave = cos(4.0 * PI * t + lapJitter)
       val baseline = 180.0 + 60.0 * cornerWave + 25.0 * secondaryWave
@@ -156,19 +150,6 @@ class DatabaseSeeder(
     return List(samples) { i ->
       val splinePosition = i.toDouble() / samples
       val speed = speeds[i]
-      val nextSpeed = speeds[min(samples - 1, i + 1)]
-      val gradient = nextSpeed - speed
-      val throttle =
-        when {
-          gradient > 1.0 -> min(1.0, 0.7 + gradient / 20.0)
-          gradient > -0.5 -> 0.6
-          else -> max(0.0, 0.3 + gradient / 30.0)
-        }
-      val brake =
-        when {
-          gradient < -2.0 -> min(1.0, -gradient / 8.0)
-          else -> 0.0
-        }
       val gear =
         when {
           speed < 90 -> 2
@@ -177,12 +158,33 @@ class DatabaseSeeder(
           speed < 210 -> 5
           else -> 6
         }
-      TelemetrySample(
-        splinePosition = splinePosition,
-        speedKph = speed,
+      RealtimeCarUpdate(
+        sessionId = session.id,
+        sessionUid = session.uid,
+        lapId = lap.id,
+        lapUid = lap.uid,
+        recordedAt = lap.recordedAt,
+        carIndex = lap.carId,
+        driverIndex = 0,
+        driverCount = 1,
         gear = gear,
-        throttle = throttle,
-        brake = brake,
+        worldPosX = 0f,
+        worldPosY = 0f,
+        yaw = 0f,
+        carLocation = "TRACK",
+        kmh = speed.toInt(),
+        racePosition = 1,
+        cupPosition = 1,
+        trackPosition = 0,
+        splinePosition = splinePosition,
+        laps = lap.lapNumber.value - 1,
+        delta = 0,
+        bestLapTimeMs = Long.MAX_VALUE,
+        lastLapTimeMs = Long.MAX_VALUE,
+        currentLapTimeMs = lap.lapTime.value,
+        currentLapIsInvalid = !lap.valid.value,
+        currentLapIsOutlap = lap.lapNumber.value == 1,
+        currentLapIsInlap = false,
       )
     }
   }
@@ -208,12 +210,11 @@ class DatabaseSeeder(
     var bestSoFar = Long.MAX_VALUE
     var recordedAt = sessionStart
     for (lapIndex in 1..profile.lapCount) {
-      // First lap is treated as an out lap; subsequent laps wobble within a tighter window.
       val variation =
         if (lapIndex == 1) profile.baseLapTime.inWholeMilliseconds / 12
         else random.nextLong(-1500, 2000)
       val lapTimeMs = profile.baseLapTime.inWholeMilliseconds + variation
-      val valid = random.nextInt(0, 20) != 0 // ~5% invalid laps
+      val valid = random.nextInt(0, 20) != 0
       val isPersonalBest = valid && lapTimeMs < bestSoFar
       if (isPersonalBest) bestSoFar = lapTimeMs
 
@@ -236,9 +237,9 @@ class DatabaseSeeder(
   }
 
   /**
-   * @param daysAgo session start, expressed as days back from `clock()`. Values
-   *   are deliberately spread across every dashboard time-range bucket
-   *   (1m / 3m / 6m / 1y / all) so the selector visibly changes the dataset.
+   * @param daysAgo session start, expressed as days back from `clock()`. Values are deliberately
+   *   spread across every dashboard time-range bucket (1m / 3m / 6m / 1y / all) so the selector
+   *   visibly changes the dataset.
    */
   private data class SeedProfile(
     val simulator: Simulator,
@@ -254,14 +255,8 @@ class DatabaseSeeder(
   companion object {
     private const val SAMPLES_PER_LAP = 150
 
-    /**
-     * Pace offsets (ms) added to the player's base lap time for each competitor
-     * car in Race/Qualifying sessions. Two competitors: one slightly faster,
-     * one slightly slower.
-     */
     private val COMPETITOR_OFFSETS = listOf(+1_800L, -900L)
 
-    /** Rough corner count per track, used to shape the synthetic speed trace. */
     private val TRACK_CORNERS: Map<Track, Int> =
       mapOf(
         Track("Monza") to 11,
@@ -274,13 +269,6 @@ class DatabaseSeeder(
         Track("Suzuka") to 18,
       )
 
-    // Sessions are distributed across every dashboard time-range bucket so
-    // the selector demonstrably changes the dataset:
-    //   1m  (0–30 d)    → 4 sessions
-    //   3m  (30–90 d)   → 3 sessions
-    //   6m  (90–180 d)  → 2 sessions
-    //   1y  (180–365 d) → 2 sessions
-    //   all (>365 d)    → 2 sessions
     private val SAMPLE_PROFILES =
       listOf(
         // ── 1 month bucket ─────────────────────────────────────────────

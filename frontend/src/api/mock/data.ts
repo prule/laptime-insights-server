@@ -174,13 +174,6 @@ function buildTelemetry(track: string, baseLapMs: number, lapTimeMs: number, lap
   }
 
   return speeds.map((speed, i): TelemetrySample => {
-    const next = speeds[Math.min(SAMPLES_PER_LAP - 1, i + 1)]!;
-    const gradient = next - speed;
-    let throttle: number;
-    if (gradient > 1) throttle = Math.min(1, 0.7 + gradient / 20);
-    else if (gradient > -0.5) throttle = 0.6;
-    else throttle = Math.max(0, 0.3 + gradient / 30);
-    const brake = gradient < -2 ? Math.min(1, -gradient / 8) : 0;
     let gear = 6;
     if (speed < 90) gear = 2;
     else if (speed < 130) gear = 3;
@@ -190,8 +183,6 @@ function buildTelemetry(track: string, baseLapMs: number, lapTimeMs: number, lap
       splinePosition: i / SAMPLES_PER_LAP,
       speedKph: speed,
       gear,
-      throttle,
-      brake,
     };
   });
 }

@@ -132,16 +132,6 @@ export function CompareScreen() {
             />
           </Card>
 
-          <div className="grid grid-cols-2 gap-4">
-            <Card>
-              <SectionHeader title="Throttle" />
-              <TelemetryTrace series={series} field="throttle" height={120} yMin={0} yMax={1} />
-            </Card>
-            <Card>
-              <SectionHeader title="Brake" />
-              <TelemetryTrace series={series} field="brake" height={120} yMin={0} yMax={1} />
-            </Card>
-          </div>
         </>
       ) : null}
     </div>

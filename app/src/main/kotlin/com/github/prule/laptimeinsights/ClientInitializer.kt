@@ -20,6 +20,7 @@ import com.github.prule.laptimeinsights.application.domain.model.Simulator
 import com.github.prule.laptimeinsights.application.domain.model.Track
 import com.github.prule.laptimeinsights.application.domain.model.ValidLap
 import com.github.prule.laptimeinsights.application.port.`in`.car.FindCarCommand
+import com.github.prule.laptimeinsights.application.port.`in`.car.RecordRealtimeCarUpdateCommand
 import com.github.prule.laptimeinsights.application.port.`in`.lap.CreateLapCommand
 import com.github.prule.laptimeinsights.application.port.`in`.session.CreateSessionCommand
 import com.github.prule.laptimeinsights.application.port.`in`.session.FinishSessionCommand
@@ -58,6 +59,7 @@ class ClientInitializer(private val appModule: AppModule) {
           LoggingListener(),
           RegistrationResultListener(clientState!!),
           buildRealTimeUpdate(),
+          buildRealTimeCarUpdate(),
           buildLapCompleted(),
           buildEntryListCar(),
           buildTrackData(),
@@ -110,6 +112,49 @@ class ClientInitializer(private val appModule: AppModule) {
             }
           }
         ),
+    )
+  }
+
+  private fun buildRealTimeCarUpdate(): MessageListener<AccBroadcastingInbound> {
+    return ConditionalFilter(
+      condition = { message ->
+        session != null &&
+          message.msgType() == AccBroadcastingInbound.InboundMsgType.REALTIME_CAR_UPDATE
+      },
+      clazz = AccBroadcastingInbound.RealtimeCarUpdate::class,
+      block = { message, _ ->
+        val currentSession = session ?: return@ConditionalFilter
+        appModule.car.recordRealtimeCarUpdateUseCase.record(
+          RecordRealtimeCarUpdateCommand(
+            sessionId = currentSession.id,
+            sessionUid = currentSession.uid,
+            lapId = null,
+            lapUid = null,
+            recordedAt = Clock.System.now(),
+            carIndex = CarId(message.carIndex()),
+            driverIndex = message.driverIndex(),
+            driverCount = message.driverCount(),
+            gear = message.gear().toInt(),
+            worldPosX = message.worldPosX(),
+            worldPosY = message.worldPosY(),
+            yaw = message.yaw(),
+            carLocation = message.carLocation()?.name ?: "UNKNOWN",
+            kmh = message.kmh(),
+            racePosition = message.position(),
+            cupPosition = message.cupPosition(),
+            trackPosition = message.trackPosition(),
+            splinePosition = message.splinePosition().toDouble(),
+            laps = message.laps(),
+            delta = message.delta(),
+            bestLapTimeMs = message.bestSessionLap()?.lapTimeMs()?.toLong() ?: Long.MAX_VALUE,
+            lastLapTimeMs = message.lastLap()?.lapTimeMs()?.toLong() ?: Long.MAX_VALUE,
+            currentLapTimeMs = message.currentLap()?.lapTimeMs()?.toLong() ?: 0L,
+            currentLapIsInvalid = message.currentLap()?.isInvalid() == 1,
+            currentLapIsOutlap = message.currentLap()?.isOutlap() == 1,
+            currentLapIsInlap = message.currentLap()?.isInlap() == 1,
+          )
+        )
+      },
     )
   }
 

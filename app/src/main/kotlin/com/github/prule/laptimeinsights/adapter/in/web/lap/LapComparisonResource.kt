@@ -12,10 +12,9 @@ import kotlinx.serialization.Serializable
 /**
  * Wire format for `GET /api/1/laps/compare?lap1Uid=…&lap2Uid=…`.
  *
- * Per the lap-comparison spec we return raw, un-resampled samples for each
- * lap (the frontend aligns on `splinePosition` for display). Each side carries
- * a `LapComparisonSide` so callers can render lap meta (lap time, lap number,
- * UID) without a follow-up call to `/api/1/laps/{uid}`.
+ * Per the lap-comparison spec we return raw, un-resampled samples for each lap (the frontend aligns
+ * on `splinePosition` for display). Each side carries a `LapComparisonSide` so callers can render
+ * lap meta (lap time, lap number, UID) without a follow-up call to `/api/1/laps/{uid}`.
  */
 @Serializable
 data class LapComparisonResource(
@@ -64,8 +63,9 @@ data class LapComparisonSide(
 class LapComparisonLinkFactory(private val application: Application) : LinkFactory<LapComparison> {
   override fun build(resource: LapComparison): Map<String, String> {
     return mapOf(
-      "self" to application.href(LapRoutes.Compare()) +
-        "?lap1Uid=${resource.lap1.uid.value}&lap2Uid=${resource.lap2.uid.value}",
+      "self" to
+        application.href(LapRoutes.Compare()) +
+          "?lap1Uid=${resource.lap1.uid.value}&lap2Uid=${resource.lap2.uid.value}",
       "lap1" to application.href(LapRoutes.LapId(uid = resource.lap1.uid.value)),
       "lap2" to application.href(LapRoutes.LapId(uid = resource.lap2.uid.value)),
     )

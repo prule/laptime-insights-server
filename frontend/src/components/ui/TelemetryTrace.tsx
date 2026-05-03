@@ -4,7 +4,7 @@ export interface TelemetryTraceProps {
   /** Series in render order (drawn last = on top). */
   series: { samples: TelemetrySample[]; color: string; label: string }[];
   /** Telemetry field to plot. */
-  field: "speedKph" | "throttle" | "brake";
+  field: "speedKph";
   height?: number;
   /** Optional unit suffix in tooltip / axis labels. */
   unit?: string;

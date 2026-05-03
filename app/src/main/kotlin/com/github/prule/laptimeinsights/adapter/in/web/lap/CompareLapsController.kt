@@ -11,9 +11,8 @@ import io.ktor.server.routing.routing
 import io.ktor.utils.io.ExperimentalKtorApi
 
 /**
- * REST controller exposing **`GET /api/1/laps/compare?lap1Uid=…&lap2Uid=…`** —
- * fetch the metadata + raw telemetry for two laps so a client can render an
- * overlay. See `docs/specs/lap-comparison.md`.
+ * REST controller exposing **`GET /api/1/laps/compare?lap1Uid=…&lap2Uid=…`** — fetch the metadata +
+ * raw telemetry for two laps so a client can render an overlay. See `docs/specs/lap-comparison.md`.
  */
 @OptIn(ExperimentalKtorApi::class)
 class CompareLapsController(application: Application, compareLapsUseCase: CompareLapsUseCase) {

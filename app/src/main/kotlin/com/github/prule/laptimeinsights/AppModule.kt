@@ -2,16 +2,16 @@ package com.github.prule.laptimeinsights
 
 import com.github.prule.acc.client.CarModelRepository
 import com.github.prule.laptimeinsights.adapter.out.event.InMemoryEventAdapter
+import com.github.prule.laptimeinsights.adapter.out.persistence.car.RealtimeCarUpdatePersistenceAdapter
+import com.github.prule.laptimeinsights.adapter.out.persistence.car.RealtimeCarUpdateRepository
 import com.github.prule.laptimeinsights.adapter.out.persistence.lap.LapMapper
 import com.github.prule.laptimeinsights.adapter.out.persistence.lap.LapPersistenceAdapter
 import com.github.prule.laptimeinsights.adapter.out.persistence.lap.LapRepository
-import com.github.prule.laptimeinsights.adapter.out.persistence.lap.LapTelemetryMapper
-import com.github.prule.laptimeinsights.adapter.out.persistence.lap.LapTelemetryPersistenceAdapter
-import com.github.prule.laptimeinsights.adapter.out.persistence.lap.LapTelemetryRepository
 import com.github.prule.laptimeinsights.adapter.out.persistence.session.SessionMapper
 import com.github.prule.laptimeinsights.adapter.out.persistence.session.SessionPersistenceAdapter
 import com.github.prule.laptimeinsights.adapter.out.persistence.session.SessionRepository
 import com.github.prule.laptimeinsights.application.domain.service.car.FindCarService
+import com.github.prule.laptimeinsights.application.domain.service.car.RecordRealtimeCarUpdateService
 import com.github.prule.laptimeinsights.application.domain.service.lap.CompareLapsService
 import com.github.prule.laptimeinsights.application.domain.service.lap.CreateLapService
 import com.github.prule.laptimeinsights.application.domain.service.lap.FindLapService
@@ -28,36 +28,39 @@ import com.github.prule.laptimeinsights.application.domain.service.session.Updat
 class AppModule {
   val eventPort = InMemoryEventAdapter()
   val session = Session()
-  val lap = Lap(session)
+
+  // Car must initialise before Lap — Lap depends on car's find port.
   val car = Car()
+  val lap = Lap(session, car)
 
   class Car {
     val carModelRepository = CarModelRepository()
     val findCarUseCase = FindCarService(carModelRepository)
+
+    val realtimeCarUpdatePersistenceAdapter =
+      RealtimeCarUpdatePersistenceAdapter(RealtimeCarUpdateRepository())
+    val realtimeCarUpdatePort = realtimeCarUpdatePersistenceAdapter
+    val findRealtimeCarUpdateByLapPort = realtimeCarUpdatePersistenceAdapter
+    val recordRealtimeCarUpdateUseCase = RecordRealtimeCarUpdateService(realtimeCarUpdatePort)
   }
 
-  inner class Lap(val session: Session) {
+  inner class Lap(val session: Session, val car: Car) {
     val mapper = LapMapper()
-
     val lapPort = LapPersistenceAdapter(LapRepository(mapper), mapper)
-
-    val telemetryMapper = LapTelemetryMapper()
-    val telemetryPort = LapTelemetryPersistenceAdapter(LapTelemetryRepository(telemetryMapper))
 
     val createLapUseCase = CreateLapService(lapPort, session.sessionPort, eventPort)
     val searchLapUseCase = SearchLapService(lapPort)
     val findLapUseCase = FindLapService(lapPort)
-    val findLapTelemetryUseCase = FindLapTelemetryService(lapPort, telemetryPort)
-    val compareLapsUseCase = CompareLapsService(lapPort, telemetryPort)
+    val findLapTelemetryUseCase =
+      FindLapTelemetryService(lapPort, car.findRealtimeCarUpdateByLapPort)
+    val compareLapsUseCase = CompareLapsService(lapPort, car.findRealtimeCarUpdateByLapPort)
   }
 
   inner class Session {
-
     val mapper = SessionMapper()
     val sessionPort = SessionPersistenceAdapter(SessionRepository(mapper), mapper)
 
     val startSessionUseCase = StartSessionService(sessionPort, sessionPort, eventPort)
-
     val findSessionUseCase = FindSessionService(sessionPort)
     val createSessionUseCase = CreateSessionService(sessionPort, eventPort)
     val searchSessionUseCase = SearchSessionService(sessionPort)

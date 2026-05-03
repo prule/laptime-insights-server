@@ -112,8 +112,7 @@ class CreateLapServiceTest {
 
     every { searchSessionPort.searchForOne(any<SessionSearchCriteria>()) } returns null
 
-    assertThatThrownBy { service.createLap(command) }
-      .isInstanceOf(NotFoundException::class.java)
+    assertThatThrownBy { service.createLap(command) }.isInstanceOf(NotFoundException::class.java)
   }
 
   @Test

@@ -64,7 +64,9 @@ class CreateSessionServiceTest {
     // Event carries the persisted session (with the real id/uid), not the pre-persistence one.
     verify {
       eventPort.emit(
-        match { it is SessionCreated && it.session.uid == persistedUid && it.session.id == persistedId }
+        match {
+          it is SessionCreated && it.session.uid == persistedUid && it.session.id == persistedId
+        }
       )
     }
   }

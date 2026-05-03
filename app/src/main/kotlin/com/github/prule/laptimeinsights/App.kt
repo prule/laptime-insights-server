@@ -10,6 +10,7 @@ import com.github.prule.laptimeinsights.adapter.`in`.web.session.SearchSessionCo
 import com.github.prule.laptimeinsights.adapter.`in`.web.session.SessionEventController
 import com.github.prule.laptimeinsights.adapter.out.persistence.JsonFileConfigurationRepository
 import com.github.prule.laptimeinsights.adapter.out.persistence.seed.DatabaseSeeder
+import com.github.prule.laptimeinsights.tracker.utils.NotFoundException as DomainNotFoundException
 import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode
 import io.ktor.openapi.OpenApiInfo
@@ -18,7 +19,6 @@ import io.ktor.server.application.Application
 import io.ktor.server.application.install
 import io.ktor.server.engine.embeddedServer
 import io.ktor.server.netty.Netty
-import com.github.prule.laptimeinsights.tracker.utils.NotFoundException as DomainNotFoundException
 import io.ktor.server.plugins.NotFoundException
 import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.server.plugins.cors.routing.CORS
@@ -38,6 +38,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
+import org.h2.tools.Server
 
 fun main(args: Array<String>): Unit = runBlocking {
   val configuration = JsonFileConfigurationRepository().loadConfiguration(args[0])
@@ -84,13 +85,17 @@ fun Application.module(
   }
 
   DatabaseFactory.init(jdbcUrl)
+  val webServer = Server.createWebServer("-web", "-webAllowOthers", "-webPort", "8082").start()
+
+  val tcpServer: Server? =
+    Server.createTcpServer("-tcp", "-tcpAllowOthers", "-tcpPort", "9092").start()
 
   if (EnvironmentVariables.shouldSeedDatabase()) {
     DatabaseSeeder(
         createSessionPort = appModule.session.sessionPort,
         updateSessionPort = appModule.session.sessionPort,
         createLapPort = appModule.lap.lapPort,
-        createLapTelemetryPort = appModule.lap.telemetryPort,
+        createRealtimeCarUpdatePort = appModule.car.realtimeCarUpdatePort,
       )
       .seed()
   }
