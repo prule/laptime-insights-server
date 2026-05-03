@@ -38,7 +38,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
-import org.h2.tools.Server
 
 fun main(args: Array<String>): Unit = runBlocking {
   val configuration = JsonFileConfigurationRepository().loadConfiguration(args[0])
@@ -85,10 +84,8 @@ fun Application.module(
   }
 
   DatabaseFactory.init(jdbcUrl)
-  val webServer = Server.createWebServer("-web", "-webAllowOthers", "-webPort", "8082").start()
 
-  val tcpServer: Server? =
-    Server.createTcpServer("-tcp", "-tcpAllowOthers", "-tcpPort", "9092").start()
+  val h2DBManager = H2DBManager(EnvironmentVariables.h2web(), EnvironmentVariables.h2tcp())
 
   if (EnvironmentVariables.shouldSeedDatabase()) {
     DatabaseSeeder(
