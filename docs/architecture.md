@@ -1,16 +1,16 @@
 This architecture document outlines the technical blueprint for the **LapTimeInsights** ecosystem. It adheres to **Clean
 Architecture** principles to ensure the business logic (telemetry analysis) remains decoupled from the infrastructure (
-Ktor, Exposed, Vue).
+Ktor, Exposed, React).
 
 ---
 
 ## 1. System Overview
 
-LapTimeInsights consists of a **Kotlin/Ktor** server acting as a local hub and a **Vue/TypeScript** dashboard.
+LapTimeInsights consists of a **Kotlin/Ktor** server acting as a local hub and a **React/TypeScript** dashboard.
 
 * **Backend:** Handles telemetry ingestion via `acc-client`, persists data using **Exposed**, and serves a *
   *REST/HATEOAS** API.
-* **Frontend:** A reactive dashboard built with **Vue 3** (Composition API) and **Pinia** for state management,
+* **Frontend:** A reactive dashboard built with **React** (Composition API) and **Pinia** for state management,
   consuming the HATEOAS API to drive navigation.
 
 ---
@@ -56,14 +56,14 @@ The server is split into four distinct layers. Dependencies point **inwards** on
 
 ---
 
-## 4. Frontend Architecture: Domain-Driven Vue
+## 4. Frontend Architecture: Domain-Driven React
 
 The frontend mirrors the backend's modularity by grouping files by **Domain** rather than technical type.
 
 ### Directory Structure (`src/`)
 
 * **`modules/`**: Feature-based folders (e.g., `modules/sessions/`, `modules/analysis/`).
-    * `components/`: Vue components specific to this feature.
+    * `components/`: React components specific to this feature.
     * `store/`: Pinia store for this feature's state.
     * `services/`: Axios/Fetch wrappers.
 * **`core/`**: Shared types, HATEOAS link parsers, and global composables.
@@ -71,7 +71,7 @@ The frontend mirrors the backend's modularity by grouping files by **Domain** ra
 
 ### HATEOAS Integration
 
-Unlike standard REST where URLs are hardcoded in the frontend, the Vue app will:
+Unlike standard REST where URLs are hardcoded in the frontend, the React app will:
 
 1. Fetch the **Entry Point** (e.g., `/api/v1/`).
 2. Follow links provided in the `_links` property to navigate (e.g., `response._links.latest_session.href`).
@@ -84,8 +84,8 @@ Unlike standard REST where URLs are hardcoded in the frontend, the Vue app will:
 1. **Ingestion:** `acc-client` emits a "Lap Completed" event.
 2. **Use Case:** `RecordLapUseCase` is triggered.
 3. **Persistence:** The Repository saves the lap and telemetry to the DB via **Exposed**.
-4. **Notification:** (Optional) A WebSocket push alerts the **Vue** dashboard of the new lap.
-5. **Consumption:** The user clicks the lap in the dashboard. The Vue app follows the `_links.telemetry` URI to fetch
+4. **Notification:** (Optional) A WebSocket push alerts the **React** dashboard of the new lap.
+5. **Consumption:** The user clicks the lap in the dashboard. The React app follows the `_links.telemetry` URI to fetch
    the data for the comparison chart.
 
 ---
@@ -97,4 +97,4 @@ Unlike standard REST where URLs are hardcoded in the frontend, the Vue app will:
 * **Result Pattern:** Use a `Result<T>` or `Either<L, R>` type for Use Case returns to handle errors (e.g., "Lap Not
   Found") without throwing exceptions across layers.
 * **Composition API & Composables:** Encapsulate telemetry-sharing logic in `useTelemetry()` or `useSessionList()` hooks
-  in Vue.
+  in React.

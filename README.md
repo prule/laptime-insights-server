@@ -27,6 +27,22 @@ And much more hopefully!
 - [Clean Architecture](./docs/clean-architecture.md) - Details on the project structure and conventions.
 - [Real-time Updates](./docs/real-time-updates.md) - How real-time events and WebSockets are implemented.
 
+### Frontend
+
+A React + Vite + TypeScript dashboard lives in `frontend/`. See
+[frontend/README.md](./frontend/README.md) for full documentation. Quick start:
+
+```bash
+cd frontend
+npm install
+npm run dev   # http://localhost:5173 — defaults to mock data
+```
+
+The sidebar toggle switches between **mock** mode (in-memory data mirroring
+the backend seeder) and **live** mode (real HTTP calls, proxied to the Ktor
+backend on port 8000 by Vite). Mock data shape matches the backend exactly,
+including HATEOAS `_links`, so screens behave identically across modes.
+
 ### Environment variables
 
 | Variable | Required | Description |
