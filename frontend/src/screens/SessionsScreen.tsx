@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useSessionOptions, useSessions } from "../api/queries";
 import { Card } from "../components/ui/Card";
 import { ErrorState, EmptyState, LoadingState } from "../components/ui/States";
+import { FilterSelect } from "../components/ui/FilterSelect";
 import { SectionHeader } from "../components/ui/SectionHeader";
 import { SessionRow } from "../components/SessionRow";
 
@@ -82,32 +83,3 @@ export function SessionsScreen() {
   );
 }
 
-function FilterSelect({
-  label,
-  value,
-  options,
-  onChange,
-}: {
-  label: string;
-  value: string | undefined;
-  options: string[];
-  onChange: (value: string | undefined) => void;
-}) {
-  return (
-    <label className="flex flex-col gap-1">
-      <span className="font-mono text-[10px] uppercase tracking-[0.08em] text-text-muted">{label}</span>
-      <select
-        value={value ?? ""}
-        onChange={(e) => onChange(e.target.value || undefined)}
-        className="rounded border border-border bg-surface px-3 py-2 font-sans text-[13px] text-text outline-none focus:border-cyan/40"
-      >
-        <option value="">All</option>
-        {options.map((opt) => (
-          <option key={opt} value={opt}>
-            {opt}
-          </option>
-        ))}
-      </select>
-    </label>
-  );
-}
