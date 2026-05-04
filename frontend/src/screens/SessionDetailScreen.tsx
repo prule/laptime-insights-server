@@ -304,8 +304,8 @@ function LapRow({
         </div>
       )}
       <div className="font-mono text-xs text-text-muted">{formatTime(lap.recordedAt)}</div>
-      <div className={`font-mono text-sm ${lap.personalBest && isPlayerCar ? "text-ok" : "text-text"}`}>
-        {lap.valid ? formatLapTime(lap.lapTime) : <span className="text-text-dim">INVAL</span>}
+      <div className={`font-mono text-sm ${lap.personalBest && isPlayerCar ? "text-ok" : lap.valid ? "text-text" : "text-text-dim"}`}>
+        {formatLapTime(lap.lapTime)}
       </div>
       <div>
         {lap.valid ? (
