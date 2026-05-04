@@ -33,4 +33,6 @@ data class RecordRealtimeCarUpdateCommand(
   val currentLapIsInvalid: Boolean,
   val currentLapIsOutlap: Boolean,
   val currentLapIsInlap: Boolean,
+  /** True when this update is for the player's own car (focusedCarIndex). */
+  val isPlayerCar: Boolean = false,
 )

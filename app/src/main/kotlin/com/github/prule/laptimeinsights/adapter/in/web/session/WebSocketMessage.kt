@@ -41,4 +41,35 @@ sealed interface WebSocketMessage {
   @Serializable
   @SerialName("LapCreated")
   data class LapCreated(val data: LapResource) : WebSocketMessage
+
+  /**
+   * Throttled telemetry frame for the player's own car (~5 Hz). Carries everything the Live
+   * screen needs: gear, speed, track position, race position, current lap time, validity, delta.
+   *
+   * Note: ACC's REALTIME_CAR_UPDATE does **not** include throttle or brake inputs — those fields
+   * are not available and are therefore absent from this message.
+   */
+  @Serializable
+  @SerialName("PlayerCarUpdated")
+  data class PlayerCarUpdated(val data: PlayerCarUpdateData) : WebSocketMessage
 }
+
+/**
+ * Payload for [WebSocketMessage.PlayerCarUpdated]. All lap times are in milliseconds.
+ * [bestLapTimeMs] and [lastLapTimeMs] are [Long.MAX_VALUE] when no timed lap exists yet.
+ */
+@Serializable
+data class PlayerCarUpdateData(
+  val sessionUid: String,
+  val gear: Int,
+  val kmh: Int,
+  val splinePosition: Double,
+  val worldPosX: Float,
+  val worldPosY: Float,
+  val racePosition: Int,
+  val currentLapTimeMs: Long,
+  val currentLapIsInvalid: Boolean,
+  val delta: Int,
+  val bestLapTimeMs: Long,
+  val lastLapTimeMs: Long,
+)

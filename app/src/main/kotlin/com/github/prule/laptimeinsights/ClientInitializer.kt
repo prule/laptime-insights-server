@@ -124,6 +124,7 @@ class ClientInitializer(private val appModule: AppModule) {
       clazz = AccBroadcastingInbound.RealtimeCarUpdate::class,
       block = { message, _ ->
         val currentSession = session ?: return@ConditionalFilter
+        val isPlayerCar = clientState?.focusedCarIndex == message.carIndex()
         // Keep per-car validity in sync so buildLapCompleted reads the correct flag.
         sessionState?.updateCurrentLapValidity(
           CarId(message.carIndex()),
@@ -157,6 +158,7 @@ class ClientInitializer(private val appModule: AppModule) {
             currentLapIsInvalid = message.currentLap()?.isInvalid() == 1,
             currentLapIsOutlap = message.currentLap()?.isOutlap() == 1,
             currentLapIsInlap = message.currentLap()?.isInlap() == 1,
+            isPlayerCar = isPlayerCar,
           )
         )
       },

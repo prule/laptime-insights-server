@@ -33,7 +33,7 @@ class AppModule {
   val car = Car()
   val lap = Lap(session, car)
 
-  class Car {
+  inner class Car {
     val carModelRepository = CarModelRepository()
     val findCarUseCase = FindCarService(carModelRepository)
 
@@ -41,7 +41,8 @@ class AppModule {
       RealtimeCarUpdatePersistenceAdapter(RealtimeCarUpdateRepository())
     val realtimeCarUpdatePort = realtimeCarUpdatePersistenceAdapter
     val findRealtimeCarUpdateByLapPort = realtimeCarUpdatePersistenceAdapter
-    val recordRealtimeCarUpdateUseCase = RecordRealtimeCarUpdateService(realtimeCarUpdatePort)
+    val recordRealtimeCarUpdateUseCase =
+      RecordRealtimeCarUpdateService(realtimeCarUpdatePort, eventPort)
   }
 
   inner class Lap(val session: Session, val car: Car) {

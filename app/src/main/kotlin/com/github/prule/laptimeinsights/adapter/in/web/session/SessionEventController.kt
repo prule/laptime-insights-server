@@ -3,6 +3,7 @@ package com.github.prule.laptimeinsights.adapter.`in`.web.session
 import com.github.prule.laptimeinsights.adapter.`in`.web.lap.LapLinkFactory
 import com.github.prule.laptimeinsights.adapter.`in`.web.lap.LapResource
 import com.github.prule.laptimeinsights.application.domain.model.LapCreated
+import com.github.prule.laptimeinsights.application.domain.model.PlayerCarUpdated
 import com.github.prule.laptimeinsights.application.domain.model.SessionCreated
 import com.github.prule.laptimeinsights.application.domain.model.SessionFinished
 import com.github.prule.laptimeinsights.application.domain.model.SessionStarted
@@ -23,6 +24,7 @@ import io.ktor.server.websocket.webSocket
  * - [SessionUpdated] → [WebSocketMessage.SessionUpdated] carrying a [SessionResource].
  * - [SessionFinished] → [WebSocketMessage.SessionFinished] carrying a [SessionResource].
  * - [LapCreated] → [WebSocketMessage.LapCreated] carrying a [LapResource].
+ * - [PlayerCarUpdated] → [WebSocketMessage.PlayerCarUpdated] carrying a [PlayerCarUpdateData] (~5 Hz).
  *
  * Each frame is wrapped in a typed envelope of the form `{ "type": "...", "data": { ... } }` so
  * clients can dispatch by the `type` field rather than guessing from resource shape. Adding a new
@@ -59,6 +61,23 @@ class SessionEventController(application: Application, eventPort: EventPort) {
                 )
               is LapCreated ->
                 WebSocketMessage.LapCreated(LapResource.fromDomain(event.lap, lapLinks))
+              is PlayerCarUpdated ->
+                WebSocketMessage.PlayerCarUpdated(
+                  PlayerCarUpdateData(
+                    sessionUid = event.sessionUid.value,
+                    gear = event.gear,
+                    kmh = event.kmh,
+                    splinePosition = event.splinePosition,
+                    worldPosX = event.worldPosX,
+                    worldPosY = event.worldPosY,
+                    racePosition = event.racePosition,
+                    currentLapTimeMs = event.currentLapTimeMs,
+                    currentLapIsInvalid = event.currentLapIsInvalid,
+                    delta = event.delta,
+                    bestLapTimeMs = event.bestLapTimeMs,
+                    lastLapTimeMs = event.lastLapTimeMs,
+                  )
+                )
               else -> null
             }
           if (message != null) {

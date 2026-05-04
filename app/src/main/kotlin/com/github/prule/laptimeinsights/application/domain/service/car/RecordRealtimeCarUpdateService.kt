@@ -1,12 +1,27 @@
 package com.github.prule.laptimeinsights.application.domain.service.car
 
+import com.github.prule.laptimeinsights.application.domain.model.PlayerCarUpdated
 import com.github.prule.laptimeinsights.application.domain.model.RealtimeCarUpdate
 import com.github.prule.laptimeinsights.application.port.`in`.car.RecordRealtimeCarUpdateCommand
 import com.github.prule.laptimeinsights.application.port.`in`.car.RecordRealtimeCarUpdateUseCase
+import com.github.prule.laptimeinsights.application.port.out.EventPort
 import com.github.prule.laptimeinsights.application.port.out.car.CreateRealtimeCarUpdatePort
 
-class RecordRealtimeCarUpdateService(private val createPort: CreateRealtimeCarUpdatePort) :
-  RecordRealtimeCarUpdateUseCase {
+/**
+ * Records each REALTIME_CAR_UPDATE frame from ACC and, every [emitEveryN] invocations for the
+ * player's own car, emits a lightweight [PlayerCarUpdated] domain event so the Live screen can
+ * refresh without polling.
+ *
+ * ACC broadcasts at ~20 Hz per car; [emitEveryN] = 4 throttles the WS stream to ~5 Hz which is
+ * smooth enough for a HUD while keeping frontend CPU low.
+ */
+class RecordRealtimeCarUpdateService(
+  private val createPort: CreateRealtimeCarUpdatePort,
+  private val eventPort: EventPort,
+  private val emitEveryN: Int = 4,
+) : RecordRealtimeCarUpdateUseCase {
+
+  private var playerUpdateCounter = 0
 
   override fun record(command: RecordRealtimeCarUpdateCommand) {
     val update =
@@ -39,5 +54,27 @@ class RecordRealtimeCarUpdateService(private val createPort: CreateRealtimeCarUp
         currentLapIsInlap = command.currentLapIsInlap,
       )
     createPort.create(update)
+
+    if (command.isPlayerCar) {
+      playerUpdateCounter++
+      if (playerUpdateCounter % emitEveryN == 0) {
+        eventPort.emit(
+          PlayerCarUpdated(
+            sessionUid = command.sessionUid,
+            gear = command.gear,
+            kmh = command.kmh,
+            splinePosition = command.splinePosition,
+            worldPosX = command.worldPosX,
+            worldPosY = command.worldPosY,
+            racePosition = command.racePosition,
+            currentLapTimeMs = command.currentLapTimeMs,
+            currentLapIsInvalid = command.currentLapIsInvalid,
+            delta = command.delta,
+            bestLapTimeMs = command.bestLapTimeMs,
+            lastLapTimeMs = command.lastLapTimeMs,
+          )
+        )
+      }
+    }
   }
 }
