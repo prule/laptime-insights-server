@@ -64,6 +64,8 @@ export interface LapResource {
   sessionUid: Uid;
   /** Integer car number within the session (e.g. ACC car index). */
   carId: number;
+  /** Car model name recorded at lap time, e.g. "Audi R8 LMS Evo". Null if unknown. */
+  car: string | null;
   recordedAt: Iso8601;
   /** lap time in milliseconds. */
   lapTime: number;

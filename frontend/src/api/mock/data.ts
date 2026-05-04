@@ -89,6 +89,7 @@ function buildLapsFor(
   session: SessionResource,
   profile: Profile,
   carId: number,
+  car: string | null,
   baseLapMs: number,
   seed: number,
 ): LapResource[] {
@@ -112,6 +113,7 @@ function buildLapsFor(
       uid: lapUid,
       sessionUid: session.uid,
       carId,
+      car,
       recordedAt: new Date(recordedAt).toISOString(),
       lapTime,
       lapNumber: lapIndex,
@@ -127,7 +129,7 @@ export const SESSIONS: SessionResource[] = buildSessions();
 
 export const LAPS: LapResource[] = SESSIONS.flatMap((s, i) => {
   const profile = PROFILES[i]!;
-  const playerLaps = buildLapsFor(s, profile, profile.carId, profile.baseLapMs, 0x200 + i);
+  const playerLaps = buildLapsFor(s, profile, profile.carId, profile.car, profile.baseLapMs, 0x200 + i);
 
   // Add competitor laps for Race/Qualifying sessions.
   const competitorLaps =
@@ -135,7 +137,7 @@ export const LAPS: LapResource[] = SESSIONS.flatMap((s, i) => {
       ? COMPETITOR_OFFSETS.flatMap((offsetMs, cIdx) => {
           const compCarId = profile.carId + cIdx + 1;
           const compBase = profile.baseLapMs + offsetMs;
-          return buildLapsFor(s, profile, compCarId, compBase, 0x400 + i * 10 + cIdx);
+          return buildLapsFor(s, profile, compCarId, null, compBase, 0x400 + i * 10 + cIdx);
         })
       : [];
 

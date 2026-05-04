@@ -121,7 +121,7 @@ export function LapBrowser({ defaultTrack, defaultCar, disabledLapUid, onPick }:
                     {session?.track ?? <span className="text-text-dim">unknown</span>}
                   </div>
                   <div className="truncate font-sans text-[12px] text-text-muted">
-                    {session?.car ?? <span className="text-text-dim">unknown</span>}
+                    {lap.car ?? session?.car ?? <span className="text-text-dim">unknown</span>}
                   </div>
                   <div className="font-mono text-xs text-text-muted">{formatDate(session?.startedAt)}</div>
                   <div className="font-mono text-[11px]">

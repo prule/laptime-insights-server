@@ -273,7 +273,7 @@ function LapRow({
   onOpen,
 }: {
   index: number;
-  lap: { uid: string; lapTime: number; recordedAt: string; valid: boolean; personalBest: boolean; sessionUid: string };
+  lap: { uid: string; lapTime: number; recordedAt: string; valid: boolean; personalBest: boolean; sessionUid: string; car: string | null };
   session: SessionResource | undefined;
   selectMode: boolean;
   selected: boolean;
@@ -311,7 +311,7 @@ function LapRow({
         {session?.track ?? <span className="text-text-dim">unknown</span>}
       </div>
       <div className="truncate font-sans text-[12px] text-text-muted">
-        {session?.car ?? <span className="text-text-dim">unknown</span>}
+        {lap.car ?? session?.car ?? <span className="text-text-dim">unknown</span>}
       </div>
       <div className="font-mono text-[11px] uppercase tracking-[0.05em] text-text-muted">
         {session?.simulator ?? "—"}
