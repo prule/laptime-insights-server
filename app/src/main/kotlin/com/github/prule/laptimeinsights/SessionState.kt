@@ -1,5 +1,6 @@
 package com.github.prule.laptimeinsights
 
+import com.github.prule.laptimeinsights.application.domain.model.Car
 import com.github.prule.laptimeinsights.application.domain.model.CarId
 import com.github.prule.laptimeinsights.application.domain.model.LapNumber
 import kotlin.concurrent.atomics.AtomicInt
@@ -21,6 +22,17 @@ class SessionState {
 
   /** Latest `currentLapIsInvalid` value seen for each car. Default: valid (true). */
   private val currentLapValid = mutableMapOf<CarId, Boolean>()
+
+  /** Car model name keyed by ACC car index, populated from EntryListCar messages. */
+  private val carModels = mutableMapOf<CarId, Car>()
+
+  /** Called when an [EntryListCar] message arrives for any car. */
+  fun registerCar(carId: CarId, car: Car) {
+    carModels[carId] = car
+  }
+
+  /** Returns the car model for [carId], or null if no EntryListCar has arrived yet. */
+  fun getCarModel(carId: CarId): Car? = carModels[carId]
 
   @OptIn(ExperimentalAtomicApi::class)
   fun incrementLapCount(carId: CarId) =

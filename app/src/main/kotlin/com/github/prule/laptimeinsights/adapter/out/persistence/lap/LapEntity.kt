@@ -23,6 +23,7 @@ class LapEntity(id: EntityID<Long>) : LongEntity(id) {
   var sessionUid by LapTable.sessionUid
 
   var carId by LapTable.carId
+  var car by LapTable.car
   var recordedAt by LapTable.recordedAt
   var lapTime by LapTable.lapTime
   var lapNumber by LapTable.lapNumber

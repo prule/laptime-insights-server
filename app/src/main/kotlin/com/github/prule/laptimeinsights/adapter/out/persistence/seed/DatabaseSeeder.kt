@@ -239,6 +239,7 @@ class DatabaseSeeder(
           sessionId = session.id,
           sessionUId = session.uid,
           carId = profile.carId,
+          car = profile.car,
           recordedAt = recordedAt,
           lapTime = LapTimeMs(lapTimeMs),
           lapNumber = LapNumber(lapIndex),

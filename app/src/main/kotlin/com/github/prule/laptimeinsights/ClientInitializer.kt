@@ -189,6 +189,7 @@ class ClientInitializer(private val appModule: AppModule) {
                 session!!.uid,
                 Clock.System.now(),
                 carId,
+                sessionState!!.getCarModel(carId),
                 LapTimeMs.fromString(message.msg().data()),
                 lapNumber,
                 ValidLap(sessionState!!.isValidLap(carId, lapNumber)),
@@ -211,9 +212,13 @@ class ClientInitializer(private val appModule: AppModule) {
       },
       clazz = AccBroadcastingInbound.EntryListCar::class,
       block = { message, _ ->
+        val resolvedCar =
+          appModule.car.findCarUseCase.findCarByModel(FindCarCommand(message.carModelType()))
+        sessionState?.registerCar(CarId(message.carId()), resolvedCar)
+        logger.info("Car registered: carId=${message.carId()} car=$resolvedCar")
+
         if (message.carId() == clientState?.focusedCarIndex) {
-          car = appModule.car.findCarUseCase.findCarByModel(FindCarCommand(message.carModelType()))
-          logger.info("Car is $car")
+          car = resolvedCar
           if (session != null) {
             appModule.session.updateSessionUseCase.update(
               UpdateSessionCommand(

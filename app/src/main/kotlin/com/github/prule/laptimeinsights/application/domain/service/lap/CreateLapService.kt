@@ -30,6 +30,7 @@ class CreateLapService(
           sessionId = session.id,
           sessionUId = session.uid,
           carId = command.carId,
+          car = command.car,
           personalBest = command.personalBest,
           valid = command.valid,
           recordedAt = command.recordedAt,

@@ -10,6 +10,7 @@ object LapTable : LongIdTable("LAP") {
   val sessionId = long("session_id")
   val sessionUid = varchar("session_uid", MAX_VARCHAR_LENGTH)
   val carId = integer("car_id")
+  val car = varchar("car", MAX_VARCHAR_LENGTH).nullable()
   val recordedAt = timestamp("recorded_at")
   val lapTime = long("lap_time")
   val lapNumber = integer("lap_number")

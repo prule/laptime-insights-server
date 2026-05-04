@@ -58,6 +58,7 @@ class CreateLapServiceTest {
         sessionUid = sessionUid,
         recordedAt = Clock.System.now(),
         carId = CarId(7),
+        car = Car("Audi R8 LMS Evo"),
         lapTime = LapTimeMs(96_745L),
         lapNumber = LapNumber(3),
         valid = ValidLap(true),
@@ -80,6 +81,7 @@ class CreateLapServiceTest {
     assertThat(lapSlot.captured.sessionId).isEqualTo(sessionId)
     assertThat(lapSlot.captured.sessionUId).isEqualTo(sessionUid)
     assertThat(lapSlot.captured.carId).isEqualTo(CarId(7))
+    assertThat(lapSlot.captured.car).isEqualTo(Car("Audi R8 LMS Evo"))
     assertThat(lapSlot.captured.lapTime).isEqualTo(LapTimeMs(96_745L))
     assertThat(lapSlot.captured.lapNumber).isEqualTo(LapNumber(3))
     assertThat(lapSlot.captured.valid).isEqualTo(ValidLap(true))
@@ -104,6 +106,7 @@ class CreateLapServiceTest {
         sessionUid = Uid(),
         recordedAt = Clock.System.now(),
         carId = CarId(1),
+        car = null,
         lapTime = LapTimeMs(90_000L),
         lapNumber = LapNumber(1),
         valid = ValidLap(true),
@@ -122,6 +125,7 @@ class CreateLapServiceTest {
         sessionUid = Uid(),
         recordedAt = Clock.System.now(),
         carId = CarId(1),
+        car = null,
         lapTime = LapTimeMs(90_000L),
         lapNumber = LapNumber(1),
         valid = ValidLap(true),

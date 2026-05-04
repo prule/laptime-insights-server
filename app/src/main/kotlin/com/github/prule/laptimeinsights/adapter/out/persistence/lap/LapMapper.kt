@@ -1,5 +1,6 @@
 package com.github.prule.laptimeinsights.adapter.out.persistence.lap
 
+import com.github.prule.laptimeinsights.application.domain.model.Car
 import com.github.prule.laptimeinsights.application.domain.model.CarId
 import com.github.prule.laptimeinsights.application.domain.model.Lap
 import com.github.prule.laptimeinsights.application.domain.model.LapId
@@ -17,6 +18,7 @@ class LapMapper {
       uid = Uid(entity.uid),
       recordedAt = entity.recordedAt,
       carId = CarId(entity.carId),
+      car = entity.car?.let { Car(it) },
       lapTime = LapTimeMs(entity.lapTime),
       lapNumber = LapNumber(entity.lapNumber),
       valid = ValidLap(entity.valid),
@@ -32,6 +34,7 @@ class LapMapper {
       sessionUid = lap.sessionUId.value
       recordedAt = lap.recordedAt
       carId = lap.carId.value
+      car = lap.car?.value
       lapTime = lap.lapTime.value
       lapNumber = lap.lapNumber.value
       valid = lap.valid.value
