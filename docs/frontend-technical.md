@@ -26,7 +26,7 @@ frontend/src/
   components/
     layout/           # AppShell, Sidebar, Topbar, TimeRangeSelector
     ui/               # Card, Badge, Delta, StatCard, BarChart, Sparkline,
-                      # TelemetryTrace, SpeedDeltaTrace, GearMismatchStrip,
+                      # TelemetryTrace, SpeedDeltaTrace, GearMismatchStrip, TrackMap,
                       # FilterSelect, Modal, SectionHeader, States, TrackPracticeChart
     LapBrowser.tsx    # reusable filtered+paginated lap list (used by LapPicker modal)
     LapPicker.tsx     # button + Modal wrapping LapBrowser for lap selection
@@ -90,10 +90,13 @@ URL params: `lap1`, `lap2`, `track` (optional hint pre-filling `LapPicker` modal
 
 Calls `useLapComparison(lap1Uid, lap2Uid)` which hits `GET /api/1/laps/compare?lap1Uid=…&lap2Uid=…`. The backend returns raw telemetry samples for both laps in one round trip.
 
-Charts:
-- `TelemetryTrace` — generic multi-series SVG trace; `series` prop is `{ samples, color, label }[]`. Used for speed, throttle, and brake.
-- `SpeedDeltaTrace` — resamples both lap sample arrays to 100 equidistant buckets by `splinePosition`, then plots Lap 1 KPH minus Lap 2 KPH per bucket.
-- `GearMismatchStrip` — same 100-bucket resampling; renders a coloured strip where buckets with differing gear values are highlighted.
+`hoveredPosition: number | null` is lifted to `CompareScreen` and passed as props to every chart and the track map. Any chart that the user hovers emits `onHover(position)`, which sets the shared state and synchronizes all other panels.
+
+Charts and panels:
+- `TelemetryTrace` — generic multi-series SVG trace; `series` prop is `{ samples, color, label }[]`. Renders speed overlaid for both laps. Accepts `hoveredPosition` / `onHover` for the synchronized crosshair; shows a tooltip with per-lap values at the cursor position.
+- `SpeedDeltaTrace` — resamples both lap sample arrays to 100 equidistant buckets by `splinePosition`, then plots Lap 1 KPH minus Lap 2 KPH per bucket. Supports crosshair; tooltip shows signed delta at cursor.
+- `GearMismatchStrip` — same 100-bucket resampling; renders a coloured strip where buckets with differing gear values are highlighted. Supports crosshair.
+- `TrackMap` — renders the track outline as an SVG polyline from `worldPosX`/`worldPosY` coordinates normalised into a square viewBox. A coloured dot per lap moves to the nearest sample when `hoveredPosition` changes. Hovering the map emits the nearest sample's `splinePosition` so all charts follow. Start/finish line is marked with a white rectangle.
 
 ## Providers
 

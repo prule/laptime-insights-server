@@ -162,13 +162,14 @@ The comparison is fully shareable: the URL contains `lap1`, `lap2`, and optional
 
 ### Telemetry charts
 
-Once two laps are selected the following charts render:
+Once two laps are selected the following charts and panels render:
 
-- **Speed (KPH)** — both laps' speed traces overlaid, plotted against `splinePosition` (0 = start/finish, 1 = end of lap). Lap 1 is cyan, Lap 2 is red.
+- **Speed (KPH)** — both laps' speed traces overlaid, plotted against track position (0 = start/finish, 1 = end of lap). Lap 1 is cyan, Lap 2 is red.
+- **Track map** — a 2-D outline of the track derived from the cars' world coordinates. As you hover over any chart, a coloured dot per lap moves along the track outline to show exactly where on the circuit that point corresponds to. You can also hover directly over the track map to drive the charts.
 - **Speed delta** — Lap 1 minus Lap 2 at every 1% of track length. Above zero means Lap 1 was faster at that point; below zero means Lap 2 was faster. Use this to find the specific corners or straights where you are losing time.
 - **Gear mismatch** — a strip that highlights (in red) every sector of the track where the two laps used a different gear. A mismatch is not always bad — it may indicate an opportunity to shift strategy.
-- **Throttle** — throttle input (0–1) for both laps.
-- **Brake** — brake input (0–1) for both laps.
+
+All panels are linked: hovering over any chart draws a vertical crosshair across every other chart at the same track position simultaneously, and moves the dots on the track map. This makes it easy to correlate a speed loss in the delta chart with the gear used and the exact corner on the map.
 
 Each lap's time and lap number are shown at the top of the results area. A `PB` badge appears if that lap is an all-time personal best at the track.
 
