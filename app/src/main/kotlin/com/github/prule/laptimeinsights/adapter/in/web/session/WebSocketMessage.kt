@@ -22,6 +22,15 @@ import kotlinx.serialization.Serializable
  */
 @Serializable
 sealed interface WebSocketMessage {
+  /**
+   * Sent immediately when a client establishes a WebSocket connection, before the event stream
+   * begins. Clients should reset all live state on receipt — this frame signals that the server
+   * is fresh and any prior in-memory state (active session, laps) no longer exists.
+   */
+  @Serializable
+  @SerialName("ServerStarted")
+  data object ServerStarted : WebSocketMessage
+
   @Serializable
   @SerialName("SessionCreated")
   data class SessionCreated(val data: SessionResource) : WebSocketMessage

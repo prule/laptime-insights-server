@@ -19,12 +19,13 @@ import io.ktor.server.websocket.webSocket
  *
  * Clients connect via WebSocket and receive a stream of JSON-encoded [WebSocketMessage] frames for
  * the following domain events as they occur:
+ * - [WebSocketMessage.ServerStarted] — sent immediately on connect; clients reset live state on receipt.
  * - [SessionCreated] → [WebSocketMessage.SessionCreated] carrying a [SessionResource].
  * - [SessionStarted] → [WebSocketMessage.SessionStarted] carrying a [SessionResource].
  * - [SessionUpdated] → [WebSocketMessage.SessionUpdated] carrying a [SessionResource].
  * - [SessionFinished] → [WebSocketMessage.SessionFinished] carrying a [SessionResource].
  * - [LapCreated] → [WebSocketMessage.LapCreated] carrying a [LapResource].
- * - [PlayerCarUpdated] → [WebSocketMessage.PlayerCarUpdated] carrying a [PlayerCarUpdateData] (~5 Hz).
+ * - [PlayerCarUpdated] → [WebSocketMessage.PlayerCarUpdated] carrying a [PlayerCarUpdateData] (~10 Hz).
  *
  * Each frame is wrapped in a typed envelope of the form `{ "type": "...", "data": { ... } }` so
  * clients can dispatch by the `type` field rather than guessing from resource shape. Adding a new
@@ -38,6 +39,10 @@ class SessionEventController(application: Application, eventPort: EventPort) {
   init {
     application.routing {
       webSocket("/api/1/events") {
+        // Send immediately so the client knows this is a fresh server connection and can
+        // reset any stale in-memory state it accumulated before the server restarted.
+        sendSerialized<WebSocketMessage>(WebSocketMessage.ServerStarted)
+
         val sessionLinks = SessionLinkFactory(application)
         val lapLinks = LapLinkFactory(application)
         eventPort.events.collect { event ->

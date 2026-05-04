@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card } from "../components/ui/Card";
 import { SectionHeader } from "../components/ui/SectionHeader";
 import { formatLapTime } from "../lib/format";
@@ -23,6 +24,7 @@ interface PlayerCarUpdateData {
 }
 
 type WsMessage =
+  | { type: "ServerStarted" }
   | { type: "SessionCreated" | "SessionStarted" | "SessionUpdated" | "SessionFinished"; data: SessionResource }
   | { type: "LapCreated"; data: LapResource }
   | { type: "PlayerCarUpdated"; data: PlayerCarUpdateData };
@@ -34,6 +36,7 @@ type ConnectionStatus = "connecting" | "connected" | "disconnected" | "error";
 function useLiveEvents(apiUrl: string) {
   const [status, setStatus] = useState<ConnectionStatus>("connecting");
   const [session, setSession] = useState<SessionResource | null>(null);
+  const [finishedSessionUid, setFinishedSessionUid] = useState<string | null>(null);
   const [telemetry, setTelemetry] = useState<PlayerCarUpdateData | null>(null);
   const [laps, setLaps] = useState<LapResource[]>([]);
   // Accumulated world-space coords to draw the track outline.
@@ -81,6 +84,15 @@ function useLiveEvents(apiUrl: string) {
         }
 
         switch (msg.type) {
+          case "ServerStarted":
+            // Server is fresh — clear all accumulated live state.
+            setSession(null);
+            setTelemetry(null);
+            setLaps([]);
+            lastSessionUidRef.current = null;
+            trackPointsRef.current = [];
+            setTrackPoints([]);
+            break;
           case "SessionCreated":
           case "SessionStarted":
           case "SessionUpdated": {
@@ -96,9 +108,12 @@ function useLiveEvents(apiUrl: string) {
             }
             break;
           }
-          case "SessionFinished":
-            setSession(msg.data as SessionResource);
+          case "SessionFinished": {
+            const s = msg.data as SessionResource;
+            setSession(s);
+            setFinishedSessionUid(s.uid);
             break;
+          }
           case "LapCreated":
             setLaps((prev) => {
               // Deduplicate by uid.
@@ -136,7 +151,7 @@ function useLiveEvents(apiUrl: string) {
     };
   }, [apiUrl]);
 
-  return { status, session, telemetry, laps, trackPoints };
+  return { status, session, finishedSessionUid, telemetry, laps, trackPoints };
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -293,13 +308,27 @@ function LiveTrackMap({
 
 export function LiveScreen() {
   const { mode, apiUrl } = useDataMode();
-  const { status, session, telemetry, laps, trackPoints } = useLiveEvents(apiUrl);
+  const navigate = useNavigate();
+  const { status, session, finishedSessionUid, telemetry, laps, trackPoints } = useLiveEvents(apiUrl);
+
+  // Navigate to the session detail page ~2 s after the session ends so the
+  // backend has time to persist the final state before the page loads.
+  useEffect(() => {
+    if (!finishedSessionUid) return;
+    const timer = setTimeout(() => navigate(`/sessions/${finishedSessionUid}`), 2000);
+    return () => clearTimeout(timer);
+  }, [finishedSessionUid, navigate]);
 
   const isLiveMode = mode === "live";
 
-  // LapCreated fires for all cars — only show the player's laps.
+  // Only show laps for this session driven by the player's car.
   const playerCarId = session?.playerCarId ?? null;
-  const playerLaps = playerCarId !== null ? laps.filter((l) => l.carId === playerCarId) : laps;
+  const sessionUid = session?.uid ?? null;
+  const playerLaps = laps.filter(
+    (l) =>
+      (sessionUid === null || l.sessionUid === sessionUid) &&
+      (playerCarId === null || l.carId === playerCarId),
+  );
 
   if (!isLiveMode) {
     return (
