@@ -17,4 +17,5 @@ class SessionEntity(id: EntityID<Long>) : LongEntity(id) {
   var track by SessionTable.track
   var car by SessionTable.car
   var sessionType by SessionTable.sessionType
+  var playerCarId by SessionTable.playerCarId
 }

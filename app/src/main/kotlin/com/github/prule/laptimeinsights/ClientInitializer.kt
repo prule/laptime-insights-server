@@ -124,6 +124,11 @@ class ClientInitializer(private val appModule: AppModule) {
       clazz = AccBroadcastingInbound.RealtimeCarUpdate::class,
       block = { message, _ ->
         val currentSession = session ?: return@ConditionalFilter
+        // Keep per-car validity in sync so buildLapCompleted reads the correct flag.
+        sessionState?.updateCurrentLapValidity(
+          CarId(message.carIndex()),
+          message.currentLap()?.isInvalid() != 1,
+        )
         appModule.car.recordRealtimeCarUpdateUseCase.record(
           RecordRealtimeCarUpdateCommand(
             sessionId = currentSession.id,
@@ -209,7 +214,12 @@ class ClientInitializer(private val appModule: AppModule) {
           logger.info("Car is $car")
           if (session != null) {
             appModule.session.updateSessionUseCase.update(
-              UpdateSessionCommand(session!!.uid, track, car)
+              UpdateSessionCommand(
+                uid = session!!.uid,
+                track = track,
+                car = car,
+                playerCarId = clientState?.focusedCarIndex?.let { CarId(it) },
+              )
             )
           }
         }

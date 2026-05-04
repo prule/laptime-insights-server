@@ -69,22 +69,40 @@ export function OverviewScreen() {
   // lately" placeholders. Not bound to the active range on purpose.
   const optionsQuery = useSessionOptions();
 
+  // Build sessionUid → playerCarId map from the fetched sessions.
+  const playerCarIdBySession = useMemo(() => {
+    const map = new Map<string, number | null>();
+    for (const s of sessionsQuery.data?.items ?? []) map.set(s.uid, s.playerCarId);
+    return map;
+  }, [sessionsQuery.data]);
+
+  // Filter laps to only those driven by the player in each session.
+  const playerLaps = useMemo(() => {
+    const laps = lapsQuery.data?.items ?? [];
+    return laps.filter((l) => {
+      const pcid = playerCarIdBySession.get(l.sessionUid);
+      // If we don't have the session in the window (e.g. outside time range), keep the lap.
+      return pcid === undefined || pcid === null || l.carId === pcid;
+    });
+  }, [lapsQuery.data, playerCarIdBySession]);
+
   const stats = useMemo(() => {
     const sessions = sessionsQuery.data?.items ?? [];
-    const laps = lapsQuery.data?.items ?? [];
-    const validLaps = laps.filter((l) => l.valid);
-    const bestLap = validLaps[0]?.lapTime ?? null;
+    const validLaps = playerLaps.filter((l) => l.valid);
+    const bestLap = validLaps.length > 0
+      ? validLaps.reduce((best, l) => (l.lapTime < best ? l.lapTime : best), validLaps[0]!.lapTime)
+      : null;
     const avgMs =
       validLaps.length > 0
         ? validLaps.reduce((acc, l) => acc + l.lapTime, 0) / validLaps.length
         : null;
     return {
       totalSessions: sessionsQuery.data?.total ?? sessions.length,
-      totalLaps: lapsQuery.data?.total ?? laps.length,
+      totalLaps: playerLaps.length,
       bestLap,
       avgLap: avgMs,
     };
-  }, [sessionsQuery.data, lapsQuery.data]);
+  }, [sessionsQuery.data, playerLaps]);
 
   const sessionStarts = useMemo(
     () => (sessionsQuery.data?.items ?? []).map((s) => s.startedAt).filter((t): t is string => !!t),
@@ -98,8 +116,8 @@ export function OverviewScreen() {
   const chartAnchor = range === "all" ? undefined : Date.now();
 
   const lapBuckets = useMemo(
-    () => groupByPlan((lapsQuery.data?.items ?? []).map((l) => l.recordedAt), bucketPlan, chartAnchor),
-    [lapsQuery.data, bucketPlan, chartAnchor],
+    () => groupByPlan(playerLaps.map((l) => l.recordedAt), bucketPlan, chartAnchor),
+    [playerLaps, bucketPlan, chartAnchor],
   );
 
   const sessionBuckets = useMemo(
@@ -122,19 +140,18 @@ export function OverviewScreen() {
   const trackPractice = useMemo(() => {
     const allTracks = optionsQuery.data?.tracks ?? [];
     const sessions = sessionsQuery.data?.items ?? [];
-    const laps = lapsQuery.data?.items ?? [];
     const sessionTrack = new Map<string, string | null>();
     for (const s of sessions) sessionTrack.set(s.uid, s.track);
 
     const counts = new Map<string, number>();
     for (const t of allTracks) counts.set(t, 0);
-    for (const l of laps) {
+    for (const l of playerLaps) {
       const track = sessionTrack.get(l.sessionUid);
       if (!track) continue;
       counts.set(track, (counts.get(track) ?? 0) + 1);
     }
     return Array.from(counts, ([track, count]) => ({ track, count }));
-  }, [optionsQuery.data, sessionsQuery.data, lapsQuery.data]);
+  }, [optionsQuery.data, sessionsQuery.data, playerLaps]);
 
   if (sessionsQuery.isLoading || lapsQuery.isLoading) {
     return <div className="p-8"><LoadingState /></div>;

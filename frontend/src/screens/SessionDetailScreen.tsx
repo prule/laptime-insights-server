@@ -27,11 +27,8 @@ export function SessionDetailScreen() {
   // null = all cars shown
   const [selectedCarId, setSelectedCarId] = useState<number | null>(null);
 
-  // Player's carId = carId of the first lap in the session.
-  const playerCarId = useMemo<number | null>(() => {
-    const laps = lapsQuery.data?.items ?? [];
-    return laps.length > 0 ? laps[0]!.carId : null;
-  }, [lapsQuery.data]);
+  // Player's carId comes from the session resource (set by EntryListCar in ClientInitializer).
+  const playerCarId: number | null = sessionQuery.data?.playerCarId ?? null;
 
   // Distinct car numbers present in this session (player first).
   const carIds = useMemo(() => {

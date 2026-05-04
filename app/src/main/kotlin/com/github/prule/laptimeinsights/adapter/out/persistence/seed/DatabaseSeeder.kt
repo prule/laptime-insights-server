@@ -211,6 +211,7 @@ class DatabaseSeeder(
       track = profile.track,
       car = profile.car,
       sessionType = profile.sessionType,
+      playerCarId = profile.carId,
     )
 
   private fun generateLaps(

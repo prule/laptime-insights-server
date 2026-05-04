@@ -79,6 +79,7 @@ function buildSessions(): SessionResource[] {
       track: p.track,
       car: p.car,
       sessionType: p.sessionType,
+      playerCarId: p.carId,
       _links: { self: `/api/1/sessions/${sessionUid}` },
     };
   });

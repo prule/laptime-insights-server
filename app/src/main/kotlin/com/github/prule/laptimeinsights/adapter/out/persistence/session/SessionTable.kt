@@ -13,4 +13,5 @@ object SessionTable : LongIdTable("SESSION") {
   val track = varchar("track", MAX_VARCHAR_LENGTH).nullable()
   val car = varchar("car", MAX_VARCHAR_LENGTH).nullable()
   val sessionType = varchar("session_type", MAX_VARCHAR_LENGTH)
+  val playerCarId = integer("player_car_id").nullable()
 }

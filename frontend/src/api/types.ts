@@ -21,6 +21,8 @@ export interface SessionResource {
   track: string | null;
   car: string | null;
   sessionType: string;
+  /** ACC car index of the player's own car. Null until EntryListCar arrives. */
+  playerCarId: number | null;
   _links: Links;
 }
 

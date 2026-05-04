@@ -21,6 +21,8 @@ data class SessionResource(
   val track: Track?,
   val car: Car?,
   val sessionType: SessionType,
+  /** ACC car index of the player's own car. Null until the EntryListCar message arrives. */
+  val playerCarId: Int?,
   val _links: Map<String, String>,
 ) {
 
@@ -34,6 +36,7 @@ data class SessionResource(
         track = session.track,
         car = session.car,
         sessionType = session.sessionType,
+        playerCarId = session.playerCarId?.value,
         _links = linkFactory.build(session),
       )
   }

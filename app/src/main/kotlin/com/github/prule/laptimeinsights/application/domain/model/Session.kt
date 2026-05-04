@@ -26,6 +26,8 @@ data class Session(
   val track: Track?,
   val car: Car?,
   val sessionType: SessionType,
+  /** ACC car index of the player's own car. Null until the EntryListCar message arrives. */
+  val playerCarId: CarId? = null,
 ) {
   fun startedAt() = startedAt
 
