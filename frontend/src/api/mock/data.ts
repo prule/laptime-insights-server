@@ -157,12 +157,21 @@ const TRACK_CORNERS: Record<string, number> = {
 /**
  * Generate a synthetic telemetry trace for a single lap. Mirrors the backend
  * seeder's algorithm so that mock-mode and live-mode look broadly similar.
+ *
+ * worldPosX/worldPosY use the same parametric ellipse + harmonic perturbation
+ * that the backend seeder uses, keyed to cornerCount so each track has a
+ * recognisably different shape.
  */
 function buildTelemetry(track: string, baseLapMs: number, lapTimeMs: number, lapNumber: number): TelemetrySample[] {
   const cornerCount = TRACK_CORNERS[track] ?? 8;
   const paceFactor = 1 + (baseLapMs - lapTimeMs) / 50_000;
   const lapJitter = ((lapNumber * 17) % 7) * 0.4;
   const trackSeed = baseLapMs % 31;
+
+  const radiusX = 500;
+  const radiusY = 300;
+  const perturbAmp = 80;
+  const perturbPhase = trackSeed * 0.2;
 
   const speeds: number[] = [];
   for (let i = 0; i < SAMPLES_PER_LAP; i++) {
@@ -179,10 +188,15 @@ function buildTelemetry(track: string, baseLapMs: number, lapTimeMs: number, lap
     else if (speed < 130) gear = 3;
     else if (speed < 170) gear = 4;
     else if (speed < 210) gear = 5;
+    const splinePosition = i / SAMPLES_PER_LAP;
+    const angle = 2 * Math.PI * splinePosition;
+    const perturb = perturbAmp * Math.sin(cornerCount * angle + perturbPhase);
     return {
-      splinePosition: i / SAMPLES_PER_LAP,
+      splinePosition,
       speedKph: speed,
       gear,
+      worldPosX: (radiusX + perturb) * Math.cos(angle),
+      worldPosY: (radiusY + perturb * 0.5) * Math.sin(angle),
     };
   });
 }

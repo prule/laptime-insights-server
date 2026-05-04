@@ -28,6 +28,10 @@ export interface TelemetrySample {
   splinePosition: number;
   speedKph: number;
   gear: number;
+  /** ACC world-space X coordinate in metres. Used for track-map rendering. */
+  worldPosX: number;
+  /** ACC world-space Y coordinate in metres. Used for track-map rendering. */
+  worldPosY: number;
 }
 
 export interface LapTelemetryResource {

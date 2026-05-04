@@ -123,8 +123,9 @@ class DatabaseSeeder(
    * Speed follows a sum of sinusoids so each track gets its own corner pattern. Faster laps sit
    * uniformly slightly higher on the speed envelope. Gear is derived from speed buckets.
    *
-   * World position and other ACC-specific fields are set to neutral synthetic values since this is
-   * dev seed data only.
+   * World position is synthesised as a parametric track shape: a base ellipse perturbed by the
+   * track's corner count so every track has a recognisably different outline. The shape is
+   * deterministic and consistent across laps on the same track.
    */
   private fun generateRealtimeCarUpdates(
     profile: SeedProfile,
@@ -147,6 +148,13 @@ class DatabaseSeeder(
       speeds[i] = max(60.0, baseline * paceFactor)
     }
 
+    // Synthetic track shape: ellipse + harmonic perturbations keyed to corner count.
+    // Radius ~500 m so the scale is vaguely realistic.
+    val radiusX = 500.0
+    val radiusY = 300.0
+    val perturbAmp = 80.0
+    val perturbPhase = (trackSeed % 31) * 0.2
+
     return List(samples) { i ->
       val splinePosition = i.toDouble() / samples
       val speed = speeds[i]
@@ -158,6 +166,10 @@ class DatabaseSeeder(
           speed < 210 -> 5
           else -> 6
         }
+      val angle = 2.0 * PI * splinePosition
+      val perturb = perturbAmp * sin(cornerCount * angle + perturbPhase)
+      val wx = ((radiusX + perturb) * cos(angle)).toFloat()
+      val wy = ((radiusY + perturb * 0.5) * sin(angle)).toFloat()
       RealtimeCarUpdate(
         sessionId = session.id,
         sessionUid = session.uid,
@@ -168,9 +180,9 @@ class DatabaseSeeder(
         driverIndex = 0,
         driverCount = 1,
         gear = gear,
-        worldPosX = 0f,
-        worldPosY = 0f,
-        yaw = 0f,
+        worldPosX = wx,
+        worldPosY = wy,
+        yaw = angle.toFloat(),
         carLocation = "TRACK",
         kmh = speed.toInt(),
         racePosition = 1,

@@ -10,6 +10,9 @@ import kotlinx.serialization.Serializable
  *
  * Projected from [RealtimeCarUpdate] rows stored in REALTIME_CAR_UPDATE. Throttle and brake are not
  * available from the ACC UDP broadcasting protocol.
+ *
+ * [worldPosX] and [worldPosY] are the ACC world-space coordinates (metres). They are used by the
+ * frontend to render a 2-D track map overlay on the comparison screen.
  */
 @Serializable
 data class TelemetrySample(
@@ -19,4 +22,8 @@ data class TelemetrySample(
   val speedKph: Double,
   /** Gear index. 0 = neutral, -1 = reverse, 1..N = forward gears. */
   val gear: Int,
+  /** ACC world-space X coordinate in metres. */
+  val worldPosX: Float,
+  /** ACC world-space Y coordinate in metres (lateral / depth axis). */
+  val worldPosY: Float,
 )

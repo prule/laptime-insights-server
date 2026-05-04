@@ -40,6 +40,8 @@ class RealtimeCarUpdateRepository {
           splinePosition = row[RealtimeCarUpdateTable.splinePosition],
           speedKph = row[RealtimeCarUpdateTable.kmh].toDouble(),
           gear = row[RealtimeCarUpdateTable.gear],
+          worldPosX = row[RealtimeCarUpdateTable.worldPosX],
+          worldPosY = row[RealtimeCarUpdateTable.worldPosY],
         )
       }
 }

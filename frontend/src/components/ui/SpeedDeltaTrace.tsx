@@ -1,9 +1,12 @@
+import { useRef } from "react";
 import type { TelemetrySample } from "../../api/types";
 
 export interface SpeedDeltaTraceProps {
   lap1: TelemetrySample[];
   lap2: TelemetrySample[];
   height?: number;
+  hoveredPosition?: number | null;
+  onHover?: (position: number | null) => void;
 }
 
 /**
@@ -12,7 +15,9 @@ export interface SpeedDeltaTraceProps {
  * in KPH at every 1% of the track length"). Positive delta = lap1 faster than
  * lap2 → renders in cyan; negative = lap2 faster → renders in accent (red).
  */
-export function SpeedDeltaTrace({ lap1, lap2, height = 100 }: SpeedDeltaTraceProps) {
+export function SpeedDeltaTrace({ lap1, lap2, height = 100, hoveredPosition, onHover }: SpeedDeltaTraceProps) {
+  const svgRef = useRef<SVGSVGElement>(null);
+
   if (lap1.length === 0 || lap2.length === 0) return null;
   const buckets = 100;
   const series1 = resample(lap1, buckets);
@@ -31,13 +36,27 @@ export function SpeedDeltaTrace({ lap1, lap2, height = 100 }: SpeedDeltaTracePro
     })
     .join(" ");
 
+  const handleMouseMove = (e: React.MouseEvent<SVGSVGElement>) => {
+    if (!onHover || !svgRef.current) return;
+    const rect = svgRef.current.getBoundingClientRect();
+    onHover(Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width)));
+  };
+
+  const crosshairDelta =
+    hoveredPosition != null
+      ? (deltas[Math.round(hoveredPosition * (buckets - 1))] ?? null)
+      : null;
+
   return (
-    <div>
+    <div className="relative">
       <svg
+        ref={svgRef}
         viewBox={`0 0 ${width} ${height}`}
         preserveAspectRatio="none"
-        className="block w-full"
+        className="block w-full cursor-crosshair"
         style={{ height }}
+        onMouseMove={handleMouseMove}
+        onMouseLeave={() => onHover?.(null)}
       >
         <line
           x1={0}
@@ -48,7 +67,31 @@ export function SpeedDeltaTrace({ lap1, lap2, height = 100 }: SpeedDeltaTracePro
           strokeWidth={1}
         />
         <path d={path} fill="none" stroke="#00d4ff" strokeWidth={1.5} vectorEffect="non-scaling-stroke" />
+        {hoveredPosition != null && (
+          <line
+            x1={hoveredPosition * width}
+            x2={hoveredPosition * width}
+            y1={0}
+            y2={height}
+            stroke="rgba(255,255,255,0.5)"
+            strokeWidth={1}
+            vectorEffect="non-scaling-stroke"
+          />
+        )}
       </svg>
+      {hoveredPosition != null && crosshairDelta != null && (
+        <div
+          className="pointer-events-none absolute top-1 z-10 rounded bg-surface-1 px-2 py-1 font-mono text-[10px] shadow"
+          style={{
+            left: `${Math.min(hoveredPosition * 100, 80)}%`,
+            transform: "translateX(-50%)",
+          }}
+        >
+          <span style={{ color: crosshairDelta >= 0 ? "#00d4ff" : "#e8212a" }}>
+            {crosshairDelta >= 0 ? "+" : ""}{crosshairDelta.toFixed(0)} kph
+          </span>
+        </div>
+      )}
       <div className="mt-1 flex justify-between font-mono text-[10px] text-text-dim">
         <span className="text-cyan">+{absMax.toFixed(0)} kph (lap 1 faster)</span>
         <span className="text-accent">-{absMax.toFixed(0)} kph (lap 2 faster)</span>

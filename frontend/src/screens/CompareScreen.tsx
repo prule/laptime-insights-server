@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useLapComparison } from "../api/queries";
 import { Card } from "../components/ui/Card";
 import { ErrorState, LoadingState, EmptyState } from "../components/ui/States";
@@ -7,6 +7,7 @@ import { LapPicker } from "../components/LapPicker";
 import { SectionHeader } from "../components/ui/SectionHeader";
 import { SpeedDeltaTrace } from "../components/ui/SpeedDeltaTrace";
 import { TelemetryTrace } from "../components/ui/TelemetryTrace";
+import { TrackMap } from "../components/ui/TrackMap";
 import { formatLapTime } from "../lib/format";
 import { getString, useUrlState } from "../hooks/useUrlState";
 
@@ -22,6 +23,10 @@ const COLOR_LAP2 = "#e8212a";
  * track/car/PB filters and pagination as the Laps screen. The optional
  * `track` URL param pre-fills the picker's track filter so jumps from
  * SessionDetail's "vs best" / "vs PB" buttons land on the right context.
+ *
+ * hoveredPosition (0–1 splinePosition) is lifted here so all panels —
+ * TelemetryTrace, SpeedDeltaTrace, GearMismatchStrip, and TrackMap — stay
+ * synchronized as the user hovers over any one of them.
  */
 export function CompareScreen() {
   const [params, setParam, setMany] = useUrlState();
@@ -31,6 +36,8 @@ export function CompareScreen() {
   const lap2Uid = getString(params, "lap2");
 
   const comparisonQuery = useLapComparison(lap1Uid, lap2Uid);
+
+  const [hoveredPosition, setHoveredPosition] = useState<number | null>(null);
 
   const series = useMemo(() => {
     if (!comparisonQuery.data) return [];
@@ -111,16 +118,37 @@ export function CompareScreen() {
             </div>
           </Card>
 
-          <Card className="mb-4">
-            <SectionHeader title="Speed (KPH)" sub="Both laps overlaid against splinePosition (0 → 1)" />
-            <TelemetryTrace series={series} field="speedKph" height={180} unit="kph" />
-          </Card>
+          {/* Track map + speed chart side-by-side at the top */}
+          <div className="mb-4 flex gap-4">
+            <Card className="flex flex-1 flex-col">
+              <SectionHeader title="Speed (KPH)" sub="Both laps overlaid against splinePosition (0 → 1)" />
+              <TelemetryTrace
+                series={series}
+                field="speedKph"
+                height={180}
+                unit="kph"
+                hoveredPosition={hoveredPosition}
+                onHover={setHoveredPosition}
+              />
+            </Card>
+            <Card className="flex flex-col items-center justify-center">
+              <SectionHeader title="Track map" sub="Hover any chart to see position" />
+              <TrackMap
+                series={series}
+                hoveredPosition={hoveredPosition}
+                onHover={setHoveredPosition}
+                size={220}
+              />
+            </Card>
+          </div>
 
           <Card className="mb-4">
             <SectionHeader title="Speed delta" sub="Lap 1 minus Lap 2 at every 1% of track length" />
             <SpeedDeltaTrace
               lap1={comparisonQuery.data.lap1.samples}
               lap2={comparisonQuery.data.lap2.samples}
+              hoveredPosition={hoveredPosition}
+              onHover={setHoveredPosition}
             />
           </Card>
 
@@ -129,6 +157,8 @@ export function CompareScreen() {
             <GearMismatchStrip
               lap1={comparisonQuery.data.lap1.samples}
               lap2={comparisonQuery.data.lap2.samples}
+              hoveredPosition={hoveredPosition}
+              onHover={setHoveredPosition}
             />
           </Card>
 
