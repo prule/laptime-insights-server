@@ -149,3 +149,22 @@ socket.onclose = () => {
     console.log('Disconnected from event stream');
 };
 ```
+
+## Mid-session catch-up
+
+Connecting clients receive only events that fire *after* the WebSocket opens.
+A page loaded mid-session therefore has no record of laps recorded earlier.
+
+The frontend `LiveScreen` resolves this with two REST fetches alongside the WS:
+
+1. **On mount** — fetch the most recent session via
+   `GET /api/1/sessions?sort=startedAt:DESC&size=1`. If `endedAt` is `null`
+   (i.e. still live), seed `session` state and fetch its laps via
+   `GET /api/1/laps?sessionUid={uid}&carId={playerCarId}&sort=lapNumber:DESC`.
+2. **On every `LapCreated`** — prepend the new lap optimistically, then
+   re-fetch the same lap list to overwrite local state with the authoritative
+   server view (handles dedup and any laps the client missed).
+
+A `PlayerCarUpdated` event for an unknown session also triggers a one-off
+`GET /api/1/sessions/{uid}` + lap fetch so a page that connects after a fresh
+session has started still picks up its details.

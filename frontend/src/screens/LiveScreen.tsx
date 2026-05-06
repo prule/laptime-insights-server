@@ -4,7 +4,7 @@ import { Card } from "../components/ui/Card";
 import { SectionHeader } from "../components/ui/SectionHeader";
 import { formatLapTime } from "../lib/format";
 import { useDataMode } from "../providers/DataModeProvider";
-import type { LapResource, SessionResource } from "../api/types";
+import type { LapResource, Page, SessionResource } from "../api/types";
 
 // ─── WebSocket message types (mirror WebSocketMessage.kt) ────────────────────
 
@@ -43,6 +43,8 @@ function useLiveEvents(apiUrl: string) {
   const trackPointsRef = useRef<{ x: number; y: number }[]>([]);
   const [trackPoints, setTrackPoints] = useState<{ x: number; y: number }[]>([]);
   const lastSessionUidRef = useRef<string | null>(null);
+  // Tracks the player's car id without needing to re-create the WS handler on every session update.
+  const playerCarIdRef = useRef<number | null>(null);
 
   /** Fetch session details via REST when we connect mid-session (no lifecycle WS event fires). */
   function fetchSession(uid: string, base: string) {
@@ -50,9 +52,38 @@ function useLiveEvents(apiUrl: string) {
     fetch(`${apiBase}/api/1/sessions/${uid}`)
       .then((r) => (r.ok ? r.json() : null))
       .then((data: SessionResource | null) => {
-        if (data) setSession(data);
+        if (data) {
+          setSession(data);
+          playerCarIdRef.current = data.playerCarId;
+          // Also pull whatever laps already exist so the table is populated immediately,
+          // not only after the next LapCreated event arrives.
+          fetchSessionLaps(data.uid, base, data.playerCarId);
+        }
       })
       .catch(() => {/* ignore — we'll show what we can */});
+  }
+
+  /**
+   * Fetch the full list of laps for `sessionUid` (optionally restricted to `carId`)
+   * and replace local lap state. Called on every `LapCreated` so a freshly loaded
+   * page picks up laps recorded before the WS connected.
+   */
+  function fetchSessionLaps(uid: string, base: string, carId: number | null) {
+    const apiBase = base.replace(/^ws/, "http");
+    const params = new URLSearchParams({
+      sessionUid: uid,
+      page: "1",
+      size: "200",
+      sort: "lapNumber:DESC",
+    });
+    if (carId !== null) params.set("carId", String(carId));
+    fetch(`${apiBase}/api/1/laps?${params.toString()}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data: Page<LapResource> | null) => {
+        if (!data) return;
+        setLaps(data.items);
+      })
+      .catch(() => {/* ignore — we still have the optimistic WS-driven state */});
   }
 
   useEffect(() => {
@@ -60,6 +91,25 @@ function useLiveEvents(apiUrl: string) {
     const wsUrl = base.replace(/^http/, "ws") + "/api/1/events";
     let ws: WebSocket;
     let closed = false;
+
+    // On mount, look up the most recent session and — if it hasn't finished —
+    // load its current state and lap list so the page is populated even before
+    // any WS event fires. Without this, a freshly loaded page during a lull in
+    // telemetry would stay empty until the next PlayerCarUpdated/LapCreated.
+    {
+      const apiBase = base.replace(/^ws/, "http");
+      fetch(`${apiBase}/api/1/sessions?sort=startedAt:DESC&size=1`)
+        .then((r) => (r.ok ? r.json() : null))
+        .then((page: Page<SessionResource> | null) => {
+          const latest = page?.items?.[0];
+          if (!latest || latest.endedAt) return;
+          setSession(latest);
+          playerCarIdRef.current = latest.playerCarId;
+          lastSessionUidRef.current = latest.uid;
+          fetchSessionLaps(latest.uid, base, latest.playerCarId);
+        })
+        .catch(() => {/* ignore — WS will populate state once events arrive */});
+    }
 
     function connect() {
       setStatus("connecting");
@@ -90,6 +140,7 @@ function useLiveEvents(apiUrl: string) {
             setTelemetry(null);
             setLaps([]);
             lastSessionUidRef.current = null;
+            playerCarIdRef.current = null;
             trackPointsRef.current = [];
             setTrackPoints([]);
             break;
@@ -98,6 +149,7 @@ function useLiveEvents(apiUrl: string) {
           case "SessionUpdated": {
             const s = msg.data as SessionResource;
             setSession(s);
+            playerCarIdRef.current = s.playerCarId;
             // Reset laps and track shape when a new session begins.
             if (lastSessionUidRef.current !== s.uid) {
               lastSessionUidRef.current = s.uid;
@@ -111,17 +163,20 @@ function useLiveEvents(apiUrl: string) {
           case "SessionFinished": {
             const s = msg.data as SessionResource;
             setSession(s);
+            playerCarIdRef.current = s.playerCarId;
             setFinishedSessionUid(s.uid);
             break;
           }
-          case "LapCreated":
-            setLaps((prev) => {
-              // Deduplicate by uid.
-              const lap = msg.data as LapResource;
-              if (prev.some((l) => l.uid === lap.uid)) return prev;
-              return [lap, ...prev];
-            });
+          case "LapCreated": {
+            const lap = msg.data as LapResource;
+            // Optimistically prepend so the UI reflects the new lap immediately,
+            // even if the follow-up REST fetch is slow.
+            setLaps((prev) => (prev.some((l) => l.uid === lap.uid) ? prev : [lap, ...prev]));
+            // Then refetch the authoritative full list for this session + player car so
+            // a page that loaded mid-session picks up earlier laps too.
+            fetchSessionLaps(lap.sessionUid, base, playerCarIdRef.current);
             break;
+          }
           case "PlayerCarUpdated": {
             const t = msg.data as PlayerCarUpdateData;
             setTelemetry(t);
@@ -362,11 +417,6 @@ export function LiveScreen() {
         <div className="ml-auto flex items-center gap-4">
           <ConnectionBadge status={status} />
         </div>
-      </div>
-
-      {/* Note: throttle/brake unavailable */}
-      <div className="mb-5 rounded-md border border-border/50 bg-surface-active px-4 py-2 font-mono text-[10px] text-text-muted">
-        Note: ACC's broadcast protocol does not include throttle or brake inputs — those fields are not available.
       </div>
 
       {!t && (
