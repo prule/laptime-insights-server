@@ -50,6 +50,7 @@ fun Application.module(
   appModule: AppModule = AppModule(),
   jdbcUrl: String = EnvironmentVariables.jdbcUrl(),
 ) {
+
   install(Resources)
   install(CORS) {
     // Dev: allow any origin so the Dashboard.html prototype can be served from python http.server,
@@ -84,8 +85,6 @@ fun Application.module(
   }
 
   DatabaseFactory.init(jdbcUrl)
-
-  val h2DBManager = H2DBManager(EnvironmentVariables.h2web(), EnvironmentVariables.h2tcp())
 
   if (EnvironmentVariables.shouldSeedDatabase()) {
     DatabaseSeeder(

@@ -2,13 +2,13 @@ package com.github.prule.laptimeinsights
 
 import com.github.prule.acc.client.AccClient
 import com.github.prule.acc.client.AccClientConfiguration
-import com.github.prule.acc.client.ClientState
+import com.github.prule.acc.client.ClientContext
+import com.github.prule.acc.client.ContextUpdater
 import com.github.prule.acc.client.FilteredMessageListener
 import com.github.prule.acc.client.JsonFormatter
 import com.github.prule.acc.client.LoggingListener
 import com.github.prule.acc.client.MessageListener
 import com.github.prule.acc.client.MessageSender
-import com.github.prule.acc.client.RegistrationResultListener
 import com.github.prule.acc.messages.AccBroadcastingInbound
 import com.github.prule.laptimeinsights.application.domain.model.Car
 import com.github.prule.laptimeinsights.application.domain.model.CarId
@@ -32,7 +32,7 @@ import org.slf4j.LoggerFactory
 
 class ClientInitializer(private val appModule: AppModule) {
   private val logger = LoggerFactory.getLogger(javaClass)
-  private var clientState: ClientState? = null
+  private var context = ClientContext()
   private var session: Session? = null
   private var sessionState: SessionState? = null
   private var track: Track? = null
@@ -49,7 +49,6 @@ class ClientInitializer(private val appModule: AppModule) {
     )
 
   suspend fun initializeClient(configuration: ApplicationClientConfiguration) {
-    clientState = ClientState()
 
     AccClient(
         AccClientConfiguration("Test", port = configuration.port, serverIp = configuration.serverIp)
@@ -57,7 +56,7 @@ class ClientInitializer(private val appModule: AppModule) {
       .connect(
         listOf(
           LoggingListener(),
-          RegistrationResultListener(clientState!!),
+          ContextUpdater(context),
           buildRealTimeUpdate(),
           buildRealTimeCarUpdate(),
           buildLapCompleted(),
@@ -109,6 +108,23 @@ class ClientInitializer(private val appModule: AppModule) {
                 sessionState = null
                 logger.info("Session ended")
               }
+
+              if (session != null && session!!.playerCarId?.value != message.focusedCarIndex()) {
+
+                val carEntry = context.cars[message.focusedCarIndex()]
+                val carModel =
+                  appModule.car.findCarUseCase.findCarByModel(
+                    FindCarCommand(carEntry?.carModelType ?: -1)
+                  )
+
+                appModule.session.updateSessionUseCase.update(
+                  UpdateSessionCommand(
+                    session!!.uid,
+                    playerCarId = CarId(message.focusedCarIndex()),
+                    car = Car(carModel.value),
+                  )
+                )
+              }
             }
           }
         ),
@@ -124,7 +140,7 @@ class ClientInitializer(private val appModule: AppModule) {
       clazz = AccBroadcastingInbound.RealtimeCarUpdate::class,
       block = { message, _ ->
         val currentSession = session ?: return@ConditionalFilter
-        val isPlayerCar = clientState?.focusedCarIndex == message.carIndex()
+        val isPlayerCar = context.focusedCarIndex == message.carIndex()
         // Keep per-car validity in sync so buildLapCompleted reads the correct flag.
         sessionState?.updateCurrentLapValidity(
           CarId(message.carIndex()),
@@ -208,7 +224,7 @@ class ClientInitializer(private val appModule: AppModule) {
     return ConditionalFilter(
       condition = { message ->
         message.msgType() == AccBroadcastingInbound.InboundMsgType.ENTRY_LIST_CAR &&
-          clientState?.focusedCarIndex != null
+          context.focusedCarIndex != null
       },
       clazz = AccBroadcastingInbound.EntryListCar::class,
       block = { message, _ ->
@@ -217,7 +233,7 @@ class ClientInitializer(private val appModule: AppModule) {
         sessionState?.registerCar(CarId(message.carId()), resolvedCar)
         logger.info("Car registered: carId=${message.carId()} car=$resolvedCar")
 
-        if (message.carId() == clientState?.focusedCarIndex) {
+        if (message.carId() == context.focusedCarIndex) {
           car = resolvedCar
           if (session != null) {
             appModule.session.updateSessionUseCase.update(
@@ -225,7 +241,7 @@ class ClientInitializer(private val appModule: AppModule) {
                 uid = session!!.uid,
                 track = track,
                 car = car,
-                playerCarId = clientState?.focusedCarIndex?.let { CarId(it) },
+                playerCarId = context.focusedCarIndex?.let { CarId(it) },
               )
             )
           }

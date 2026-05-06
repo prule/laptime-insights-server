@@ -7,6 +7,9 @@ import org.jetbrains.exposed.v1.jdbc.Database
 
 object DatabaseFactory {
   fun init(jdbcUrl: String = EnvironmentVariables.jdbcUrl()) {
+    val h2DBManager =
+      H2DBManager(EnvironmentVariables.h2web(), EnvironmentVariables.h2tcp()).start()
+
     val datasource = hikari(jdbcUrl)
     Database.connect(datasource)
     FlywayDatabaseMigration().migrate(datasource)
