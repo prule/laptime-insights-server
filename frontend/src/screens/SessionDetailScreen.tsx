@@ -8,6 +8,7 @@ import {
 } from "../api/queries";
 import { Badge } from "../components/ui/Badge";
 import { Card } from "../components/ui/Card";
+import { CarFilterBar } from "../components/ui/CarFilterBar";
 import { LapTable } from "../components/LapTable";
 import { SectionHeader } from "../components/ui/SectionHeader";
 import { Sparkline } from "../components/ui/Sparkline";
@@ -36,8 +37,6 @@ export function SessionDetailScreen() {
     all.sort((a, b) => (a === playerCarId ? -1 : b === playerCarId ? 1 : a - b));
     return all;
   }, [lapsQuery.data, playerCarId]);
-
-  const hasCompetitors = carIds.length > 1;
 
   // Laps visible after car filter.
   const visibleLaps = useMemo(() => {
@@ -128,23 +127,17 @@ export function SessionDetailScreen() {
           }
         />
 
-        {/* Car filter pills — only when multiple cars present */}
-        {hasCompetitors && allLaps.length > 0 && (
-          <div className="mb-3 flex items-center gap-1.5 flex-wrap">
-            <CarFilterPill
-              label="All"
-              active={selectedCarId === null}
-              onClick={() => setSelectedCarId(null)}
+        {allLaps.length > 0 && (
+          <div className="mb-3">
+            <CarFilterBar
+              cars={carIds.map((id) => ({
+                value: String(id),
+                label: `Car ${id}${id === playerCarId ? " (you)" : ""}`,
+                isPlayer: id === playerCarId,
+              }))}
+              selected={selectedCarId !== null ? String(selectedCarId) : null}
+              onChange={(v) => setSelectedCarId(v !== null ? Number(v) : null)}
             />
-            {carIds.map((id) => (
-              <CarFilterPill
-                key={id}
-                label={`Car ${id}${id === playerCarId ? " (you)" : ""}`}
-                active={selectedCarId === id}
-                isPlayer={id === playerCarId}
-                onClick={() => setSelectedCarId(selectedCarId === id ? null : id)}
-              />
-            ))}
           </div>
         )}
 
@@ -209,38 +202,6 @@ export function SessionDetailScreen() {
         )}
       </Card>
     </div>
-  );
-}
-
-function CarFilterPill({
-  label,
-  active,
-  isPlayer,
-  onClick,
-}: {
-  label: string;
-  active: boolean;
-  isPlayer?: boolean;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className={`flex items-center gap-1.5 rounded border px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.08em] transition-colors ${
-        active
-          ? "border-cyan/50 bg-cyan/10 text-cyan"
-          : "border-border text-text-muted hover:border-cyan/30 hover:text-text"
-      }`}
-    >
-      {isPlayer !== undefined && (
-        <span
-          className={`inline-block h-1.5 w-1.5 flex-shrink-0 rounded-full ${
-            isPlayer ? "bg-cyan" : "bg-text-dim"
-          }`}
-        />
-      )}
-      {label}
-    </button>
   );
 }
 

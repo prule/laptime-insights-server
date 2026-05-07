@@ -72,6 +72,8 @@ export interface LapResource {
   carId: number;
   /** Car model name recorded at lap time, e.g. "Audi R8 LMS Evo". Null if unknown. */
   car: string | null;
+  /** Track name denormalized from the session at lap creation time. */
+  track: string | null;
   recordedAt: Iso8601;
   /** lap time in milliseconds. */
   lapTime: number;

@@ -46,6 +46,7 @@ function formatDelta(lapMs: number, bestMs: number): string {
 
 const CORE_WIDTHS = [
   "90px",  // session uid
+  "1fr",   // track
   "150px", // date/time
   "50px",  // lap #
   "55px",  // car #
@@ -95,6 +96,7 @@ export function LapTable({
       >
         {prefixColumn && <div>{prefixColumn.header ?? ""}</div>}
         <div>Session</div>
+        <div>Track</div>
         <div>Date / Time</div>
         <div>Lap</div>
         <div>Car #</div>
@@ -142,6 +144,9 @@ export function LapTable({
                   {lap.sessionUid.slice(0, 8)}
                 </span>
               )}
+            </div>
+            <div className="min-w-0 truncate font-sans text-[13px] text-text">
+              {lap.track ?? <span className="text-text-dim">—</span>}
             </div>
             <div className="whitespace-nowrap font-mono text-xs text-text-muted">
               {formatDate(lap.recordedAt)}

@@ -114,6 +114,7 @@ function buildLapsFor(
       sessionUid: session.uid,
       carId,
       car,
+      track: session.track,
       recordedAt: new Date(recordedAt).toISOString(),
       lapTime,
       lapNumber: lapIndex,

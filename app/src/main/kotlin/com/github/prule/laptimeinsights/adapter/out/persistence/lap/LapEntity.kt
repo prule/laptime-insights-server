@@ -29,4 +29,5 @@ class LapEntity(id: EntityID<Long>) : LongEntity(id) {
   var lapNumber by LapTable.lapNumber
   var valid by LapTable.valid
   var personalBest by LapTable.personalBest
+  var track by LapTable.track
 }

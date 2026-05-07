@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useLaps, useSessionOptions } from "../api/queries";
 import { Card } from "../components/ui/Card";
+import { CarFilterBar } from "../components/ui/CarFilterBar";
 import { ErrorState, LoadingState, EmptyState } from "../components/ui/States";
 import { FilterSelect } from "../components/ui/FilterSelect";
 import { SectionHeader } from "../components/ui/SectionHeader";
@@ -94,12 +95,6 @@ export function LapsScreen() {
             onChange={(v) => updateFacet("track", v)}
           />
           <FilterSelect
-            label="Car"
-            value={facets.car}
-            options={optionsQuery.data?.cars ?? []}
-            onChange={(v) => updateFacet("car", v)}
-          />
-          <FilterSelect
             label="Simulator"
             value={facets.simulator}
             options={optionsQuery.data?.simulators ?? []}
@@ -134,6 +129,16 @@ export function LapsScreen() {
           )}
         </div>
       </Card>
+
+      {(optionsQuery.data?.cars?.length ?? 0) > 1 && (
+        <div className="mb-4">
+          <CarFilterBar
+            cars={(optionsQuery.data?.cars ?? []).map((c) => ({ value: c, label: c }))}
+            selected={facets.car ?? null}
+            onChange={(v) => updateFacet("car", v ?? undefined)}
+          />
+        </div>
+      )}
 
       <Card>
         <div className="mb-4 flex items-baseline justify-between">
