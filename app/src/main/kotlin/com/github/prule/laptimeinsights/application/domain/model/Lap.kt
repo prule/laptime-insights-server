@@ -44,6 +44,8 @@ data class Lap(
   val sessionUId: Uid,
   val carId: CarId,
   val car: Car?,
+  val track: Track?,
+  val playerLap: Boolean?,
   val recordedAt: Instant,
   val lapTime: LapTimeMs,
   val lapNumber: LapNumber,

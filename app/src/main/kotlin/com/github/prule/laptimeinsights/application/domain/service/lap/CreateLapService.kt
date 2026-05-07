@@ -60,6 +60,8 @@ class CreateLapService(
           sessionUId = session.uid,
           carId = command.carId,
           car = command.car,
+          track = session.track,
+          playerLap = session.playerCarId?.let { it == command.carId },
           // Always persist as non-PB initially — derivation below promotes it
           // (and demotes the previous PB) atomically within this transaction.
           personalBest = PersonalBest(false),

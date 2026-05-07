@@ -226,6 +226,8 @@ class CreateLapServiceTest {
         lapNumber = LapNumber(2),
         valid = ValidLap(true),
         personalBest = PersonalBest(true),
+        track = Track("testTrack"),
+        playerLap = true,
       )
     val updates = mutableListOf<Lap>()
 
@@ -265,6 +267,8 @@ class CreateLapServiceTest {
         lapNumber = LapNumber(2),
         valid = ValidLap(true),
         personalBest = PersonalBest(true),
+        track = Track("testTrack"),
+        playerLap = true,
       )
 
     every { searchSessionPort.searchForOne(any<SessionSearchCriteria>()) } returns session()

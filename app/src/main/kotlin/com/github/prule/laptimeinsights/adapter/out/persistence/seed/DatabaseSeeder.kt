@@ -250,6 +250,8 @@ class DatabaseSeeder(
           lapNumber = LapNumber(lapIndex),
           valid = ValidLap(valid),
           personalBest = PersonalBest(isPersonalBest),
+          track = profile.track,
+          playerLap = profile.carId == session.playerCarId,
         )
     }
     return laps
