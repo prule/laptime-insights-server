@@ -1,12 +1,11 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useLaps, useSessionOptions, useSessions } from "../api/queries";
+import { useLaps, useSessionOptions } from "../api/queries";
 import { Card } from "../components/ui/Card";
 import { ErrorState, LoadingState, EmptyState } from "../components/ui/States";
 import { FilterSelect } from "../components/ui/FilterSelect";
 import { SectionHeader } from "../components/ui/SectionHeader";
-import type { SessionResource } from "../api/types";
-import { formatLapTime, formatTime } from "../lib/format";
+import { LapTable } from "../components/LapTable";
 import { getBool, getInt, getString, useUrlState } from "../hooks/useUrlState";
 import { useTimeRange } from "../providers/TimeRangeProvider";
 
@@ -46,10 +45,6 @@ export function LapsScreen() {
   const from = fromIso ?? undefined;
 
   const optionsQuery = useSessionOptions();
-  // Sessions list is used as a lookup (uid → track/car/sim) for laps that fall
-  // inside the active range — restrict it to the same window so we never
-  // render lap rows whose owning session was filtered out client-side.
-  const sessionsQuery = useSessions({ size: 500, sort: "startedAt:DESC", from });
 
   const lapsQuery = useLaps({
     page,
@@ -62,12 +57,6 @@ export function LapsScreen() {
     simulator: facets.simulator,
     from,
   });
-
-  const sessionsByUid = useMemo(() => {
-    const map = new Map<string, SessionResource>();
-    for (const s of sessionsQuery.data?.items ?? []) map.set(s.uid, s);
-    return map;
-  }, [sessionsQuery.data]);
 
   const items = lapsQuery.data?.items ?? [];
 
@@ -201,25 +190,36 @@ export function LapsScreen() {
         )}
         {items.length > 0 && (
           <>
-            <div className="overflow-hidden rounded border border-border">
-              <Header selectMode={selectMode} />
-              {items.map((lap, i) => {
-                const session = sessionsByUid.get(lap.sessionUid);
-                const isSelected = selected.includes(lap.uid);
-                return (
-                  <LapRow
-                    key={lap.uid}
-                    index={(page - 1) * PAGE_SIZE + i + 1}
-                    lap={lap}
-                    session={session}
-                    selectMode={selectMode}
-                    selected={isSelected}
-                    onToggleSelect={() => toggleSelect(lap.uid)}
-                    onOpen={() => navigate(`/sessions/${lap.sessionUid}`)}
-                  />
-                );
-              })}
-            </div>
+            <LapTable
+              laps={items}
+              onRowClick={(lap) =>
+                selectMode ? toggleSelect(lap.uid) : navigate(`/sessions/${lap.sessionUid}`)
+              }
+              onSessionClick={(uid) => navigate(`/sessions/${uid}`)}
+              isRowSelected={(lap) => selected.includes(lap.uid)}
+              prefixColumn={
+                selectMode
+                  ? {
+                      width: "36px",
+                      cell: (lap) => (
+                        <div className="flex items-center justify-center">
+                          <span
+                            aria-hidden
+                            className={[
+                              "flex h-4 w-4 items-center justify-center rounded border font-mono text-[10px]",
+                              selected.includes(lap.uid)
+                                ? "border-cyan bg-cyan/20 text-cyan"
+                                : "border-border text-transparent",
+                            ].join(" ")}
+                          >
+                            ✓
+                          </span>
+                        </div>
+                      ),
+                    }
+                  : undefined
+              }
+            />
             <div className="mt-3 flex items-center gap-2">
               <button
                 disabled={page === 1}
@@ -240,88 +240,6 @@ export function LapsScreen() {
         )}
       </Card>
     </div>
-  );
-}
-
-const COL_TEMPLATE_NORMAL = "grid-cols-[50px_120px_1fr_1fr_90px_110px_70px]";
-const COL_TEMPLATE_SELECT = "grid-cols-[36px_50px_120px_1fr_1fr_90px_110px_70px]";
-
-function Header({ selectMode }: { selectMode: boolean }) {
-  return (
-    <div
-      className={`grid items-center gap-3 border-b border-border bg-surface-active px-3 py-2 font-mono text-[10px] uppercase tracking-[0.08em] text-text-muted ${selectMode ? COL_TEMPLATE_SELECT : COL_TEMPLATE_NORMAL}`}
-    >
-      {selectMode && <div></div>}
-      <div>#</div>
-      <div>Lap time</div>
-      <div>Track</div>
-      <div>Car</div>
-      <div>Sim</div>
-      <div>Recorded</div>
-      <div>Status</div>
-    </div>
-  );
-}
-
-function LapRow({
-  index,
-  lap,
-  session,
-  selectMode,
-  selected,
-  onToggleSelect,
-  onOpen,
-}: {
-  index: number;
-  lap: { uid: string; lapTime: number; recordedAt: string; valid: boolean; personalBest: boolean; sessionUid: string; car: string | null };
-  session: SessionResource | undefined;
-  selectMode: boolean;
-  selected: boolean;
-  onToggleSelect: () => void;
-  onOpen: () => void;
-}) {
-  const onClick = selectMode ? onToggleSelect : onOpen;
-  return (
-    <button
-      onClick={onClick}
-      className={[
-        "grid w-full items-center gap-3 border-b border-border/40 px-3 py-2 text-left last:border-b-0",
-        selectMode ? COL_TEMPLATE_SELECT : COL_TEMPLATE_NORMAL,
-        selected ? "bg-cyan/10 hover:bg-cyan/15" : "hover:bg-surface-hover",
-      ].join(" ")}
-    >
-      {selectMode && (
-        <div className="flex items-center justify-center">
-          <span
-            aria-hidden
-            className={[
-              "flex h-4 w-4 items-center justify-center rounded border font-mono text-[10px]",
-              selected ? "border-cyan bg-cyan/20 text-cyan" : "border-border text-transparent",
-            ].join(" ")}
-          >
-            ✓
-          </span>
-        </div>
-      )}
-      <div className="font-mono text-xs text-text-muted">{index}</div>
-      <div className={`font-mono text-sm ${lap.personalBest ? "text-ok" : "text-text"}`}>
-        {formatLapTime(lap.lapTime)}
-      </div>
-      <div className="truncate font-sans text-[13px] text-text">
-        {session?.track ?? <span className="text-text-dim">unknown</span>}
-      </div>
-      <div className="truncate font-sans text-[12px] text-text-muted">
-        {lap.car ?? session?.car ?? <span className="text-text-dim">unknown</span>}
-      </div>
-      <div className="font-mono text-[11px] uppercase tracking-[0.05em] text-text-muted">
-        {session?.simulator ?? "—"}
-      </div>
-      <div className="font-mono text-xs text-text-muted">{formatTime(lap.recordedAt)}</div>
-      <div className="font-mono text-[11px]">
-        {lap.personalBest && <span className="text-ok">PB</span>}
-        {!lap.valid && <span className="text-accent">INVAL</span>}
-      </div>
-    </button>
   );
 }
 

@@ -1,9 +1,8 @@
-import { useMemo, useState } from "react";
-import { useLaps, useSessionOptions, useSessions } from "../api/queries";
-import type { SessionResource } from "../api/types";
+import { useState } from "react";
+import { useLaps, useSessionOptions } from "../api/queries";
 import { ErrorState, LoadingState, EmptyState } from "./ui/States";
 import { FilterSelect } from "./ui/FilterSelect";
-import { formatDate, formatLapTime } from "../lib/format";
+import { LapTable } from "./LapTable";
 
 const PAGE_SIZE = 20;
 
@@ -32,14 +31,6 @@ export function LapBrowser({ defaultTrack, defaultCar, disabledLapUid, onPick }:
   const [validOnly, setValidOnly] = useState(true);
   const [pbOnly, setPbOnly] = useState(false);
   const [page, setPage] = useState(1);
-
-  // Fetch all sessions so we can show track/car/date next to each lap.
-  const sessionsQuery = useSessions({ size: 500, sort: "startedAt:DESC" });
-  const sessionsByUid = useMemo(() => {
-    const m = new Map<string, SessionResource>();
-    for (const s of sessionsQuery.data?.items ?? []) m.set(s.uid, s);
-    return m;
-  }, [sessionsQuery.data]);
 
   const lapsQuery = useLaps({
     track,
@@ -88,50 +79,12 @@ export function LapBrowser({ defaultTrack, defaultCar, disabledLapUid, onPick }:
       )}
       {items.length > 0 && (
         <>
-          <div className="overflow-hidden rounded border border-border">
-            <div className="grid grid-cols-[60px_120px_1fr_1fr_90px_90px] items-center gap-3 border-b border-border bg-surface-active px-3 py-2 font-mono text-[10px] uppercase tracking-[0.08em] text-text-muted">
-              <div>#</div>
-              <div>Lap time</div>
-              <div>Track</div>
-              <div>Car</div>
-              <div>Date</div>
-              <div>Status</div>
-            </div>
-            {items.map((lap, i) => {
-              const session = sessionsByUid.get(lap.sessionUid);
-              const disabled = disabledLapUid === lap.uid;
-              return (
-                <button
-                  key={lap.uid}
-                  onClick={() => !disabled && onPick(lap.uid)}
-                  disabled={disabled}
-                  title={disabled ? "Already chosen as the other lap" : "Pick this lap"}
-                  className={[
-                    "grid w-full grid-cols-[60px_120px_1fr_1fr_90px_90px] items-center gap-3 border-b border-border/40 px-3 py-2 text-left last:border-b-0",
-                    disabled
-                      ? "cursor-not-allowed opacity-30"
-                      : "hover:bg-surface-hover",
-                  ].join(" ")}
-                >
-                  <div className="font-mono text-xs text-text-muted">{(page - 1) * PAGE_SIZE + i + 1}</div>
-                  <div className={`font-mono text-sm ${lap.personalBest ? "text-ok" : "text-text"}`}>
-                    {formatLapTime(lap.lapTime)}
-                  </div>
-                  <div className="truncate font-sans text-[13px] text-text">
-                    {session?.track ?? <span className="text-text-dim">unknown</span>}
-                  </div>
-                  <div className="truncate font-sans text-[12px] text-text-muted">
-                    {lap.car ?? session?.car ?? <span className="text-text-dim">unknown</span>}
-                  </div>
-                  <div className="font-mono text-xs text-text-muted">{formatDate(session?.startedAt)}</div>
-                  <div className="font-mono text-[11px]">
-                    {lap.personalBest && <span className="text-ok">PB</span>}
-                    {!lap.valid && <span className="text-accent">INVAL</span>}
-                  </div>
-                </button>
-              );
-            })}
-          </div>
+          <LapTable
+            laps={items}
+            onRowClick={(lap) => onPick(lap.uid)}
+            isRowDisabled={(lap) => disabledLapUid === lap.uid}
+            disabledTitle="Already chosen as the other lap"
+          />
           <div className="flex items-center gap-2">
             <button
               disabled={page === 1}

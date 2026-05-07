@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card } from "../components/ui/Card";
+import { LapTable } from "../components/LapTable";
 import { SectionHeader } from "../components/ui/SectionHeader";
 import { formatLapTime } from "../lib/format";
 import { useDataMode } from "../providers/DataModeProvider";
@@ -353,6 +355,7 @@ function LiveTrackMap({
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
 export function LiveScreen() {
+  const navigate = useNavigate();
   const { mode, apiUrl } = useDataMode();
   const { status, session, telemetry, laps, trackPoints } = useLiveEvents(apiUrl);
 
@@ -463,37 +466,10 @@ export function LiveScreen() {
         {playerLaps.length === 0 ? (
           <div className="py-6 text-center font-mono text-[11px] text-text-muted">No laps completed yet</div>
         ) : (
-          <div className="overflow-hidden rounded border border-border">
-            <div className="grid grid-cols-[60px_120px_100px_80px] items-center gap-3 border-b border-border bg-surface-active px-3 py-2 font-mono text-[10px] uppercase tracking-[0.08em] text-text-muted">
-              <div>Lap</div>
-              <div>Lap Time</div>
-              <div>Status</div>
-              <div>PB</div>
-            </div>
-            {playerLaps.map((lap) => (
-              <div
-                key={lap.uid}
-                className="grid grid-cols-[60px_120px_100px_80px] items-center gap-3 border-b border-border/40 px-3 py-2 last:border-b-0 font-mono text-sm"
-              >
-                <div className="text-xs text-text-muted">#{lap.lapNumber}</div>
-                <div className={lap.valid ? (lap.personalBest ? "text-ok" : "text-text") : "text-text-dim"}>
-                  {formatLapTime(lap.lapTime)}
-                </div>
-                <div className="text-[11px]">
-                  {lap.personalBest ? (
-                    <span className="text-ok">PB</span>
-                  ) : !lap.valid ? (
-                    <span className="text-accent">INVALID</span>
-                  ) : (
-                    <span className="text-text-muted">—</span>
-                  )}
-                </div>
-                <div className="text-[11px] text-text-muted">
-                  {lap.personalBest ? "✓" : ""}
-                </div>
-              </div>
-            ))}
-          </div>
+          <LapTable
+            laps={playerLaps}
+            onSessionClick={(uid) => navigate(`/sessions/${uid}`)}
+          />
         )}
       </Card>
     </div>
