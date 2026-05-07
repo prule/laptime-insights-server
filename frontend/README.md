@@ -76,6 +76,59 @@ npm run typecheck
 npm run build
 ```
 
+## Lap comparison
+
+The `/compare` screen overlays two laps' telemetry traces against
+`splinePosition`.
+
+### Entry points
+
+Picking laps from a long list is the failure mode, not the happy path. The
+common ways into compare are:
+
+- **From SessionDetail row**: each lap row exposes `vs best` (against the
+  fastest valid lap of the same session) and `vs PB` (against the all-time
+  fastest lap at that track). One click, no picking. Disabled when the
+  current row is itself the relevant best.
+- **From the Laps screen**: "Select to compare" enters multi-select mode;
+  tick two rows and click "Compare selected". The user picks the filters
+  (track/car/PB/page) before tapping the rows, so this works at scale.
+- **Direct on /compare**: the `LapPicker` is a button that opens a modal
+  containing a paginated, filterable lap browser. URL state owns `lap1`,
+  `lap2` and an optional `track` hint, so a chosen comparison is shareable
+  via copy-paste.
+
+### Implementation
+
+- `useLapComparison(lap1Uid, lap2Uid)` hits `GET /api/1/laps/compare`. The
+  backend returns raw samples for both laps in one round trip.
+- `useSessionBestLap(sessionUid)` and `useTrackBestLap(track)` are thin
+  wrappers around `GET /api/1/laps?…&validLap=true&sort=lapTime:ASC&size=1`.
+- `LapBrowser` is the reusable filtered + paginated lap list used both inside
+  the `LapPicker` modal and (in spirit) on the Laps screen. Toggles for
+  valid-only and PB-only mirror the screen-level toggles.
+- Charts: `TelemetryTrace` overlays multiple series; `SpeedDeltaTrace`
+  resamples both laps to 100 buckets and plots the per-bucket KPH delta;
+  `GearMismatchStrip` highlights buckets where the two laps used different
+  gears.
+
+## URL state
+
+Filter and pagination state for screens with searchable lists is mirrored to
+the URL querystring. Reload-safe and shareable: `/laps?track=Monza&pb=true&page=2`
+restores the same view. Implemented in `src/hooks/useUrlState.ts`:
+
+```ts
+const [params, setParam, setMany] = useUrlState();
+const track = getString(params, "track");
+const page  = getInt(params, "page", 1);
+setParam("track", "Monza");        // → ?track=Monza
+setMany({ track: undefined, page: undefined });  // strip both
+```
+
+When adding a new screen with filters, **always** drive state from
+`useUrlState` rather than `useState` so deep-linking keeps working.
+
 ## Adding a new endpoint
 
 1. Add a handler to `src/api/mock/handler.ts` that mirrors the Ktor route.

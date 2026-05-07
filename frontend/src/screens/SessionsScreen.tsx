@@ -1,52 +1,62 @@
-import { useState } from "react";
 import { useSessionOptions, useSessions } from "../api/queries";
 import { Card } from "../components/ui/Card";
 import { ErrorState, EmptyState, LoadingState } from "../components/ui/States";
 import { FilterSelect } from "../components/ui/FilterSelect";
 import { SectionHeader } from "../components/ui/SectionHeader";
 import { SessionRow } from "../components/SessionRow";
+import { getString, useUrlState } from "../hooks/useUrlState";
+import { useTimeRange } from "../providers/TimeRangeProvider";
 
-interface Filters {
-  car?: string;
-  track?: string;
-  simulator?: string;
-}
-
+/**
+ * Filters live in the URL querystring. Reload-safe and shareable: a link
+ * like `/sessions?track=Monza&car=Ferrari%20488%20GT3` restores the same
+ * filter state.
+ */
 export function SessionsScreen() {
   const optionsQuery = useSessionOptions();
-  const [filters, setFilters] = useState<Filters>({});
-  const sessionsQuery = useSessions({ ...filters, size: 50, sort: "startedAt:DESC" });
+  const [params, setParam, setMany] = useUrlState();
 
-  const setFilter = (key: keyof Filters, value: string | undefined) => {
-    setFilters((prev) => ({ ...prev, [key]: value === "" ? undefined : value }));
+  const filters = {
+    track: getString(params, "track"),
+    car: getString(params, "car"),
+    simulator: getString(params, "simulator"),
   };
+  const facetsActive = !!(filters.track || filters.car || filters.simulator);
+
+  const { fromIso } = useTimeRange();
+  const sessionsQuery = useSessions({
+    ...filters,
+    from: fromIso ?? undefined,
+    size: 50,
+    sort: "startedAt:DESC",
+  });
 
   return (
     <div className="h-full overflow-y-auto px-8 py-7">
       <Card className="mb-4">
-        <SectionHeader title="Filter" sub="Server-side filters via /api/1/sessions query params" />
+        <SectionHeader title="Filter" sub="Filters are written to the URL — reload or share the link to restore state" />
         <div className="flex flex-wrap gap-3">
           <FilterSelect
             label="Track"
             value={filters.track}
             options={optionsQuery.data?.tracks ?? []}
-            onChange={(v) => setFilter("track", v)}
+            onChange={(v) => setParam("track", v)}
           />
           <FilterSelect
             label="Car"
             value={filters.car}
             options={optionsQuery.data?.cars ?? []}
-            onChange={(v) => setFilter("car", v)}
+            onChange={(v) => setParam("car", v)}
           />
           <FilterSelect
             label="Simulator"
             value={filters.simulator}
             options={optionsQuery.data?.simulators ?? []}
-            onChange={(v) => setFilter("simulator", v)}
+            onChange={(v) => setParam("simulator", v)}
           />
-          {(filters.track || filters.car || filters.simulator) && (
+          {facetsActive && (
             <button
-              onClick={() => setFilters({})}
+              onClick={() => setMany({ track: undefined, car: undefined, simulator: undefined })}
               className="self-end rounded border border-border px-3 py-2 font-mono text-[11px] uppercase tracking-[0.08em] text-text-muted hover:text-text"
             >
               Clear
@@ -82,4 +92,3 @@ export function SessionsScreen() {
     </div>
   );
 }
-

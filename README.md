@@ -24,8 +24,10 @@ And much more hopefully!
 
 ## Documentation
 
-- [Clean Architecture](./docs/clean-architecture.md) - Details on the project structure and conventions.
-- [Real-time Updates](./docs/real-time-updates.md) - How real-time events and WebSockets are implemented.
+- [User Guide](./docs/user-guide.md) - How to use the dashboard (Overview, Sessions, Laps, Compare).
+- [Frontend Technical](./docs/frontend-technical.md) - Frontend architecture, screens, providers, and dev workflows.
+- [Clean Architecture](./docs/clean-architecture.md) - Backend project structure and conventions.
+- [Real-time Updates](./docs/real-time-updates.md) - WebSocket event stream protocol.
 
 ### Frontend
 

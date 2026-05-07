@@ -31,10 +31,13 @@ export function formatTime(iso: string | null | undefined): string {
   return new Date(iso).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
 }
 
-export function formatDuration(startIso: string | null, endIso: string | null): string {
-  if (!startIso || !endIso) return "—";
-  const ms = new Date(endIso).getTime() - new Date(startIso).getTime();
-  if (ms < 0) return "—";
+/**
+ * Format the cumulative driving time for a session — the sum of lap times for the player's car,
+ * supplied by the backend in milliseconds. Differs from wall-clock session duration: only
+ * on-track time counts, so pit/idle periods are excluded.
+ */
+export function formatDrivingTime(ms: number | null | undefined): string {
+  if (ms == null || !Number.isFinite(ms) || ms < 0) return "—";
   const totalSec = Math.floor(ms / 1000);
   const hours = Math.floor(totalSec / 3600);
   const minutes = Math.floor((totalSec % 3600) / 60);

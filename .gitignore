@@ -4,6 +4,7 @@ build/
 !gradle/wrapper/gradle-wrapper.jar
 !**/src/main/**/build/
 !**/src/test/**/build/
+frontend/src/**/*.js
 
 ### IntelliJ IDEA ###
 .idea/modules.xml
@@ -45,3 +46,4 @@ bin/
 ### Mac OS ###
 .DS_Store
 /.env.local
+/app/src/main/resources/static/assets/*

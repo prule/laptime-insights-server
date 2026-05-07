@@ -1,0 +1,23 @@
+meta {
+  name: Search lap by date range
+  type: http
+  seq: 8
+}
+
+get {
+  url: http://localhost:8000/api/1/laps?size=50&page=1&from=2026-04-01T00:00:00Z&to=2026-05-01T00:00:00Z&sort=recordedAt:DESC
+  body: none
+  auth: inherit
+}
+
+params:query {
+  size: 50
+  page: 1
+  from: 2026-04-01T00:00:00Z
+  to: 2026-05-01T00:00:00Z
+  sort: recordedAt:DESC
+}
+
+settings {
+  encodeUrl: true
+}

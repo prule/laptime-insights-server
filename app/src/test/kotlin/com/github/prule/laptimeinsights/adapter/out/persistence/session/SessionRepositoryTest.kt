@@ -99,7 +99,6 @@ class SessionRepositoryTest : RepositoryTest(listOf(SessionTable)) {
       id = SessionId(0L), // ID is ignored during creation
       uid = Uid(),
       startedAt = startedAt,
-      finishedAt = null,
       simulator = Simulator.ACC,
       track = track,
       car = car,

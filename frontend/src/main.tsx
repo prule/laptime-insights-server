@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter } from "react-router-dom";
 import { App } from "./App";
 import { DataModeProvider } from "./providers/DataModeProvider";
+import { TimeRangeProvider } from "./providers/TimeRangeProvider";
 import "./styles.css";
 
 const queryClient = new QueryClient({
@@ -20,9 +21,11 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <QueryClientProvider client={queryClient}>
       <DataModeProvider>
-        <BrowserRouter>
-          <App />
-        </BrowserRouter>
+        <TimeRangeProvider>
+          <BrowserRouter>
+            <App />
+          </BrowserRouter>
+        </TimeRangeProvider>
       </DataModeProvider>
     </QueryClientProvider>
   </React.StrictMode>,

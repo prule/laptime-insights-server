@@ -1,6 +1,8 @@
 package com.github.prule.laptimeinsights
 
+import com.github.prule.laptimeinsights.adapter.`in`.web.lap.CompareLapsController
 import com.github.prule.laptimeinsights.adapter.`in`.web.lap.FindLapController
+import com.github.prule.laptimeinsights.adapter.`in`.web.lap.FindLapTelemetryController
 import com.github.prule.laptimeinsights.adapter.`in`.web.lap.SearchLapController
 import com.github.prule.laptimeinsights.adapter.`in`.web.session.FindSessionController
 import com.github.prule.laptimeinsights.adapter.`in`.web.session.SearchOptionsController
@@ -8,6 +10,7 @@ import com.github.prule.laptimeinsights.adapter.`in`.web.session.SearchSessionCo
 import com.github.prule.laptimeinsights.adapter.`in`.web.session.SessionEventController
 import com.github.prule.laptimeinsights.adapter.out.persistence.JsonFileConfigurationRepository
 import com.github.prule.laptimeinsights.adapter.out.persistence.seed.DatabaseSeeder
+import com.github.prule.laptimeinsights.tracker.utils.NotFoundException as DomainNotFoundException
 import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode
 import io.ktor.openapi.OpenApiInfo
@@ -16,7 +19,6 @@ import io.ktor.server.application.Application
 import io.ktor.server.application.install
 import io.ktor.server.engine.embeddedServer
 import io.ktor.server.netty.Netty
-import com.github.prule.laptimeinsights.tracker.utils.NotFoundException as DomainNotFoundException
 import io.ktor.server.plugins.NotFoundException
 import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.server.plugins.cors.routing.CORS
@@ -48,6 +50,7 @@ fun Application.module(
   appModule: AppModule = AppModule(),
   jdbcUrl: String = EnvironmentVariables.jdbcUrl(),
 ) {
+
   install(Resources)
   install(CORS) {
     // Dev: allow any origin so the Dashboard.html prototype can be served from python http.server,
@@ -88,6 +91,7 @@ fun Application.module(
         createSessionPort = appModule.session.sessionPort,
         updateSessionPort = appModule.session.sessionPort,
         createLapPort = appModule.lap.lapPort,
+        createRealtimeCarUpdatePort = appModule.car.realtimeCarUpdatePort,
       )
       .seed()
   }
@@ -131,5 +135,9 @@ private fun Application.initializeSessionControllers(appModule: AppModule) {
 
 private fun Application.initializeLapControllers(appModule: AppModule) {
   SearchLapController(this, appModule.lap.searchLapUseCase)
+  // `Compare` must be registered before `LapId` so the `/compare` literal wins
+  // over the `/{uid}` placeholder when the router resolves a request.
+  CompareLapsController(this, appModule.lap.compareLapsUseCase)
   FindLapController(this, appModule.lap.findLapUseCase)
+  FindLapTelemetryController(this, appModule.lap.findLapTelemetryUseCase)
 }

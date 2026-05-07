@@ -22,6 +22,13 @@ import kotlinx.serialization.Serializable
  */
 @Serializable
 sealed interface WebSocketMessage {
+  /**
+   * Sent immediately when a client establishes a WebSocket connection, before the event stream
+   * begins. Clients should reset all live state on receipt — this frame signals that the server is
+   * fresh and any prior in-memory state (active session, laps) no longer exists.
+   */
+  @Serializable @SerialName("ServerStarted") data object ServerStarted : WebSocketMessage
+
   @Serializable
   @SerialName("SessionCreated")
   data class SessionCreated(val data: SessionResource) : WebSocketMessage
@@ -35,10 +42,37 @@ sealed interface WebSocketMessage {
   data class SessionUpdated(val data: SessionResource) : WebSocketMessage
 
   @Serializable
-  @SerialName("SessionFinished")
-  data class SessionFinished(val data: SessionResource) : WebSocketMessage
-
-  @Serializable
   @SerialName("LapCreated")
   data class LapCreated(val data: LapResource) : WebSocketMessage
+
+  /**
+   * Throttled telemetry frame for the player's own car (~5 Hz). Carries everything the Live screen
+   * needs: gear, speed, track position, race position, current lap time, validity, delta.
+   *
+   * Note: ACC's REALTIME_CAR_UPDATE does **not** include throttle or brake inputs — those fields
+   * are not available and are therefore absent from this message.
+   */
+  @Serializable
+  @SerialName("PlayerCarUpdated")
+  data class PlayerCarUpdated(val data: PlayerCarUpdateData) : WebSocketMessage
 }
+
+/**
+ * Payload for [WebSocketMessage.PlayerCarUpdated]. All lap times are in milliseconds.
+ * [bestLapTimeMs] and [lastLapTimeMs] are [Long.MAX_VALUE] when no timed lap exists yet.
+ */
+@Serializable
+data class PlayerCarUpdateData(
+  val sessionUid: String,
+  val gear: Int,
+  val kmh: Int,
+  val splinePosition: Double,
+  val worldPosX: Float,
+  val worldPosY: Float,
+  val racePosition: Int,
+  val currentLapTimeMs: Long,
+  val currentLapIsInvalid: Boolean,
+  val delta: Int,
+  val bestLapTimeMs: Long,
+  val lastLapTimeMs: Long,
+)

@@ -5,6 +5,6 @@
   clientConfiguration: {
     // acc server details
     port: 9000,
-    serverIp: "127.0.0.1"
+    serverIp: "desktop-chff66k"
   }
 }

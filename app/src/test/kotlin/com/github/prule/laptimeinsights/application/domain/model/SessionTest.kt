@@ -8,19 +8,20 @@ import org.junit.jupiter.api.Test
 
 class SessionTest {
 
+  private fun newSession(startedAt: kotlin.time.Instant? = null) =
+    Session(
+      id = SessionId(1L),
+      uid = Uid(),
+      startedAt = startedAt,
+      simulator = Simulator.ACC,
+      track = Track("Monza"),
+      car = Car("Ferrari 488 GT3"),
+      sessionType = SessionType("Race"),
+    )
+
   @Test
   fun `session can be started if not already started`() {
-    val session =
-      Session(
-        id = SessionId(1L),
-        uid = Uid(),
-        startedAt = null,
-        finishedAt = null,
-        simulator = Simulator.ACC,
-        track = Track("Monza"),
-        car = Car("Ferrari 488 GT3"),
-        sessionType = SessionType("Race"),
-      )
+    val session = newSession()
     val startTime = Clock.System.now()
 
     session.start(startTime)
@@ -32,95 +33,32 @@ class SessionTest {
   @Test
   fun `session cannot be started if already started`() {
     val startTime = Clock.System.now()
-    val session =
-      Session(
-        id = SessionId(1L),
-        uid = Uid(),
-        startedAt = startTime,
-        finishedAt = null,
-        simulator = Simulator.ACC,
-        track = Track("Monza"),
-        car = Car("Ferrari 488 GT3"),
-        sessionType = SessionType("Race"),
-      )
+    val session = newSession(startedAt = startTime)
     val newStartTime = Clock.System.now().plus(60.seconds)
 
     assertThatThrownBy { session.start(newStartTime) }
       .isInstanceOf(IllegalStateException::class.java)
       .hasMessage("Session cannot be started")
 
+    // Original start time preserved.
     assertThat(session.isStarted()).isTrue()
-    assertThat(session.startedAt()).isEqualTo(startTime) // Should remain the original start time
+    assertThat(session.startedAt()).isEqualTo(startTime)
   }
 
   @Test
-  fun `session can be finished if started and not already finished`() {
-    val startTime = Clock.System.now()
-    val session =
-      Session(
-        id = SessionId(1L),
-        uid = Uid(),
-        startedAt = startTime,
-        finishedAt = null,
-        simulator = Simulator.ACC,
-        track = Track("Monza"),
-        car = Car("Ferrari 488 GT3"),
-        sessionType = SessionType("Race"),
-      )
-    val finishTime = Clock.System.now().plus(3600.seconds)
-
-    session.finish(finishTime)
-
-    assertThat(session.isFinished()).isTrue()
-    assertThat(session.finishedAt()).isEqualTo(finishTime)
+  fun `drivingTime defaults to zero on a fresh session`() {
+    assertThat(newSession().drivingTime()).isEqualTo(LapTimeMs(0))
   }
 
   @Test
-  fun `session cannot be finished if not started`() {
-    val session =
-      Session(
-        id = SessionId(1L),
-        uid = Uid(),
-        startedAt = null,
-        finishedAt = null,
-        simulator = Simulator.ACC,
-        track = Track("Monza"),
-        car = Car("Ferrari 488 GT3"),
-        sessionType = SessionType("Race"),
-      )
-    val finishTime = Clock.System.now().plus(3600.seconds)
+  fun `addDriving accumulates lap times into drivingTime`() {
+    val session = newSession()
 
-    assertThatThrownBy { session.finish(finishTime) }
-      .isInstanceOf(IllegalStateException::class.java)
-      .hasMessage("Session cannot be finished")
+    session.addDriving(LapTimeMs(95_000L))
+    session.addDriving(LapTimeMs(91_500L))
+    session.addDriving(LapTimeMs(94_200L))
 
-    assertThat(session.isFinished()).isFalse()
-    assertThat(session.finishedAt()).isNull()
-  }
-
-  @Test
-  fun `session cannot be finished if already finished`() {
-    val startTime = Clock.System.now()
-    val firstFinishTime = Clock.System.now().plus(3600.seconds)
-    val session =
-      Session(
-        id = SessionId(1L),
-        uid = Uid(),
-        startedAt = startTime,
-        finishedAt = firstFinishTime,
-        simulator = Simulator.ACC,
-        track = Track("Monza"),
-        car = Car("Ferrari 488 GT3"),
-        sessionType = SessionType("Race"),
-      )
-    val secondFinishTime = Clock.System.now().plus(7200.seconds)
-
-    assertThatThrownBy { session.finish(secondFinishTime) }
-      .isInstanceOf(IllegalStateException::class.java)
-      .hasMessage("Session cannot be finished")
-
-    assertThat(session.isFinished()).isTrue()
-    assertThat(session.finishedAt())
-      .isEqualTo(firstFinishTime) // Should remain the original finish time
+    // Sum independent of order/validity — every call adds, the caller decides which laps to feed.
+    assertThat(session.drivingTime()).isEqualTo(LapTimeMs(95_000L + 91_500L + 94_200L))
   }
 }
