@@ -13,7 +13,6 @@ import com.github.prule.acc.messages.AccBroadcastingInbound
 import com.github.prule.laptimeinsights.application.domain.model.Car
 import com.github.prule.laptimeinsights.application.domain.model.CarId
 import com.github.prule.laptimeinsights.application.domain.model.LapTimeMs
-import com.github.prule.laptimeinsights.application.domain.model.PersonalBest
 import com.github.prule.laptimeinsights.application.domain.model.Session
 import com.github.prule.laptimeinsights.application.domain.model.SessionType
 import com.github.prule.laptimeinsights.application.domain.model.Simulator
@@ -200,6 +199,7 @@ class ClientInitializer(private val appModule: AppModule) {
 
             val carId = CarId(message.carId())
             val lapNumber = sessionState!!.incrementLapCount(carId)
+            // PB is derived inside CreateLapService — we just report what telemetry observed.
             appModule.lap.createLapUseCase.createLap(
               CreateLapCommand(
                 session!!.uid,
@@ -209,7 +209,6 @@ class ClientInitializer(private val appModule: AppModule) {
                 LapTimeMs.fromString(message.msg().data()),
                 lapNumber,
                 ValidLap(sessionState!!.isValidLap(carId, lapNumber)),
-                PersonalBest(false), // TODO
               )
             )
 

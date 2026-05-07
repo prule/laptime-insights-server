@@ -49,7 +49,8 @@ class AppModule {
     val mapper = LapMapper()
     val lapPort = LapPersistenceAdapter(LapRepository(mapper), mapper)
 
-    val createLapUseCase = CreateLapService(lapPort, session.sessionPort, eventPort)
+    val createLapUseCase =
+      CreateLapService(lapPort, lapPort, lapPort, session.sessionPort, eventPort)
     val searchLapUseCase = SearchLapService(lapPort)
     val findLapUseCase = FindLapService(lapPort)
     val findLapTelemetryUseCase =
