@@ -115,6 +115,7 @@ function buildLapsFor(
       carId,
       car,
       track: session.track,
+      playerLap: session.playerCarId !== null ? carId === session.playerCarId : null,
       recordedAt: new Date(recordedAt).toISOString(),
       lapTime,
       lapNumber: lapIndex,

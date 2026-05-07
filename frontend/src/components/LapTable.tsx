@@ -46,6 +46,7 @@ function formatDelta(lapMs: number, bestMs: number): string {
 
 const CORE_WIDTHS = [
   "90px",  // session uid
+  "40px",  // player indicator
   "1fr",   // track
   "150px", // date/time
   "50px",  // lap #
@@ -96,6 +97,7 @@ export function LapTable({
       >
         {prefixColumn && <div>{prefixColumn.header ?? ""}</div>}
         <div>Session</div>
+        <div title="Player lap">P</div>
         <div>Track</div>
         <div>Date / Time</div>
         <div>Lap</div>
@@ -143,6 +145,14 @@ export function LapTable({
                 <span className="font-mono text-[10px] text-text-dim">
                   {lap.sessionUid.slice(0, 8)}
                 </span>
+              )}
+            </div>
+            <div className="flex items-center justify-center" title={lap.playerLap === null ? "Unknown" : lap.playerLap ? "Player lap" : "Competitor lap"}>
+              {lap.playerLap === true && (
+                <span className="inline-block h-2 w-2 rounded-full bg-cyan" />
+              )}
+              {lap.playerLap === false && (
+                <span className="inline-block h-2 w-2 rounded-full bg-text-dim" />
               )}
             </div>
             <div className="min-w-0 truncate font-sans text-[13px] text-text">

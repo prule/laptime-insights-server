@@ -21,6 +21,7 @@ class LapMapper {
       carId = CarId(entity.carId),
       car = entity.car?.let { Car(it) },
       track = entity.track?.let { Track(it) },
+      playerLap = entity.playerLap,
       lapTime = LapTimeMs(entity.lapTime),
       lapNumber = LapNumber(entity.lapNumber),
       valid = ValidLap(entity.valid),
@@ -38,6 +39,7 @@ class LapMapper {
       carId = lap.carId.value
       car = lap.car?.value
       track = lap.track?.value
+      playerLap = lap.playerLap
       lapTime = lap.lapTime.value
       lapNumber = lap.lapNumber.value
       valid = lap.valid.value

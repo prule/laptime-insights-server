@@ -74,6 +74,8 @@ export interface LapResource {
   car: string | null;
   /** Track name denormalized from the session at lap creation time. */
   track: string | null;
+  /** True when this lap was driven by the player's car. Null if playerCarId was unknown at creation time. */
+  playerLap: boolean | null;
   recordedAt: Iso8601;
   /** lap time in milliseconds. */
   lapTime: number;

@@ -17,4 +17,5 @@ object LapTable : LongIdTable("LAP") {
   val valid = bool("valid")
   val personalBest = bool("personal_best")
   val track = varchar("track", MAX_VARCHAR_LENGTH).nullable()
+  val playerLap = bool("player_lap").nullable()
 }
