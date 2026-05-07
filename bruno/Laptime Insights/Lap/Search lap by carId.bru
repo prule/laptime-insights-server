@@ -1,0 +1,22 @@
+meta {
+  name: Search lap by carId
+  type: http
+  seq: 9
+}
+
+get {
+  url: http://localhost:8000/api/1/laps?sessionUid={{sessionUid}}&carId=20&size=50&page=1
+  body: none
+  auth: inherit
+}
+
+params:query {
+  sessionUid: {{sessionUid}}
+  carId: 20
+  size: 50
+  page: 1
+}
+
+settings {
+  encodeUrl: true
+}

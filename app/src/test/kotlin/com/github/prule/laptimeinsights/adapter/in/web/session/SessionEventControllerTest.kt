@@ -43,7 +43,6 @@ class SessionEventControllerTest {
           id = SessionId(1L),
           uid = Uid(),
           startedAt = null,
-          finishedAt = null,
           simulator = Simulator.ACC,
           track = Track("Monza"),
           car = Car("Ferrari"),
@@ -54,6 +53,13 @@ class SessionEventControllerTest {
       // emitting. Without this guard the test races the (now non-suspending) `tryEmit` against
       // the server-side coroutine that starts the collection.
       withTimeout(2.seconds) { appModule.eventPort.subscriptionCount().first { it > 0 } }
+
+      withTimeout(5.seconds) {
+        val frame = incoming.receive() as Frame.Text
+        val text = frame.readText()
+
+        assertThat(text).contains("\"type\":\"ServerStarted\"")
+      }
 
       // Emit the event via the SAME appModule being used by the application
       appModule.eventPort.emit(SessionCreated(session))

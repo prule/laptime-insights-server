@@ -1,67 +1,157 @@
 import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { useLaps, useSessions } from "../api/queries";
+import { useLaps, useSessionOptions, useSessions } from "../api/queries";
+import { type BucketPlan, useTimeRange } from "../providers/TimeRangeProvider";
 import { Card } from "../components/ui/Card";
 import { SectionHeader } from "../components/ui/SectionHeader";
 import { StatCard } from "../components/ui/StatCard";
 import { BarChart } from "../components/ui/BarChart";
 import { ErrorState, LoadingState } from "../components/ui/States";
 import { SessionRow } from "../components/SessionRow";
+import { TrackPracticeChart } from "../components/ui/TrackPracticeChart";
 import { formatLapTime, formatNumber } from "../lib/format";
 
 const ONE_DAY_MS = 86_400_000;
+const ONE_WEEK_MS = 7 * ONE_DAY_MS;
 
-/** Group dates into 8 buckets ending at the most recent session. */
-function groupByWeek(timestamps: string[]): { label: string; value: number }[] {
+/**
+ * Group timestamps into N contiguous buckets ending at `anchor`. Bucket width
+ * is fixed for `week` but variable for `month` (calendar months step naturally,
+ * so each bucket aligns to the start of a real month).
+ *
+ * `anchor` defaults to the most recent timestamp so an "all" range hugs the
+ * data's actual end instead of rendering empty trailing buckets.
+ */
+function groupByPlan(
+  timestamps: string[],
+  plan: BucketPlan,
+  anchor?: number,
+): { label: string; value: number }[] {
   if (timestamps.length === 0) return [];
   const sortedMs = timestamps.map((t) => new Date(t).getTime()).sort((a, b) => a - b);
-  const last = sortedMs[sortedMs.length - 1]!;
-  const weekStarts = Array.from({ length: 8 }, (_, i) => last - (7 - i) * 7 * ONE_DAY_MS);
-  return weekStarts.map((start, i) => {
-    const end = i < weekStarts.length - 1 ? weekStarts[i + 1]! : last + ONE_DAY_MS;
-    const count = sortedMs.filter((t) => t >= start && t < end).length;
+  const end = anchor ?? sortedMs[sortedMs.length - 1]!;
+
+  const starts: number[] = [];
+  if (plan.unit === "week") {
+    for (let i = plan.count - 1; i >= 0; i--) {
+      starts.push(end - i * ONE_WEEK_MS);
+    }
+  } else {
+    // Walk back month-by-month from the anchor's month start.
+    const anchorDate = new Date(end);
+    const baseYear = anchorDate.getFullYear();
+    const baseMonth = anchorDate.getMonth();
+    for (let i = plan.count - 1; i >= 0; i--) {
+      starts.push(new Date(baseYear, baseMonth - i, 1).getTime());
+    }
+  }
+
+  return starts.map((start, i) => {
+    const next = i < starts.length - 1 ? starts[i + 1]! : end + ONE_DAY_MS;
+    const count = sortedMs.filter((t) => t >= start && t < next).length;
     const date = new Date(start);
-    return {
-      label: date.toLocaleDateString("en-GB", { day: "2-digit", month: "short" }),
-      value: count,
-    };
+    const label =
+      plan.unit === "week"
+        ? date.toLocaleDateString("en-GB", { day: "2-digit", month: "short" })
+        : date.toLocaleDateString("en-GB", { month: "short", year: "2-digit" });
+    return { label, value: count };
   });
 }
 
 export function OverviewScreen() {
   const navigate = useNavigate();
-  const sessionsQuery = useSessions({ size: 100, sort: "startedAt:DESC" });
-  const lapsQuery = useLaps({ size: 1000, sort: "lapTime:ASC" });
+  const { fromIso, bucketPlan, range } = useTimeRange();
+  const from = fromIso ?? undefined;
+  const sessionsQuery = useSessions({ size: 100, sort: "startedAt:DESC", from });
+  const lapsQuery = useLaps({ size: 1000, sort: "lapTime:ASC", from });
+  // Full universe of tracks the user has *ever* visited — feeds the practice
+  // chart so tracks with zero laps in range still render as "haven't been here
+  // lately" placeholders. Not bound to the active range on purpose.
+  const optionsQuery = useSessionOptions();
+
+  // Build sessionUid → playerCarId map from the fetched sessions.
+  const playerCarIdBySession = useMemo(() => {
+    const map = new Map<string, number | null>();
+    for (const s of sessionsQuery.data?.items ?? []) map.set(s.uid, s.playerCarId);
+    return map;
+  }, [sessionsQuery.data]);
+
+  // Filter laps to only those driven by the player in each session.
+  const playerLaps = useMemo(() => {
+    const laps = lapsQuery.data?.items ?? [];
+    return laps.filter((l) => {
+      const pcid = playerCarIdBySession.get(l.sessionUid);
+      // If we don't have the session in the window (e.g. outside time range), keep the lap.
+      return pcid === undefined || pcid === null || l.carId === pcid;
+    });
+  }, [lapsQuery.data, playerCarIdBySession]);
 
   const stats = useMemo(() => {
     const sessions = sessionsQuery.data?.items ?? [];
-    const laps = lapsQuery.data?.items ?? [];
-    const validLaps = laps.filter((l) => l.valid);
-    const bestLap = validLaps[0]?.lapTime ?? null;
+    const validLaps = playerLaps.filter((l) => l.valid);
+    const bestLap = validLaps.length > 0
+      ? validLaps.reduce((best, l) => (l.lapTime < best ? l.lapTime : best), validLaps[0]!.lapTime)
+      : null;
     const avgMs =
       validLaps.length > 0
         ? validLaps.reduce((acc, l) => acc + l.lapTime, 0) / validLaps.length
         : null;
     return {
       totalSessions: sessionsQuery.data?.total ?? sessions.length,
-      totalLaps: lapsQuery.data?.total ?? laps.length,
+      totalLaps: playerLaps.length,
       bestLap,
       avgLap: avgMs,
     };
-  }, [sessionsQuery.data, lapsQuery.data]);
+  }, [sessionsQuery.data, playerLaps]);
 
   const sessionStarts = useMemo(
     () => (sessionsQuery.data?.items ?? []).map((s) => s.startedAt).filter((t): t is string => !!t),
     [sessionsQuery.data],
   );
 
-  const lapsPerWeek = useMemo(() => {
+  // Anchor every chart on "now" when a finite range is active so the rightmost
+  // bucket means "this week / this month" — not the most recent data point.
+  // For `all`, fall back to the data's max so we don't render empty trailing
+  // buckets when the user hasn't recorded anything recently.
+  const chartAnchor = range === "all" ? undefined : Date.now();
+
+  const lapBuckets = useMemo(
+    () => groupByPlan(playerLaps.map((l) => l.recordedAt), bucketPlan, chartAnchor),
+    [playerLaps, bucketPlan, chartAnchor],
+  );
+
+  const sessionBuckets = useMemo(
+    () => groupByPlan(sessionStarts, bucketPlan, chartAnchor),
+    [sessionStarts, bucketPlan, chartAnchor],
+  );
+
+  const bucketSub =
+    bucketPlan.unit === "week"
+      ? `last ${bucketPlan.count} weeks`
+      : `last ${bucketPlan.count} months`;
+
+  // Bubble-per-track view. Lap rows don't carry track directly, so we join
+  // through the in-range sessions: sessionUid → track. Tracks present in
+  // session-options but absent from the join surface as zero-count placeholders
+  // so the user can see what they *haven't* practiced lately. NOTE: bounded by
+  // the page-size of `lapsQuery` (1000) — for ranges with more laps than that
+  // the counts undercount; a dedicated `/laps/aggregate?groupBy=track` endpoint
+  // would be the next step.
+  const trackPractice = useMemo(() => {
+    const allTracks = optionsQuery.data?.tracks ?? [];
     const sessions = sessionsQuery.data?.items ?? [];
-    const laps = lapsQuery.data?.items ?? [];
-    if (sessions.length === 0) return [];
-    // Distribute lap counts across weeks using the lap's recordedAt.
-    return groupByWeek(laps.map((l) => l.recordedAt));
-  }, [sessionsQuery.data, lapsQuery.data]);
+    const sessionTrack = new Map<string, string | null>();
+    for (const s of sessions) sessionTrack.set(s.uid, s.track);
+
+    const counts = new Map<string, number>();
+    for (const t of allTracks) counts.set(t, 0);
+    for (const l of playerLaps) {
+      const track = sessionTrack.get(l.sessionUid);
+      if (!track) continue;
+      counts.set(track, (counts.get(track) ?? 0) + 1);
+    }
+    return Array.from(counts, ([track, count]) => ({ track, count }));
+  }, [optionsQuery.data, sessionsQuery.data, playerLaps]);
 
   if (sessionsQuery.isLoading || lapsQuery.isLoading) {
     return <div className="p-8"><LoadingState /></div>;
@@ -103,14 +193,22 @@ export function OverviewScreen() {
 
       <div className="mb-6 grid grid-cols-2 gap-4">
         <Card>
-          <SectionHeader title="Laps per week" sub="last 8 weeks" />
-          <BarChart data={lapsPerWeek} colorClass="cyan" height={90} />
+          <SectionHeader title={`Laps per ${bucketPlan.unit}`} sub={bucketSub} />
+          <BarChart data={lapBuckets} colorClass="cyan" height={90} />
         </Card>
         <Card>
-          <SectionHeader title="Sessions per week" sub="last 8 weeks" />
-          <BarChart data={groupByWeek(sessionStarts)} colorClass="accent" height={90} />
+          <SectionHeader title={`Sessions per ${bucketPlan.unit}`} sub={bucketSub} />
+          <BarChart data={sessionBuckets} colorClass="accent" height={90} />
         </Card>
       </div>
+
+      <Card className="mb-6">
+        <SectionHeader
+          title="Tracks practiced"
+          sub="Bubble area ∝ laps in range · dashed = no laps yet"
+        />
+        <TrackPracticeChart items={trackPractice} />
+      </Card>
 
       <Card>
         <SectionHeader title="Recent sessions" action="View all" onAction={() => navigate("/sessions")} />

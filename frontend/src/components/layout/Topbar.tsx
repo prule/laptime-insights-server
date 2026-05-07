@@ -1,11 +1,13 @@
 import { useLocation, useMatch } from "react-router-dom";
 import { useSession } from "../../api/queries";
 import { formatDate } from "../../lib/format";
+import { TimeRangeSelector } from "./TimeRangeSelector";
 
 const SCREEN_LABELS: Record<string, string> = {
   "/": "Overview",
   "/sessions": "Sessions",
   "/laps": "Lap Search",
+  "/compare": "Lap Comparison",
 };
 
 export function Topbar() {
@@ -23,6 +25,9 @@ export function Topbar() {
   return (
     <header className="flex h-[52px] flex-shrink-0 items-center gap-4 border-b border-border bg-bg px-7">
       <div className="font-sans text-[15px] font-medium text-text">{label}</div>
+      <div className="ml-auto">
+        <TimeRangeSelector />
+      </div>
     </header>
   );
 }

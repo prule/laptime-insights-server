@@ -22,6 +22,8 @@ import com.github.prule.laptimeinsights.application.domain.model.ValidLap
 import com.github.prule.laptimeinsights.tracker.utils.data.PageRequest
 import com.github.prule.laptimeinsights.tracker.utils.data.Sort
 import kotlin.time.Clock
+import kotlin.time.Duration.Companion.days
+import kotlin.time.Instant
 import org.assertj.core.api.Assertions.assertThat
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.junit.jupiter.api.Test
@@ -142,13 +144,22 @@ class LapRepositoryTest : RepositoryTest(listOf(LapTable, SessionTable)) {
       val porscheSession = sessionRepository.create(buildSession(car = Car("Porsche 991 II GT3 R")))
 
       repository.create(
-        createTestLap(sessionUid = Uid(ferrariSession.uid), sessionId = SessionId(ferrariSession.id.value))
+        createTestLap(
+          sessionUid = Uid(ferrariSession.uid),
+          sessionId = SessionId(ferrariSession.id.value),
+        )
       )
       repository.create(
-        createTestLap(sessionUid = Uid(ferrariSession.uid), sessionId = SessionId(ferrariSession.id.value))
+        createTestLap(
+          sessionUid = Uid(ferrariSession.uid),
+          sessionId = SessionId(ferrariSession.id.value),
+        )
       )
       repository.create(
-        createTestLap(sessionUid = Uid(porscheSession.uid), sessionId = SessionId(porscheSession.id.value))
+        createTestLap(
+          sessionUid = Uid(porscheSession.uid),
+          sessionId = SessionId(porscheSession.id.value),
+        )
       )
 
       val result =
@@ -197,6 +208,37 @@ class LapRepositoryTest : RepositoryTest(listOf(LapTable, SessionTable)) {
     }
   }
 
+  @Test
+  fun `should filter laps by recordedAt range`() {
+    val anchor = Instant.parse("2026-04-15T12:00:00Z")
+    val tenDaysAgo = anchor.minus(10.days)
+    val fiveDaysAgo = anchor.minus(5.days)
+    val now = anchor
+
+    transaction {
+      repository.create(createTestLap(recordedAt = tenDaysAgo))
+      repository.create(createTestLap(recordedAt = fiveDaysAgo))
+      repository.create(createTestLap(recordedAt = now))
+
+      val onlyLastWeek =
+        repository.search(
+          LapSearchCriteria(from = anchor.minus(7.days)),
+          PageRequest(1, 25),
+          Sort.noSort(),
+        )
+      assertThat(onlyLastWeek.total).isEqualTo(2L)
+
+      val between =
+        repository.search(
+          LapSearchCriteria(from = anchor.minus(7.days), to = anchor.minus(1.days)),
+          PageRequest(1, 25),
+          Sort.noSort(),
+        )
+      assertThat(between.total).isEqualTo(1L)
+      assertThat(between.items[0].recordedAt).isEqualTo(fiveDaysAgo)
+    }
+  }
+
   private fun buildSession(
     car: Car = Car("Ferrari 488 GT3"),
     track: Track = Track("Monza"),
@@ -206,7 +248,6 @@ class LapRepositoryTest : RepositoryTest(listOf(LapTable, SessionTable)) {
       id = SessionId(0L),
       uid = Uid(),
       startedAt = Clock.System.now(),
-      finishedAt = null,
       simulator = simulator,
       track = track,
       car = car,
@@ -218,11 +259,12 @@ class LapRepositoryTest : RepositoryTest(listOf(LapTable, SessionTable)) {
     sessionUid: Uid = Uid(),
     personalBest: PersonalBest = PersonalBest(false),
     valid: ValidLap = ValidLap(true),
+    recordedAt: Instant = Clock.System.now(),
   ) =
     Lap(
       id = LapId(0L),
       uid = Uid(),
-      recordedAt = Clock.System.now(),
+      recordedAt = recordedAt,
       carId = CarId(1),
       lapTime = LapTimeMs(90000L),
       lapNumber = LapNumber(1),
@@ -230,5 +272,8 @@ class LapRepositoryTest : RepositoryTest(listOf(LapTable, SessionTable)) {
       personalBest = personalBest,
       sessionId = sessionId,
       sessionUId = sessionUid,
+      car = Car("testCar"),
+      track = Track("testTrack"),
+      playerLap = true,
     )
 }

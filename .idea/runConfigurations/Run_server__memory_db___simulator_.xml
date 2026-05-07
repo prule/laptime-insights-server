@@ -1,0 +1,28 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Run server (memory db + simulator)" type="KtorApplicationConfigurationType" factoryName="Ktor">
+    <option name="envFilePaths">
+      <option value="$PROJECT_DIR$/.env.mem.local" />
+    </option>
+    <option name="MAIN_CLASS_NAME" value="com.github.prule.laptimeinsights.AppKt" />
+    <module name="lap-insights-server.app.main" />
+    <option name="PROGRAM_PARAMETERS" value="app/configuration-simulator.json5" />
+    <extension name="coverage">
+      <pattern>
+        <option name="PATTERN" value="com.github.prule.laptimeinsights.tracker.*" />
+        <option name="ENABLED" value="true" />
+      </pattern>
+    </extension>
+    <option name="alternativeJrePath" />
+    <option name="alternativeJrePathEnabled" value="false" />
+    <option name="includeProvidedScope" value="false" />
+    <option name="mainClass" value="com.github.prule.laptimeinsights.AppKt" />
+    <option name="passParentEnvs" value="true" />
+    <option name="programParameters" value="app/configuration-simulator.json5" />
+    <option name="shortenCommandLine" />
+    <option name="vmParameters" />
+    <option name="workingDirectory" value="$PROJECT_DIR$" />
+    <method v="2">
+      <option name="Make" enabled="true" />
+    </method>
+  </configuration>
+</component>

@@ -53,18 +53,20 @@ class CreateSessionServiceTest {
     assertThat(result.track).isEqualTo(Track("Monza"))
     assertThat(result.car).isEqualTo(Car("Ferrari 296 GT3"))
     assertThat(result.startedAt()).isNull()
-    assertThat(result.finishedAt()).isNull()
+    assertThat(result.drivingTime().value).isEqualTo(0L)
 
     // Service constructed a fresh in-memory session with a generated UID and no times set.
     assertThat(sessionSlot.captured.id).isEqualTo(SessionId(0))
     assertThat(sessionSlot.captured.uid.value).isNotBlank()
     assertThat(sessionSlot.captured.startedAt()).isNull()
-    assertThat(sessionSlot.captured.finishedAt()).isNull()
+    assertThat(sessionSlot.captured.drivingTime().value).isEqualTo(0L)
 
     // Event carries the persisted session (with the real id/uid), not the pre-persistence one.
     verify {
       eventPort.emit(
-        match { it is SessionCreated && it.session.uid == persistedUid && it.session.id == persistedId }
+        match {
+          it is SessionCreated && it.session.uid == persistedUid && it.session.id == persistedId
+        }
       )
     }
   }

@@ -22,9 +22,10 @@ fun RoutingRequest.toSort(): Sort {
       .map { it.trim() }
       .filter { it.isNotEmpty() }
       .map {
-        val (field, direction) = it.split(":", limit = 2).let { p ->
-          if (p.size == 2) p[0].trim() to p[1].trim() else p[0].trim() to "ASC"
-        }
+        val (field, direction) =
+          it.split(":", limit = 2).let { p ->
+            if (p.size == 2) p[0].trim() to p[1].trim() else p[0].trim() to "ASC"
+          }
         SortBy(field, Order.valueOf(direction.uppercase()))
       }
   return if (parts.isEmpty()) Sort.noSort() else Sort(parts)

@@ -12,7 +12,9 @@
 import { useQuery } from "@tanstack/react-query";
 import { apiGet, buildQuery, type ApiContext } from "./client";
 import type {
+  LapComparisonResource,
   LapResource,
+  LapTelemetryResource,
   Page,
   PagingAndSort,
   SessionFilters,
@@ -34,6 +36,10 @@ const KEYS = {
     ["session", ctx.mode, ctx.apiBase, uid] as const,
   laps: (ctx: ApiContext, params: { sessionUid?: string } & PagingAndSort) =>
     ["laps", ctx.mode, ctx.apiBase, params] as const,
+  lapTelemetry: (ctx: ApiContext, lapUid: string | undefined) =>
+    ["lap-telemetry", ctx.mode, ctx.apiBase, lapUid] as const,
+  compare: (ctx: ApiContext, lap1Uid: string | undefined, lap2Uid: string | undefined) =>
+    ["compare-laps", ctx.mode, ctx.apiBase, lap1Uid, lap2Uid] as const,
 };
 
 export function useSessionOptions() {
@@ -59,6 +65,16 @@ export function useSessions(filters: SessionFilters & PagingAndSort = {}) {
         })}`,
       ),
     placeholderData: (previous) => previous,
+  });
+}
+
+export function useLap(uid: string | undefined) {
+  const ctx = useApiContext();
+  return useQuery({
+    queryKey: ["lap", ctx.mode, ctx.apiBase, uid] as const,
+    queryFn: () => apiGet<LapResource>(ctx, `/api/1/laps/${uid}`),
+    enabled: !!uid,
+    staleTime: 60_000,
   });
 }
 
@@ -89,7 +105,34 @@ export function useSessionLaps(sessionUid: string | undefined, paging: PagingAnd
   });
 }
 
+export function useLapTelemetry(lapUid: string | undefined) {
+  const ctx = useApiContext();
+  return useQuery({
+    queryKey: KEYS.lapTelemetry(ctx, lapUid),
+    queryFn: () => apiGet<LapTelemetryResource>(ctx, `/api/1/laps/${lapUid}/telemetry`),
+    enabled: !!lapUid,
+    // Telemetry is immutable for a given lap — keep it cached longer.
+    staleTime: 5 * 60_000,
+  });
+}
+
+export function useLapComparison(lap1Uid: string | undefined, lap2Uid: string | undefined) {
+  const ctx = useApiContext();
+  return useQuery({
+    queryKey: KEYS.compare(ctx, lap1Uid, lap2Uid),
+    queryFn: () =>
+      apiGet<LapComparisonResource>(
+        ctx,
+        `/api/1/laps/compare?lap1Uid=${lap1Uid}&lap2Uid=${lap2Uid}`,
+      ),
+    enabled: !!lap1Uid && !!lap2Uid,
+    staleTime: 5 * 60_000,
+  });
+}
+
 export interface LapFilters {
+  /** Integer car number within the session. */
+  carId?: number;
   validLap?: boolean;
   personalBest?: boolean;
   /** Owning-session car name. Backend joins SESSION when set. */
@@ -98,6 +141,64 @@ export interface LapFilters {
   track?: string;
   /** Owning-session simulator. Backend joins SESSION when set. */
   simulator?: string;
+  /** Inclusive lower bound on lap.recordedAt as ISO-8601 instant. */
+  from?: string;
+  /** Inclusive upper bound on lap.recordedAt as ISO-8601 instant. */
+  to?: string;
+}
+
+/**
+ * Returns the fastest valid lap of the supplied session, or `undefined` while
+ * loading / when the session has no valid laps yet. Cheap — `size=1` with a
+ * server-side sort.
+ */
+export function useSessionBestLap(sessionUid: string | undefined) {
+  const ctx = useApiContext();
+  return useQuery({
+    queryKey: ["session-best-lap", ctx.mode, ctx.apiBase, sessionUid] as const,
+    queryFn: async () => {
+      const page = await apiGet<Page<LapResource>>(
+        ctx,
+        `/api/1/laps${buildQuery({
+          sessionUid,
+          validLap: true,
+          page: 1,
+          size: 1,
+          sort: "lapTime:ASC",
+        })}`,
+      );
+      return page.items[0] ?? null;
+    },
+    enabled: !!sessionUid,
+    staleTime: 60_000,
+  });
+}
+
+/**
+ * Returns the fastest valid lap recorded at the supplied track across every
+ * session — i.e. the all-time PB at that track. Backend join handles the
+ * `track` filter.
+ */
+export function useTrackBestLap(track: string | null | undefined) {
+  const ctx = useApiContext();
+  return useQuery({
+    queryKey: ["track-best-lap", ctx.mode, ctx.apiBase, track] as const,
+    queryFn: async () => {
+      const page = await apiGet<Page<LapResource>>(
+        ctx,
+        `/api/1/laps${buildQuery({
+          track: track ?? undefined,
+          validLap: true,
+          page: 1,
+          size: 1,
+          sort: "lapTime:ASC",
+        })}`,
+      );
+      return page.items[0] ?? null;
+    },
+    enabled: !!track,
+    staleTime: 60_000,
+  });
 }
 
 export function useLaps(params: LapFilters & PagingAndSort = {}) {
@@ -108,11 +209,14 @@ export function useLaps(params: LapFilters & PagingAndSort = {}) {
       apiGet<Page<LapResource>>(
         ctx,
         `/api/1/laps${buildQuery({
+          carId: params.carId,
           validLap: params.validLap,
           personalBest: params.personalBest,
           car: params.car,
           track: params.track,
           simulator: params.simulator,
+          from: params.from,
+          to: params.to,
           page: params.page ?? 1,
           size: params.size ?? 50,
           sort: params.sort ?? "lapTime:ASC",

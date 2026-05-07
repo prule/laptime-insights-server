@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import type { SessionResource } from "../api/types";
 import { Badge } from "./ui/Badge";
-import { formatDate, formatDuration, formatTime } from "../lib/format";
+import { formatDate, formatDrivingTime, formatTime } from "../lib/format";
 
 /**
  * Single row in a sessions table. Navigation prefers the HATEOAS `self` link
@@ -35,7 +35,7 @@ export function SessionRow({ session }: { session: SessionResource }) {
         {session.simulator}
       </div>
       <div className="font-mono text-[12px] text-text-muted">
-        {formatDuration(session.startedAt, session.endedAt)}
+        {formatDrivingTime(session.drivingTimeMs)}
       </div>
     </button>
   );

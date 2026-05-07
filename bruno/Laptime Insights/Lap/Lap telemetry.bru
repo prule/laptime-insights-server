@@ -1,0 +1,15 @@
+meta {
+  name: Lap telemetry
+  type: http
+  seq: 8
+}
+
+get {
+  url: http://localhost:8000/api/1/laps/{{lapUid}}/telemetry
+  body: none
+  auth: inherit
+}
+
+settings {
+  encodeUrl: true
+}

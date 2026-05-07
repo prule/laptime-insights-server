@@ -14,6 +14,8 @@ import com.github.prule.laptimeinsights.tracker.utils.data.exposed.firstOrNull
 import com.github.prule.laptimeinsights.tracker.utils.data.exposed.paginate
 import org.jetbrains.exposed.v1.core.JoinType
 import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.core.greaterEq
+import org.jetbrains.exposed.v1.core.lessEq
 import org.jetbrains.exposed.v1.jdbc.Query
 import org.jetbrains.exposed.v1.jdbc.andWhere
 import org.jetbrains.exposed.v1.jdbc.selectAll
@@ -69,12 +71,18 @@ fun LapSearchCriteria.toQuery(): Query {
   sessionId?.let { query.andWhere { LapTable.sessionId eq it.value } }
   sessionUid?.let { query.andWhere { LapTable.sessionUid eq it.value } }
 
+  carId?.let { query.andWhere { LapTable.carId eq it.value } }
   personalBest?.let { query.andWhere { LapTable.personalBest eq it.value } }
   validLap?.let { query.andWhere { LapTable.valid eq it.value } }
 
   car?.let { query.andWhere { SessionTable.car eq it.value } }
   track?.let { query.andWhere { SessionTable.track eq it.value } }
   simulator?.let { query.andWhere { SessionTable.simulator eq it.name } }
+
+  // Filter on LAP.recordedAt — inclusive lower / inclusive upper bound, mirrors
+  // SessionRepository semantics for from/to.
+  from?.let { query.andWhere { LapTable.recordedAt greaterEq it } }
+  to?.let { query.andWhere { LapTable.recordedAt lessEq it } }
 
   return query
 }

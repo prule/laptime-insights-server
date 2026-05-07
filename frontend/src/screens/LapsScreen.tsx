@@ -1,39 +1,51 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useLaps, useSessionOptions, useSessions } from "../api/queries";
+import { useLaps, useSessionOptions } from "../api/queries";
 import { Card } from "../components/ui/Card";
+import { CarFilterBar } from "../components/ui/CarFilterBar";
 import { ErrorState, LoadingState, EmptyState } from "../components/ui/States";
 import { FilterSelect } from "../components/ui/FilterSelect";
 import { SectionHeader } from "../components/ui/SectionHeader";
-import type { SessionResource } from "../api/types";
-import { formatLapTime, formatTime } from "../lib/format";
+import { LapTable } from "../components/LapTable";
+import { getBool, getInt, getString, useUrlState } from "../hooks/useUrlState";
+import { useTimeRange } from "../providers/TimeRangeProvider";
 
 const PAGE_SIZE = 50;
-
-interface SessionFacets {
-  car?: string;
-  track?: string;
-  simulator?: string;
-}
 
 /**
  * Lap-search screen.
  *
- * `car` / `track` / `simulator` are sent to the backend as query params; the
- * Ktor controller joins SESSION at the persistence layer so pagination is
- * accurate. The local sessions query is only used to enrich rows with
- * track/car/sim labels for display.
+ * Filters and pagination live in the URL querystring (e.g.
+ * `/laps?track=Monza&validOnly=true&page=2`) — reload-safe and shareable.
+ *
+ * Includes a "select mode" so users can pick exactly two laps from the
+ * filtered, paginated list and jump straight into the compare screen.
+ * Selection is local component state — the URL only carries filter state.
  */
 export function LapsScreen() {
   const navigate = useNavigate();
-  const [page, setPage] = useState(1);
-  const [validOnly, setValidOnly] = useState(true);
-  const [pbOnly, setPbOnly] = useState(false);
-  const [facets, setFacets] = useState<SessionFacets>({});
+  const [params, setParam, setMany] = useUrlState();
+
+  const facets = {
+    track: getString(params, "track"),
+    car: getString(params, "car"),
+    simulator: getString(params, "simulator"),
+  };
+  const showInvalid = getBool(params, "invalid", false);
+  const validOnly = !showInvalid;
+  const pbOnly = getBool(params, "pb", false);
+  const page = getInt(params, "page", 1);
+  const facetsActive = !!(facets.track || facets.car || facets.simulator);
+
+  // Multi-select state for compare. We deliberately keep this in component
+  // state, not the URL — selection is a transient pre-action, not a view.
+  const [selectMode, setSelectMode] = useState(false);
+  const [selected, setSelected] = useState<string[]>([]);
+
+  const { fromIso } = useTimeRange();
+  const from = fromIso ?? undefined;
 
   const optionsQuery = useSessionOptions();
-  // Used solely to look up car/track/simulator strings per visible lap row.
-  const sessionsQuery = useSessions({ size: 500, sort: "startedAt:DESC" });
 
   const lapsQuery = useLaps({
     page,
@@ -44,55 +56,72 @@ export function LapsScreen() {
     car: facets.car,
     track: facets.track,
     simulator: facets.simulator,
+    from,
   });
 
-  const sessionsByUid = useMemo(() => {
-    const map = new Map<string, SessionResource>();
-    for (const s of sessionsQuery.data?.items ?? []) map.set(s.uid, s);
-    return map;
-  }, [sessionsQuery.data]);
+  const items = lapsQuery.data?.items ?? [];
 
-  const setFacet = (key: keyof SessionFacets, value: string | undefined) => {
-    setFacets((prev) => ({ ...prev, [key]: value }));
-    setPage(1);
+  const updateFacet = (key: "track" | "car" | "simulator", value: string | undefined) => {
+    setMany({ [key]: value, page: undefined });
   };
 
-  const facetsActive = !!(facets.car || facets.track || facets.simulator);
-  const items = lapsQuery.data?.items ?? [];
+  const toggleSelect = (lapUid: string) => {
+    setSelected((prev) => {
+      if (prev.includes(lapUid)) return prev.filter((u) => u !== lapUid);
+      // Cap at 2: drop the older selection so the most recent two clicks win.
+      if (prev.length >= 2) return [prev[1]!, lapUid];
+      return [...prev, lapUid];
+    });
+  };
+
+  const compareSelected = () => {
+    if (selected.length !== 2) return;
+    const [lap1, lap2] = selected as [string, string];
+    // Track is preserved in URL only when the user picked one — otherwise
+    // /compare infers it from the chosen laps.
+    const trackParam = facets.track ? `&track=${encodeURIComponent(facets.track)}` : "";
+    navigate(`/compare?lap1=${lap1}&lap2=${lap2}${trackParam}`);
+  };
 
   return (
     <div className="h-full overflow-y-auto px-8 py-7">
       <Card className="mb-4">
-        <SectionHeader title="Filter" sub="All filters hit /api/1/laps directly — pagination reflects the filtered total" />
+        <SectionHeader title="Filter" sub="All filters hit /api/1/laps directly · state is mirrored to the URL" />
         <div className="flex flex-wrap items-end gap-3">
           <FilterSelect
             label="Track"
             value={facets.track}
             options={optionsQuery.data?.tracks ?? []}
-            onChange={(v) => setFacet("track", v)}
-          />
-          <FilterSelect
-            label="Car"
-            value={facets.car}
-            options={optionsQuery.data?.cars ?? []}
-            onChange={(v) => setFacet("car", v)}
+            onChange={(v) => updateFacet("track", v)}
           />
           <FilterSelect
             label="Simulator"
             value={facets.simulator}
             options={optionsQuery.data?.simulators ?? []}
-            onChange={(v) => setFacet("simulator", v)}
+            onChange={(v) => updateFacet("simulator", v)}
           />
-          <Toggle label="Valid only" value={validOnly} onChange={(v) => { setValidOnly(v); setPage(1); }} />
-          <Toggle label="Personal bests" value={pbOnly} onChange={(v) => { setPbOnly(v); setPage(1); }} />
+          <Toggle
+            label="Valid only"
+            value={validOnly}
+            onChange={(v) => setMany({ invalid: v ? undefined : true, page: undefined })}
+          />
+          <Toggle
+            label="Personal bests"
+            value={pbOnly}
+            onChange={(v) => setMany({ pb: v ? true : undefined, page: undefined })}
+          />
           {(facetsActive || pbOnly || !validOnly) && (
             <button
-              onClick={() => {
-                setFacets({});
-                setValidOnly(true);
-                setPbOnly(false);
-                setPage(1);
-              }}
+              onClick={() =>
+                setMany({
+                  track: undefined,
+                  car: undefined,
+                  simulator: undefined,
+                  invalid: undefined,
+                  pb: undefined,
+                  page: undefined,
+                })
+              }
               className="self-end rounded border border-border px-3 py-2 font-mono text-[11px] uppercase tracking-[0.08em] text-text-muted hover:text-text"
             >
               Reset
@@ -101,11 +130,59 @@ export function LapsScreen() {
         </div>
       </Card>
 
+      {(optionsQuery.data?.cars?.length ?? 0) > 1 && (
+        <div className="mb-4">
+          <CarFilterBar
+            cars={(optionsQuery.data?.cars ?? []).map((c) => ({ value: c, label: c }))}
+            selected={facets.car ?? null}
+            onChange={(v) => updateFacet("car", v ?? undefined)}
+          />
+        </div>
+      )}
+
       <Card>
-        <SectionHeader
-          title="Fastest laps"
-          sub={lapsQuery.data ? `${lapsQuery.data.total} match · page ${page}` : undefined}
-        />
+        <div className="mb-4 flex items-baseline justify-between">
+          <div>
+            <div className="font-sans text-sm font-medium text-text">Fastest laps</div>
+            <div className="font-sans text-xs text-text-muted">
+              {lapsQuery.data ? `${lapsQuery.data.total} match · page ${page}` : "—"}
+              {selectMode && (
+                <span className="ml-2 text-cyan">
+                  · select mode: {selected.length}/2 picked
+                </span>
+              )}
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            {selectMode ? (
+              <>
+                <button
+                  onClick={compareSelected}
+                  disabled={selected.length !== 2}
+                  className="rounded border border-cyan/40 bg-cyan/10 px-3 py-1 font-mono text-[11px] uppercase tracking-[0.08em] text-cyan transition-colors disabled:cursor-not-allowed disabled:opacity-30"
+                >
+                  Compare selected
+                </button>
+                <button
+                  onClick={() => {
+                    setSelected([]);
+                    setSelectMode(false);
+                  }}
+                  className="rounded border border-border px-3 py-1 font-mono text-[11px] uppercase tracking-[0.08em] text-text-muted hover:text-text"
+                >
+                  Cancel
+                </button>
+              </>
+            ) : (
+              <button
+                onClick={() => setSelectMode(true)}
+                className="rounded border border-border px-3 py-1 font-mono text-[11px] uppercase tracking-[0.08em] text-text-muted hover:border-cyan/40 hover:text-cyan"
+              >
+                Select to compare
+              </button>
+            )}
+          </div>
+        </div>
         {lapsQuery.isLoading && <LoadingState />}
         {lapsQuery.isError && (
           <ErrorState error={lapsQuery.error} onRetry={() => lapsQuery.refetch()} />
@@ -118,59 +195,47 @@ export function LapsScreen() {
         )}
         {items.length > 0 && (
           <>
-            <div className="overflow-hidden rounded border border-border">
-              <div className="grid grid-cols-[50px_120px_1fr_1fr_90px_110px_70px] items-center gap-3 border-b border-border bg-surface-active px-3 py-2 font-mono text-[10px] uppercase tracking-[0.08em] text-text-muted">
-                <div>#</div>
-                <div>Lap time</div>
-                <div>Track</div>
-                <div>Car</div>
-                <div>Sim</div>
-                <div>Recorded</div>
-                <div>Status</div>
-              </div>
-              {items.map((lap, i) => {
-                const session = sessionsByUid.get(lap.sessionUid);
-                return (
-                  <button
-                    key={lap.uid}
-                    onClick={() => navigate(`/sessions/${lap.sessionUid}`)}
-                    className="grid w-full grid-cols-[50px_120px_1fr_1fr_90px_110px_70px] items-center gap-3 border-b border-border/40 px-3 py-2 text-left last:border-b-0 hover:bg-surface-hover"
-                  >
-                    <div className="font-mono text-xs text-text-muted">
-                      {(page - 1) * PAGE_SIZE + i + 1}
-                    </div>
-                    <div className={`font-mono text-sm ${lap.personalBest ? "text-ok" : "text-text"}`}>
-                      {formatLapTime(lap.lapTime)}
-                    </div>
-                    <div className="truncate font-sans text-[13px] text-text">
-                      {session?.track ?? <span className="text-text-dim">unknown</span>}
-                    </div>
-                    <div className="truncate font-sans text-[12px] text-text-muted">
-                      {session?.car ?? <span className="text-text-dim">unknown</span>}
-                    </div>
-                    <div className="font-mono text-[11px] uppercase tracking-[0.05em] text-text-muted">
-                      {session?.simulator ?? "—"}
-                    </div>
-                    <div className="font-mono text-xs text-text-muted">{formatTime(lap.recordedAt)}</div>
-                    <div className="font-mono text-[11px]">
-                      {lap.personalBest && <span className="text-ok">PB</span>}
-                      {!lap.valid && <span className="text-accent">INVAL</span>}
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
+            <LapTable
+              laps={items}
+              onRowClick={(lap) =>
+                selectMode ? toggleSelect(lap.uid) : navigate(`/sessions/${lap.sessionUid}`)
+              }
+              onSessionClick={(uid) => navigate(`/sessions/${uid}`)}
+              isRowSelected={(lap) => selected.includes(lap.uid)}
+              prefixColumn={
+                selectMode
+                  ? {
+                      width: "36px",
+                      cell: (lap) => (
+                        <div className="flex items-center justify-center">
+                          <span
+                            aria-hidden
+                            className={[
+                              "flex h-4 w-4 items-center justify-center rounded border font-mono text-[10px]",
+                              selected.includes(lap.uid)
+                                ? "border-cyan bg-cyan/20 text-cyan"
+                                : "border-border text-transparent",
+                            ].join(" ")}
+                          >
+                            ✓
+                          </span>
+                        </div>
+                      ),
+                    }
+                  : undefined
+              }
+            />
             <div className="mt-3 flex items-center gap-2">
               <button
                 disabled={page === 1}
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                onClick={() => setParam("page", page > 2 ? page - 1 : undefined)}
                 className="rounded border border-border px-3 py-1 font-mono text-[11px] uppercase tracking-[0.08em] text-text-muted disabled:opacity-30"
               >
                 Prev
               </button>
               <button
                 disabled={!lapsQuery.data || page * PAGE_SIZE >= lapsQuery.data.total}
-                onClick={() => setPage((p) => p + 1)}
+                onClick={() => setParam("page", page + 1)}
                 className="rounded border border-border px-3 py-1 font-mono text-[11px] uppercase tracking-[0.08em] text-text-muted disabled:opacity-30"
               >
                 Next

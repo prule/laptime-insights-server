@@ -37,7 +37,7 @@ dependencies {
   implementation(libs.bundles.exposed)
   implementation(libs.h2)
   implementation(libs.logback.classic)
-  implementation("com.zaxxer:HikariCP:3.4.5")
+  implementation("com.zaxxer:HikariCP:7.0.2")
 
   implementation(project(":utils"))
 
@@ -55,3 +55,28 @@ dependencies {
 }
 
 application { mainClass = "com.github.prule.acc.client.app.AppKt" }
+
+val frontendDir = project.rootProject.file("frontend")
+val frontendBuildDir = file("$frontendDir/dist")
+val staticResourcesDir = file("src/main/resources/static")
+
+tasks.register("npmInstall", Exec::class) {
+  workingDir = frontendDir
+  commandLine("npm", "install")
+}
+
+tasks.register("npmBuild", Exec::class) {
+  dependsOn("npmInstall")
+  workingDir = frontendDir
+  commandLine("npm", "run", "build")
+}
+
+tasks.register("copyFrontend", Copy::class) {
+  dependsOn("npmBuild")
+  from(frontendBuildDir)
+  into(staticResourcesDir)
+}
+
+// tasks.getByName("processResources") {
+//  dependsOn("copyFrontend")
+// }

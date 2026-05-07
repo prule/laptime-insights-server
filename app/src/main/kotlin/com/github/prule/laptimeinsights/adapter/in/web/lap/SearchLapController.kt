@@ -3,6 +3,7 @@ package com.github.prule.laptimeinsights.adapter.`in`.web.lap
 import com.github.prule.laptimeinsights.adapter.`in`.web.toPageRequest
 import com.github.prule.laptimeinsights.adapter.`in`.web.toSort
 import com.github.prule.laptimeinsights.application.domain.model.Car
+import com.github.prule.laptimeinsights.application.domain.model.CarId
 import com.github.prule.laptimeinsights.application.domain.model.LapSearchCriteria
 import com.github.prule.laptimeinsights.application.domain.model.PersonalBest
 import com.github.prule.laptimeinsights.application.domain.model.Simulator
@@ -18,6 +19,7 @@ import io.ktor.server.response.respond
 import io.ktor.server.routing.openapi.describe
 import io.ktor.server.routing.routing
 import io.ktor.utils.io.ExperimentalKtorApi
+import kotlin.time.Instant
 
 /**
  * REST controller exposing **`GET /api/1/laps`** — the paginated, filterable search endpoint for
@@ -92,6 +94,12 @@ class SearchLapController(application: Application, searchLapUseCase: SearchLapU
                   "as a strict boolean are silently ignored."
               required = false
             }
+            query("carId") {
+              description =
+                "Integer car number. Restricts results to laps recorded by the specified car " +
+                  "within a session. Non-integer values are silently ignored."
+              required = false
+            }
             query("car") {
               description =
                 "Exact car name of the owning session, e.g. `Ferrari 488 GT3`. Triggers a " +
@@ -108,6 +116,18 @@ class SearchLapController(application: Application, searchLapUseCase: SearchLapU
               description =
                 "Simulator of the owning session. Allowed values: `ACC`, `F1`. Triggers a " +
                   "join to SESSION at the persistence layer."
+              required = false
+            }
+            query("from") {
+              description =
+                "Inclusive lower bound for the lap's `recordedAt`, as an ISO-8601 instant " +
+                  "(e.g. `2026-04-11T00:00:00Z`)."
+              required = false
+            }
+            query("to") {
+              description =
+                "Inclusive upper bound for the lap's `recordedAt`, as an ISO-8601 instant " +
+                  "(e.g. `2026-04-13T00:00:00Z`)."
               required = false
             }
             query("page") {
@@ -143,10 +163,13 @@ fun LapSearchCriteria.Companion.fromParameters(parameters: Parameters): LapSearc
   return LapSearchCriteria(
     uid = parameters["uid"]?.let { Uid(it) },
     sessionUid = parameters["sessionUid"]?.let { Uid(it) },
+    carId = parameters["carId"]?.toIntOrNull()?.let { CarId(it) },
     personalBest = parameters["personalBest"]?.toBooleanStrictOrNull()?.let { PersonalBest(it) },
     validLap = parameters["validLap"]?.toBooleanStrictOrNull()?.let { ValidLap(it) },
     car = parameters["car"]?.let { Car(it) },
     track = parameters["track"]?.let { Track(it) },
     simulator = parameters["simulator"]?.let { Simulator.valueOf(it) },
+    from = parameters["from"]?.let { Instant.parse(it) },
+    to = parameters["to"]?.let { Instant.parse(it) },
   )
 }

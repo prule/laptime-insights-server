@@ -8,10 +8,10 @@ Ktor, Exposed, React).
 
 LapTimeInsights consists of a **Kotlin/Ktor** server acting as a local hub and a **React/TypeScript** dashboard.
 
-* **Backend:** Handles telemetry ingestion via `acc-client`, persists data using **Exposed**, and serves a *
-  *REST/HATEOAS** API.
-* **Frontend:** A reactive dashboard built with **React** (Composition API) and **Pinia** for state management,
-  consuming the HATEOAS API to drive navigation.
+* **Backend:** Handles telemetry ingestion via `acc-client`, persists data using **Exposed**, and serves a
+  **REST/HATEOAS** API.
+* **Frontend:** A reactive dashboard built with **React** + **TanStack Query** for data fetching, consuming the HATEOAS
+  API to drive navigation.
 
 ---
 
@@ -21,80 +21,100 @@ The server is split into four distinct layers. Dependencies point **inwards** on
 
 ### I. Domain Layer (The Core)
 
-* **Entities:** Pure Kotlin data classes (e.g., `Lap`, `Session`, `TelemetryPoint`).
-* **Repository Interfaces:** Boundary definitions (e.g., `LapRepository`, `SessionRepository`).
+* **Entities:** Pure Kotlin data classes (e.g., `Lap`, `Session`, `RealtimeCarUpdate`, `TelemetrySample`).
+* **Ports:** Boundary definitions expressed as interfaces (e.g., `CreateLapPort`, `FindRealtimeCarUpdateByLapPort`).
 * **Business Logic:** Logic that doesn't belong in a use case, such as calculating "Effort Score" or "Grip Multipliers."
 
 ### II. Use Case Layer (Application)
 
-* **Interactors:** Orchestrate the flow of data (e.g., `RecordLapUseCase`, `CompareLapsUseCase`).
-* **Ports:** Input ports (Use Case interfaces) and Output ports (Repository interfaces).
+* **Interactors:** Orchestrate the flow of data (e.g., `CreateLapUseCase`, `CompareLapsUseCase`).
+* **Ports:** Input ports (Use Case interfaces) and Output ports (persistence / event interfaces).
 
 ### III. Interface Adapters (The Glue)
 
 * **Controllers/Routes:** Ktor routing definitions.
 * **HATEOAS Presenters:** Converts Domain Entities into **HAL (Hypertext Application Language)** JSON.
     * *Example:* A Lap resource includes a `_links` object with a URI to its `telemetry` or its parent `session`.
-* **Repositories Implementation:** **Exposed** DAO/DSL logic that interacts with the database.
+* **Repositories Implementation:** **Exposed** DSL logic that interacts with the database.
 
 ### IV. Infrastructure Layer
 
-* **Ktor Server:** Configuration, Plugins (Authentication, ContentNegotiation, CORS).
-* **Telemetry Client:** Integration with `acc-client` to bridge external UDP/Shared Memory data into the app.
+* **Ktor Server:** Configuration, Plugins (ContentNegotiation, CORS, OpenAPI).
+* **Telemetry Client:** Integration with `acc-client` to bridge external ACC UDP broadcast data into the app via
+  `ClientInitializer`. Handles `RealtimeUpdate`, `RealtimeCarUpdate`, `LapCompleted`, `EntryListCar`, and `TrackData`
+  message types.
 
 ---
 
 ## 3. Backend Technology Stack
 
-| Component                | Technology                                       |
-|:-------------------------|:-------------------------------------------------|
-| **Language**             | Kotlin 2.x                                       |
-| **Web Framework**        | Ktor (Server-side)                               |
-| **ORM / Database**       | JetBrains Exposed / SQLite (Local) or PostgreSQL |
-| **API Style**            | REST with HATEOAS (HAL+JSON)                     |
-| **Dependency Injection** | Koin (Lightweight and Kotlin-native)             |
+| Component                | Technology                                 |
+|:-------------------------|:-------------------------------------------|
+| **Language**             | Kotlin 2.x                                 |
+| **Web Framework**        | Ktor (Server-side)                         |
+| **ORM / Database**       | JetBrains Exposed v1 / H2 (local dev)      |
+| **API Style**            | REST with HATEOAS (HAL+JSON)               |
+| **Dependency Injection** | Manual wiring in `AppModule.kt` (no Koin)  |
+| **Migrations**           | Flyway                                     |
+| **Serialization**        | kotlinx.serialization                      |
 
 ---
 
-## 4. Frontend Architecture: Domain-Driven React
+## 4. Frontend Architecture
 
-The frontend mirrors the backend's modularity by grouping files by **Domain** rather than technical type.
+The frontend is a single-page React application built with Vite.
 
 ### Directory Structure (`src/`)
 
-* **`modules/`**: Feature-based folders (e.g., `modules/sessions/`, `modules/analysis/`).
-    * `components/`: React components specific to this feature.
-    * `store/`: Pinia store for this feature's state.
-    * `services/`: Axios/Fetch wrappers.
-* **`core/`**: Shared types, HATEOAS link parsers, and global composables.
-* **`views/`**: Page-level components that assemble modules.
+* **`api/`** — TypeScript resource types (`types.ts`), fetch wrapper + HATEOAS helpers (`client.ts`), all TanStack
+  Query hooks (`queries.ts`), and an in-memory mock layer (`mock/`).
+* **`components/`** — Shared UI components:
+    * `layout/` — AppShell, Sidebar, Topbar, TimeRangeSelector.
+    * `ui/` — Card, Badge, Delta, StatCard, BarChart, Sparkline, TelemetryTrace, SpeedDeltaTrace,
+      GearMismatchStrip, TrackMap, FilterSelect, Modal, SectionHeader, States, TrackPracticeChart.
+    * Feature-specific — LapBrowser, LapPicker, SessionRow.
+* **`screens/`** — Page-level components: OverviewScreen, SessionsScreen, SessionDetailScreen, LapsScreen,
+  CompareScreen.
+* **`providers/`** — DataModeProvider (mock/live toggle), TimeRangeProvider (global time range).
+* **`hooks/`** — `useUrlState` (URL querystring read/write).
+* **`lib/`** — Formatting utilities.
+* **`config/`** — Navigation items.
 
 ### HATEOAS Integration
 
-Unlike standard REST where URLs are hardcoded in the frontend, the React app will:
-
-1. Fetch the **Entry Point** (e.g., `/api/v1/`).
-2. Follow links provided in the `_links` property to navigate (e.g., `response._links.latest_session.href`).
-3. This makes the frontend resilient to backend URI changes.
+Unlike standard REST where URLs are hardcoded in the frontend, the React app follows `_links` provided in API
+responses to navigate. `client.ts` exposes `fetchLink(ctx, links, rel)` for following arbitrary link relations.
+If the backend changes its URL scheme, the frontend follows without code changes.
 
 ---
 
 ## 5. Data Flow: From Telemetry to Dashboard
 
-1. **Ingestion:** `acc-client` emits a "Lap Completed" event.
-2. **Use Case:** `RecordLapUseCase` is triggered.
-3. **Persistence:** The Repository saves the lap and telemetry to the DB via **Exposed**.
-4. **Notification:** (Optional) A WebSocket push alerts the **React** dashboard of the new lap.
-5. **Consumption:** The user clicks the lap in the dashboard. The React app follows the `_links.telemetry` URI to fetch
-   the data for the comparison chart.
+### Live recording
+
+1. **Ingestion:** `acc-client` emits `RealtimeCarUpdate` events at ~100 ms intervals per car.
+2. **ClientInitializer:** `buildRealTimeCarUpdate()` maps the raw ACC message to a `RecordRealtimeCarUpdateCommand`.
+3. **Use Case:** `RecordRealtimeCarUpdateService` persists the row to `REALTIME_CAR_UPDATE` via
+   `CreateRealtimeCarUpdatePort`.
+4. **Lap completion:** `buildLapCompleted()` receives a `LAPCOMPLETED` broadcast event, persists the lap via
+   `CreateLapUseCase`, and emits a `LapCreated` domain event.
+5. **WebSocket push:** `SessionEventController` forwards domain events to connected browser clients.
+6. **Consumption:** The user navigates to Compare, picks two laps. The React app calls
+   `GET /api/1/laps/compare?lap1Uid=…&lap2Uid=…`. The backend reads `REALTIME_CAR_UPDATE` rows for both lap UIDs and
+   projects them into `TelemetrySample` objects (splinePosition, speedKph, gear, worldPosX, worldPosY).
+
+### Mock mode
+
+`DatabaseSeeder` generates synthetic `RealtimeCarUpdate` rows for each seeded lap. The frontend's `mock/data.ts`
+mirrors the same algorithm so mock-mode charts look identical to live-mode charts.
 
 ---
 
 ## 6. Key Design Patterns
 
-* **Screaming Architecture:** The package structure should tell you exactly what the app does (`com.laptime.sessions`)
+* **Screaming Architecture:** The package structure tells you what the app does (`com.laptime.sessions`)
   rather than how it works (`com.laptime.controllers`).
-* **Result Pattern:** Use a `Result<T>` or `Either<L, R>` type for Use Case returns to handle errors (e.g., "Lap Not
-  Found") without throwing exceptions across layers.
-* **Composition API & Composables:** Encapsulate telemetry-sharing logic in `useTelemetry()` or `useSessionList()` hooks
-  in React.
+* **Ports & Adapters:** Every external dependency (DB, UDP client, WebSocket) is hidden behind an interface in
+  `application.port`. Swapping the database or transport requires changing only the adapter, not the domain.
+* **Custom Hooks:** Telemetry-sharing state (e.g., `hoveredPosition` on the Compare screen) is lifted to the nearest
+  common ancestor and passed as props, following standard React patterns.

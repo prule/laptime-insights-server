@@ -21,7 +21,6 @@ class CreateSessionService(
           id = SessionId(0),
           uid = Uid(),
           startedAt = null,
-          finishedAt = null,
           simulator = command.simulator,
           track = command.track,
           car = command.car,
