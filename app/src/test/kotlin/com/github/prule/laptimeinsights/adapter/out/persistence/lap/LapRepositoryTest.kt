@@ -272,6 +272,8 @@ class LapRepositoryTest : RepositoryTest(listOf(LapTable, SessionTable)) {
       personalBest = personalBest,
       sessionId = sessionId,
       sessionUId = sessionUid,
-      car = Car("test"),
+      car = Car("testCar"),
+      track = Track("testTrack"),
+      playerLap = true,
     )
 }
