@@ -59,7 +59,8 @@ class DatabaseSeederTest : RepositoryTest(listOf(SessionTable, LapTable, Realtim
       assertThat(sessions.map { it.track?.value }.toSet()).hasSizeGreaterThan(3)
       assertThat(sessions.map { it.simulator }.toSet()).hasSizeGreaterThan(1)
       assertThat(sessions.mapNotNull { it.startedAt() }.toSet()).hasSizeGreaterThan(3)
-      assertThat(sessions.all { it.isFinished() }).isTrue
+      // Player-car laps should have folded into each session's drivingTime aggregate.
+      assertThat(sessions.all { it.drivingTime().value > 0L }).isTrue
       assertThat(laps).isNotEmpty
       assertThat(laps.any { it.personalBest.value }).isTrue
     }

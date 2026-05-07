@@ -13,9 +13,9 @@ import kotlin.concurrent.atomics.incrementAndFetch
  * Lap counts are incremented atomically on each [LAPCOMPLETED] event.
  *
  * Lap validity is tracked by recording the latest [currentLapIsInvalid] flag from each
- * [REALTIME_CAR_UPDATE] message. ACC resets the flag to 0 (valid) at the start of every
- * new lap and sets it to 1 if a track-limits violation occurs during that lap. Reading the
- * flag at [LAPCOMPLETED] therefore reflects whether the just-finished lap was clean.
+ * [REALTIME_CAR_UPDATE] message. ACC resets the flag to 0 (valid) at the start of every new lap and
+ * sets it to 1 if a track-limits violation occurs during that lap. Reading the flag at
+ * [LAPCOMPLETED] therefore reflects whether the just-finished lap was clean.
  */
 class SessionState {
   @OptIn(ExperimentalAtomicApi::class) private val lapCounts = mutableMapOf<CarId, AtomicInt>()
@@ -39,8 +39,8 @@ class SessionState {
     LapNumber(lapCounts.getOrPut(carId) { AtomicInt(0) }.incrementAndFetch())
 
   /**
-   * Called on every [REALTIME_CAR_UPDATE]. Records whether the car's current lap is still
-   * valid so [isValidLap] can read the correct value when the lap completes.
+   * Called on every [REALTIME_CAR_UPDATE]. Records whether the car's current lap is still valid so
+   * [isValidLap] can read the correct value when the lap completes.
    */
   fun updateCurrentLapValidity(carId: CarId, isValid: Boolean) {
     currentLapValid[carId] = isValid

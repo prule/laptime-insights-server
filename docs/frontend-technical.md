@@ -36,7 +36,7 @@ frontend/src/
   hooks/
     useUrlState.ts    # URL querystring read/write helpers
   lib/
-    format.ts         # formatLapTime / formatDate / formatDuration / formatNumber
+    format.ts         # formatLapTime / formatDate / formatDrivingTime / formatNumber
   providers/
     DataModeProvider.tsx   # mock|live toggle + apiBase, persisted to localStorage
     TimeRangeProvider.tsx  # global time range (1m/3m/6m/1y/all), persisted to localStorage

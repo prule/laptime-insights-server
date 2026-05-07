@@ -68,18 +68,18 @@ function buildSessions(): SessionResource[] {
   return PROFILES.map((p, i) => {
     const sessionUid = uid(0x100 + i);
     const startedAt = new Date(NOW - (i + 1) * DAY_MS).toISOString();
-    const endedAt = new Date(
-      NOW - (i + 1) * DAY_MS + p.lapCount * p.baseLapMs,
-    ).toISOString();
+    // Approximate the player's drivingTime as lapCount × baseLap. The real backend folds each
+    // recorded lap time individually, but for mock data this is close enough for layout.
+    const drivingTimeMs = p.lapCount * p.baseLapMs;
     return {
       uid: sessionUid,
       startedAt,
-      endedAt,
       simulator: p.simulator,
       track: p.track,
       car: p.car,
       sessionType: p.sessionType,
       playerCarId: p.carId,
+      drivingTimeMs,
       _links: { self: `/api/1/sessions/${sessionUid}` },
     };
   });

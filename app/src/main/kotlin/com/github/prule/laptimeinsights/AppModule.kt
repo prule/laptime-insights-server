@@ -19,7 +19,6 @@ import com.github.prule.laptimeinsights.application.domain.service.lap.FindLapTe
 import com.github.prule.laptimeinsights.application.domain.service.lap.SearchLapService
 import com.github.prule.laptimeinsights.application.domain.service.session.CreateSessionService
 import com.github.prule.laptimeinsights.application.domain.service.session.FindSessionService
-import com.github.prule.laptimeinsights.application.domain.service.session.FinishSessionService
 import com.github.prule.laptimeinsights.application.domain.service.session.SearchSessionOptionsService
 import com.github.prule.laptimeinsights.application.domain.service.session.SearchSessionService
 import com.github.prule.laptimeinsights.application.domain.service.session.StartSessionService
@@ -50,7 +49,14 @@ class AppModule {
     val lapPort = LapPersistenceAdapter(LapRepository(mapper), mapper)
 
     val createLapUseCase =
-      CreateLapService(lapPort, lapPort, lapPort, session.sessionPort, eventPort)
+      CreateLapService(
+        lapPort,
+        lapPort,
+        lapPort,
+        session.sessionPort,
+        session.sessionPort,
+        eventPort,
+      )
     val searchLapUseCase = SearchLapService(lapPort)
     val findLapUseCase = FindLapService(lapPort)
     val findLapTelemetryUseCase =
@@ -67,7 +73,6 @@ class AppModule {
     val createSessionUseCase = CreateSessionService(sessionPort, eventPort)
     val searchSessionUseCase = SearchSessionService(sessionPort)
     val searchSessionOptionsUseCase = SearchSessionOptionsService(sessionPort)
-    val finishSessionUseCase = FinishSessionService(sessionPort, sessionPort, eventPort)
     val updateSessionUseCase = UpdateSessionService(sessionPort, sessionPort, eventPort)
   }
 }

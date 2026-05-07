@@ -23,6 +23,7 @@ import com.github.prule.laptimeinsights.application.port.out.lap.CreateLapPort
 import com.github.prule.laptimeinsights.application.port.out.lap.SearchLapPort
 import com.github.prule.laptimeinsights.application.port.out.lap.UpdateLapPort
 import com.github.prule.laptimeinsights.application.port.out.session.SearchSessionPort
+import com.github.prule.laptimeinsights.application.port.out.session.UpdateSessionPort
 import com.github.prule.laptimeinsights.tracker.utils.NotFoundException
 import io.mockk.every
 import io.mockk.mockk
@@ -39,29 +40,39 @@ class CreateLapServiceTest {
   private val searchLapPort = mockk<SearchLapPort>()
   private val updateLapPort = mockk<UpdateLapPort>()
   private val searchSessionPort = mockk<SearchSessionPort>()
+  private val updateSessionPort = mockk<UpdateSessionPort>(relaxed = true)
   private val eventPort = mockk<EventPort>(relaxed = true)
   private val service =
-    CreateLapService(createLapPort, searchLapPort, updateLapPort, searchSessionPort, eventPort)
+    CreateLapService(
+      createLapPort,
+      searchLapPort,
+      updateLapPort,
+      searchSessionPort,
+      updateSessionPort,
+      eventPort,
+    )
 
   private val sessionId = SessionId(42L)
   private val sessionUid = Uid()
-  private val existingSession =
+  private val playerCarId = CarId(7)
+
+  private fun session(carId: CarId? = playerCarId) =
     Session(
       id = sessionId,
       uid = sessionUid,
       startedAt = Clock.System.now(),
-      finishedAt = null,
       simulator = Simulator.ACC,
       track = Track("Spa"),
       car = Car("Ferrari"),
       sessionType = SessionType("Race"),
+      playerCarId = carId,
     )
 
   private fun command(
     lapTimeMs: Long,
     lapNumber: Int,
     valid: Boolean = true,
-    carId: Int = 7,
+    carId: Int = playerCarId.value,
   ) =
     CreateLapCommand(
       sessionUid = sessionUid,
@@ -80,7 +91,7 @@ class CreateLapServiceTest {
     val persistedLapUid = Uid()
     val lapSlot = slot<Lap>()
 
-    every { searchSessionPort.searchForOne(any<SessionSearchCriteria>()) } returns existingSession
+    every { searchSessionPort.searchForOne(any<SessionSearchCriteria>()) } returns session()
     every { createLapPort.create(capture(lapSlot)) } answers
       {
         lapSlot.captured.copy(id = persistedLapId, uid = persistedLapUid)
@@ -95,7 +106,7 @@ class CreateLapServiceTest {
     // Service resolved the session and stamped its id/uid onto the new lap before persisting.
     assertThat(lapSlot.captured.sessionId).isEqualTo(sessionId)
     assertThat(lapSlot.captured.sessionUId).isEqualTo(sessionUid)
-    assertThat(lapSlot.captured.carId).isEqualTo(CarId(7))
+    assertThat(lapSlot.captured.carId).isEqualTo(playerCarId)
     assertThat(lapSlot.captured.car).isEqualTo(Car("Audi R8 LMS Evo"))
     assertThat(lapSlot.captured.lapTime).isEqualTo(LapTimeMs(96_745L))
     assertThat(lapSlot.captured.lapNumber).isEqualTo(LapNumber(3))
@@ -123,6 +134,81 @@ class CreateLapServiceTest {
   }
 
   @Test
+  fun `should fold player car lap time into session drivingTime aggregate`() {
+    val cmd = command(lapTimeMs = 96_745L, lapNumber = 3)
+    val sessionSlot = slot<Session>()
+
+    every { searchSessionPort.searchForOne(any<SessionSearchCriteria>()) } returns session()
+    every { createLapPort.create(any()) } answers
+      {
+        firstArg<Lap>().copy(id = LapId(1), uid = Uid())
+      }
+    every { searchLapPort.searchForOne(any<LapSearchCriteria>(), any()) } returns null
+    every { updateLapPort.update(any()) } answers { firstArg() }
+    every { updateSessionPort.update(capture(sessionSlot)) } answers { firstArg() }
+
+    service.createLap(cmd)
+
+    // Player-car lap → session drivingTime now includes this lap's time.
+    assertThat(sessionSlot.captured.drivingTime()).isEqualTo(LapTimeMs(96_745L))
+  }
+
+  @Test
+  fun `invalid player car lap still counts toward drivingTime`() {
+    // drivingTime = "time the player spent on track", not "time spent on valid laps".
+    val cmd = command(lapTimeMs = 80_000L, lapNumber = 5, valid = false)
+    val sessionSlot = slot<Session>()
+
+    every { searchSessionPort.searchForOne(any<SessionSearchCriteria>()) } returns session()
+    every { createLapPort.create(any()) } answers
+      {
+        firstArg<Lap>().copy(id = LapId(1), uid = Uid())
+      }
+    every { updateSessionPort.update(capture(sessionSlot)) } answers { firstArg() }
+
+    service.createLap(cmd)
+
+    assertThat(sessionSlot.captured.drivingTime()).isEqualTo(LapTimeMs(80_000L))
+  }
+
+  @Test
+  fun `competitor lap does not touch session drivingTime`() {
+    // Competitor (carId != playerCarId) → session left alone.
+    val cmd = command(lapTimeMs = 96_745L, lapNumber = 3, carId = 99)
+
+    every { searchSessionPort.searchForOne(any<SessionSearchCriteria>()) } returns session()
+    every { createLapPort.create(any()) } answers
+      {
+        firstArg<Lap>().copy(id = LapId(1), uid = Uid())
+      }
+    every { searchLapPort.searchForOne(any<LapSearchCriteria>(), any()) } returns null
+    every { updateLapPort.update(any()) } answers { firstArg() }
+
+    service.createLap(cmd)
+
+    verify(exactly = 0) { updateSessionPort.update(any()) }
+  }
+
+  @Test
+  fun `lap on session without playerCarId set does not touch session`() {
+    // Pre-EntryListCar: no player car known, so we can't attribute laps yet.
+    val cmd = command(lapTimeMs = 96_745L, lapNumber = 3)
+
+    every { searchSessionPort.searchForOne(any<SessionSearchCriteria>()) } returns
+      session(carId = null)
+    every { createLapPort.create(any()) } answers
+      {
+        firstArg<Lap>().copy(id = LapId(1), uid = Uid())
+      }
+    every { searchLapPort.searchForOne(any<LapSearchCriteria>(), any()) } returns null
+    every { updateLapPort.update(any()) } answers { firstArg() }
+
+    service.createLap(cmd)
+
+    verify(exactly = 0) { updateSessionPort.update(any()) }
+  }
+
+  @Test
   fun `should mark lap as PB and demote previous PB when faster`() {
     val cmd = command(lapTimeMs = 90_000L, lapNumber = 5)
     val createdId = LapId(200L)
@@ -133,7 +219,7 @@ class CreateLapServiceTest {
         uid = Uid(),
         sessionId = sessionId,
         sessionUId = sessionUid,
-        carId = CarId(7),
+        carId = playerCarId,
         car = Car("Audi R8 LMS Evo"),
         recordedAt = Clock.System.now(),
         lapTime = LapTimeMs(95_000L),
@@ -143,7 +229,7 @@ class CreateLapServiceTest {
       )
     val updates = mutableListOf<Lap>()
 
-    every { searchSessionPort.searchForOne(any<SessionSearchCriteria>()) } returns existingSession
+    every { searchSessionPort.searchForOne(any<SessionSearchCriteria>()) } returns session()
     every { createLapPort.create(any()) } answers
       {
         firstArg<Lap>().copy(id = createdId, uid = createdUid)
@@ -172,7 +258,7 @@ class CreateLapServiceTest {
         uid = Uid(),
         sessionId = sessionId,
         sessionUId = sessionUid,
-        carId = CarId(7),
+        carId = playerCarId,
         car = Car("Audi R8 LMS Evo"),
         recordedAt = Clock.System.now(),
         lapTime = LapTimeMs(95_000L),
@@ -181,7 +267,7 @@ class CreateLapServiceTest {
         personalBest = PersonalBest(true),
       )
 
-    every { searchSessionPort.searchForOne(any<SessionSearchCriteria>()) } returns existingSession
+    every { searchSessionPort.searchForOne(any<SessionSearchCriteria>()) } returns session()
     every { createLapPort.create(any()) } answers
       {
         firstArg<Lap>().copy(id = LapId(200L), uid = Uid())
@@ -198,7 +284,7 @@ class CreateLapServiceTest {
   fun `should never promote invalid lap, regardless of lap time`() {
     val cmd = command(lapTimeMs = 80_000L, lapNumber = 5, valid = false)
 
-    every { searchSessionPort.searchForOne(any<SessionSearchCriteria>()) } returns existingSession
+    every { searchSessionPort.searchForOne(any<SessionSearchCriteria>()) } returns session()
     every { createLapPort.create(any()) } answers
       {
         firstArg<Lap>().copy(id = LapId(200L), uid = Uid())
@@ -206,7 +292,7 @@ class CreateLapServiceTest {
 
     val result = service.createLap(cmd)
 
-    // Invalid lap never queries for current PB and never updates anything.
+    // Invalid lap never queries for current PB and never updates anything on the lap side.
     verify(exactly = 0) { searchLapPort.searchForOne(any<LapSearchCriteria>(), any()) }
     verify(exactly = 0) { updateLapPort.update(any()) }
     assertThat(result.personalBest).isEqualTo(PersonalBest(false))

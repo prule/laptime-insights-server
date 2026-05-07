@@ -12,8 +12,8 @@ import kotlinx.serialization.Serializable
  * replaces the corresponding session field.
  *
  * The driving caller is `ClientInitializer`, which builds up `track`, `car`, and `playerCarId`
- * incrementally as ACC telemetry arrives. Unknown values must NOT clobber what is already persisted,
- * hence the leave-alone semantic.
+ * incrementally as ACC telemetry arrives. Unknown values must NOT clobber what is already
+ * persisted, hence the leave-alone semantic.
  *
  * If a future REST endpoint needs to support clearing a field explicitly, that should be modelled
  * with a sentinel/optional rather than overloading `null`.

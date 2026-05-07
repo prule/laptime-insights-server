@@ -24,12 +24,10 @@ import kotlinx.serialization.Serializable
 sealed interface WebSocketMessage {
   /**
    * Sent immediately when a client establishes a WebSocket connection, before the event stream
-   * begins. Clients should reset all live state on receipt — this frame signals that the server
-   * is fresh and any prior in-memory state (active session, laps) no longer exists.
+   * begins. Clients should reset all live state on receipt — this frame signals that the server is
+   * fresh and any prior in-memory state (active session, laps) no longer exists.
    */
-  @Serializable
-  @SerialName("ServerStarted")
-  data object ServerStarted : WebSocketMessage
+  @Serializable @SerialName("ServerStarted") data object ServerStarted : WebSocketMessage
 
   @Serializable
   @SerialName("SessionCreated")
@@ -44,16 +42,12 @@ sealed interface WebSocketMessage {
   data class SessionUpdated(val data: SessionResource) : WebSocketMessage
 
   @Serializable
-  @SerialName("SessionFinished")
-  data class SessionFinished(val data: SessionResource) : WebSocketMessage
-
-  @Serializable
   @SerialName("LapCreated")
   data class LapCreated(val data: LapResource) : WebSocketMessage
 
   /**
-   * Throttled telemetry frame for the player's own car (~5 Hz). Carries everything the Live
-   * screen needs: gear, speed, track position, race position, current lap time, validity, delta.
+   * Throttled telemetry frame for the player's own car (~5 Hz). Carries everything the Live screen
+   * needs: gear, speed, track position, race position, current lap time, validity, delta.
    *
    * Note: ACC's REALTIME_CAR_UPDATE does **not** include throttle or brake inputs — those fields
    * are not available and are therefore absent from this message.

@@ -16,13 +16,19 @@ export type Links = Record<string, string>;
 export interface SessionResource {
   uid: Uid;
   startedAt: Iso8601 | null;
-  endedAt: Iso8601 | null;
   simulator: SimulatorName;
   track: string | null;
   car: string | null;
   sessionType: string;
   /** ACC car index of the player's own car. Null until EntryListCar arrives. */
   playerCarId: number | null;
+  /**
+   * Cumulative time the player's car spent on track in this session, in milliseconds.
+   * Sum of `lapTime` for every lap whose `carId` equals `playerCarId`. Maintained
+   * server-side on every lap insert; clients should display it directly rather than
+   * re-summing the laps list.
+   */
+  drivingTimeMs: number;
   _links: Links;
 }
 

@@ -12,8 +12,8 @@ import com.github.prule.laptimeinsights.application.port.out.car.CreateRealtimeC
  * player's own car, emits a lightweight [PlayerCarUpdated] domain event so the Live screen can
  * refresh without polling.
  *
- * ACC broadcasts at ~20 Hz per car; [emitEveryN] = 2 throttles the WS stream to ~10 Hz which
- * keeps the Live HUD responsive without saturating the WebSocket.
+ * ACC broadcasts at ~20 Hz per car; [emitEveryN] = 2 throttles the WS stream to ~10 Hz which keeps
+ * the Live HUD responsive without saturating the WebSocket.
  */
 class RecordRealtimeCarUpdateService(
   private val createPort: CreateRealtimeCarUpdatePort,

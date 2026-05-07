@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { Card } from "../components/ui/Card";
 import { SectionHeader } from "../components/ui/SectionHeader";
 import { formatLapTime } from "../lib/format";
@@ -25,7 +24,7 @@ interface PlayerCarUpdateData {
 
 type WsMessage =
   | { type: "ServerStarted" }
-  | { type: "SessionCreated" | "SessionStarted" | "SessionUpdated" | "SessionFinished"; data: SessionResource }
+  | { type: "SessionCreated" | "SessionStarted" | "SessionUpdated"; data: SessionResource }
   | { type: "LapCreated"; data: LapResource }
   | { type: "PlayerCarUpdated"; data: PlayerCarUpdateData };
 
@@ -36,7 +35,6 @@ type ConnectionStatus = "connecting" | "connected" | "disconnected" | "error";
 function useLiveEvents(apiUrl: string) {
   const [status, setStatus] = useState<ConnectionStatus>("connecting");
   const [session, setSession] = useState<SessionResource | null>(null);
-  const [finishedSessionUid, setFinishedSessionUid] = useState<string | null>(null);
   const [telemetry, setTelemetry] = useState<PlayerCarUpdateData | null>(null);
   const [laps, setLaps] = useState<LapResource[]>([]);
   // Accumulated world-space coords to draw the track outline.
@@ -92,17 +90,17 @@ function useLiveEvents(apiUrl: string) {
     let ws: WebSocket;
     let closed = false;
 
-    // On mount, look up the most recent session and — if it hasn't finished —
-    // load its current state and lap list so the page is populated even before
-    // any WS event fires. Without this, a freshly loaded page during a lull in
-    // telemetry would stay empty until the next PlayerCarUpdated/LapCreated.
+    // On mount, look up the most recent session and load its current state and lap list so the
+    // page is populated even before any WS event fires. Without this, a freshly loaded page
+    // during a lull in telemetry would stay empty until the next PlayerCarUpdated/LapCreated.
+    // (Sessions no longer carry a finished flag — the most recent one is treated as live.)
     {
       const apiBase = base.replace(/^ws/, "http");
       fetch(`${apiBase}/api/1/sessions?sort=startedAt:DESC&size=1`)
         .then((r) => (r.ok ? r.json() : null))
         .then((page: Page<SessionResource> | null) => {
           const latest = page?.items?.[0];
-          if (!latest || latest.endedAt) return;
+          if (!latest) return;
           setSession(latest);
           playerCarIdRef.current = latest.playerCarId;
           lastSessionUidRef.current = latest.uid;
@@ -160,13 +158,6 @@ function useLiveEvents(apiUrl: string) {
             }
             break;
           }
-          case "SessionFinished": {
-            const s = msg.data as SessionResource;
-            setSession(s);
-            playerCarIdRef.current = s.playerCarId;
-            setFinishedSessionUid(s.uid);
-            break;
-          }
           case "LapCreated": {
             const lap = msg.data as LapResource;
             // Optimistically prepend so the UI reflects the new lap immediately,
@@ -206,7 +197,7 @@ function useLiveEvents(apiUrl: string) {
     };
   }, [apiUrl]);
 
-  return { status, session, finishedSessionUid, telemetry, laps, trackPoints };
+  return { status, session, telemetry, laps, trackPoints };
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -363,16 +354,7 @@ function LiveTrackMap({
 
 export function LiveScreen() {
   const { mode, apiUrl } = useDataMode();
-  const navigate = useNavigate();
-  const { status, session, finishedSessionUid, telemetry, laps, trackPoints } = useLiveEvents(apiUrl);
-
-  // Navigate to the session detail page ~2 s after the session ends so the
-  // backend has time to persist the final state before the page loads.
-  useEffect(() => {
-    if (!finishedSessionUid) return;
-    const timer = setTimeout(() => navigate(`/sessions/${finishedSessionUid}`), 2000);
-    return () => clearTimeout(timer);
-  }, [finishedSessionUid, navigate]);
+  const { status, session, telemetry, laps, trackPoints } = useLiveEvents(apiUrl);
 
   const isLiveMode = mode === "live";
 

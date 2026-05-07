@@ -17,21 +17,35 @@ enum class Simulator {
   F1,
 }
 
+/**
+ * A single recorded session for a simulator + track + car.
+ *
+ * Session lifetime is bounded by [startedAt] only — sessions have no explicit "finished" timestamp.
+ * Activity is instead derived from the laps recorded against the session: [drivingTime] is the
+ * cumulative lap time for the *player's* car (identified by [playerCarId]) and grows as new laps
+ * are recorded. Competitor lap times are recorded but do not contribute to [drivingTime] — it
+ * reflects how long the player was actually on track.
+ */
 data class Session(
   val id: SessionId,
   val uid: Uid,
   private var startedAt: Instant?,
-  private var finishedAt: Instant?,
   val simulator: Simulator,
   val track: Track?,
   val car: Car?,
   val sessionType: SessionType,
   /** ACC car index of the player's own car. Null until the EntryListCar message arrives. */
   val playerCarId: CarId? = null,
+  /**
+   * Cumulative time the player spent on track in this session — sum of [lapTime][Lap.lapTime] for
+   * every lap whose [Lap.carId] equals [playerCarId]. Maintained by `CreateLapService`; readers
+   * should treat it as authoritative rather than re-summing laps.
+   */
+  private var drivingTime: LapTimeMs = LapTimeMs(0),
 ) {
   fun startedAt() = startedAt
 
-  fun finishedAt() = finishedAt
+  fun drivingTime() = drivingTime
 
   fun start(time: Instant) {
     if (canStart()) {
@@ -41,27 +55,19 @@ data class Session(
     }
   }
 
-  fun finish(time: Instant) {
-    if (canFinish()) {
-      finishedAt = time
-    } else {
-      throw IllegalStateException("Session cannot be finished")
-    }
+  /**
+   * Adds [lapTime] to the running [drivingTime] aggregate. Called by `CreateLapService` for every
+   * persisted lap belonging to the player's car so the column stays in sync without a full re-sum.
+   */
+  fun addDriving(lapTime: LapTimeMs) {
+    drivingTime = LapTimeMs(drivingTime.value + lapTime.value)
   }
 
   fun isStarted(): Boolean {
     return startedAt != null
   }
 
-  fun isFinished(): Boolean {
-    return finishedAt != null
-  }
-
   fun canStart(): Boolean {
     return !isStarted()
-  }
-
-  fun canFinish(): Boolean {
-    return isStarted() && !isFinished()
   }
 }

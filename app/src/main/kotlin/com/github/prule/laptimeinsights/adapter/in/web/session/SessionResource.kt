@@ -16,13 +16,14 @@ import kotlinx.serialization.Serializable
 data class SessionResource(
   val uid: Uid,
   val startedAt: Instant?,
-  val endedAt: Instant?,
   val simulator: Simulator,
   val track: Track?,
   val car: Car?,
   val sessionType: SessionType,
   /** ACC car index of the player's own car. Null until the EntryListCar message arrives. */
   val playerCarId: Int?,
+  /** Cumulative time the player spent on track in this session, in milliseconds. */
+  val drivingTimeMs: Long,
   val _links: Map<String, String>,
 ) {
 
@@ -31,12 +32,12 @@ data class SessionResource(
       SessionResource(
         uid = session.uid,
         startedAt = session.startedAt(),
-        endedAt = session.finishedAt(),
         simulator = session.simulator,
         track = session.track,
         car = session.car,
         sessionType = session.sessionType,
         playerCarId = session.playerCarId?.value,
+        drivingTimeMs = session.drivingTime().value,
         _links = linkFactory.build(session),
       )
   }

@@ -248,7 +248,6 @@ class LapRepositoryTest : RepositoryTest(listOf(LapTable, SessionTable)) {
       id = SessionId(0L),
       uid = Uid(),
       startedAt = Clock.System.now(),
-      finishedAt = null,
       simulator = simulator,
       track = track,
       car = car,

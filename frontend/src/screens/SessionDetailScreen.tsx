@@ -14,7 +14,7 @@ import { SectionHeader } from "../components/ui/SectionHeader";
 import { Sparkline } from "../components/ui/Sparkline";
 import { StatCard } from "../components/ui/StatCard";
 import { ErrorState, LoadingState, EmptyState } from "../components/ui/States";
-import { formatDate, formatDuration, formatLapTime, formatTime } from "../lib/format";
+import { formatDate, formatDrivingTime, formatLapTime, formatTime } from "../lib/format";
 
 export function SessionDetailScreen() {
   const { uid } = useParams();
@@ -107,7 +107,7 @@ export function SessionDetailScreen() {
             <div className="font-sans text-sm text-text-muted">{session.car ?? "Unknown car"}</div>
             <div className="font-mono text-xs text-text-muted">
               {formatDate(session.startedAt)} · {formatTime(session.startedAt)} ·{" "}
-              {formatDuration(session.startedAt, session.endedAt)}
+              {formatDrivingTime(session.drivingTimeMs)}
             </div>
           </div>
         </div>

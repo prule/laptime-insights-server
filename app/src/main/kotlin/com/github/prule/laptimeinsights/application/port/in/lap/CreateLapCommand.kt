@@ -13,10 +13,10 @@ import kotlinx.serialization.Serializable
  * Inputs needed to record a freshly completed lap.
  *
  * Note that `personalBest` is intentionally absent — the PB flag is derived inside
- * [com.github.prule.laptimeinsights.application.domain.service.lap.CreateLapService]
- * by comparing the new lap against the existing PB for the same session+car. Callers
- * (the ACC ingest path, DB seeders, etc.) only need to report what telemetry observed:
- * the lap time and whether it was clean.
+ * [com.github.prule.laptimeinsights.application.domain.service.lap.CreateLapService] by comparing
+ * the new lap against the existing PB for the same session+car. Callers (the ACC ingest path, DB
+ * seeders, etc.) only need to report what telemetry observed: the lap time and whether it was
+ * clean.
  */
 @Serializable
 data class CreateLapCommand(

@@ -79,6 +79,11 @@ class DatabaseSeeder(
         val laps = generateLaps(profile, saved, startedAt)
         laps.forEach { lap ->
           val savedLap = createLapPort.create(lap)
+          // Player-car laps contribute to the session's drivingTime aggregate.
+          // CreateLapService does this in production; the seeder writes laps directly via the
+          // port (skipping the service to control PB / event emission), so we mirror the
+          // bookkeeping here.
+          saved.addDriving(savedLap.lapTime)
           createRealtimeCarUpdatePort.batchCreate(
             generateRealtimeCarUpdates(profile, savedLap, saved)
           )
@@ -101,6 +106,7 @@ class DatabaseSeeder(
               )
             competitorLaps.forEach { lap ->
               val savedLap = createLapPort.create(lap)
+              // Competitor lap → no addDriving; drivingTime tracks player only.
               createRealtimeCarUpdatePort.batchCreate(
                 generateRealtimeCarUpdates(profile, savedLap, saved)
               )
@@ -109,7 +115,7 @@ class DatabaseSeeder(
           }
         }
 
-        saved.finish(startedAt + profile.baseLapTime.times(laps.size))
+        // Persist the accumulated drivingTime in one update at the end.
         updateSessionPort.update(saved)
       }
 
@@ -206,7 +212,6 @@ class DatabaseSeeder(
       id = SessionId(0),
       uid = Uid(),
       startedAt = null,
-      finishedAt = null,
       simulator = profile.simulator,
       track = profile.track,
       car = profile.car,

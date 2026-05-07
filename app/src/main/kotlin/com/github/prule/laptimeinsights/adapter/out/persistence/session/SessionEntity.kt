@@ -12,10 +12,10 @@ class SessionEntity(id: EntityID<Long>) : LongEntity(id) {
 
   var uid by SessionTable.uid
   var startedAt by SessionTable.startedAt
-  var finishedAt by SessionTable.finishedAt
   var simulator by SessionTable.simulator
   var track by SessionTable.track
   var car by SessionTable.car
   var sessionType by SessionTable.sessionType
   var playerCarId by SessionTable.playerCarId
+  var drivingTimeMs by SessionTable.drivingTimeMs
 }

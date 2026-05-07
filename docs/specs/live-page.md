@@ -26,8 +26,6 @@ track being driven. Intended to be left up on a second monitor while driving.
   `valid` and `personalBest`; the client renders verbatim.
 - **Mid-session catch-up** — a page loaded after the session has already started
   populates immediately rather than staying empty until the next event arrives.
-- **Auto-redirect on session end** — when the active session finishes,
-  automatically navigate to its session detail page so the driver can review.
 - **Resilient connection** — transparently reconnect on WebSocket drop; show
   the connection state in the header.
 
@@ -36,7 +34,9 @@ track being driven. Intended to be left up on a second monitor while driving.
 - **WebSocket**: `ws://<host>:<port>/api/1/events` — see
   [Real-time Updates](../real-time-updates.md). Frames consumed:
   `ServerStarted`, `SessionCreated`, `SessionStarted`, `SessionUpdated`,
-  `SessionFinished`, `LapCreated`, `PlayerCarUpdated`.
+  `LapCreated`, `PlayerCarUpdated`. Sessions have no explicit "finished" frame —
+  activity is implied by the absence of further laps / telemetry, and the
+  cumulative `drivingTimeMs` aggregate carried on the session.
 - **REST** (used to seed state when the WS connects mid-session):
   - `GET /api/1/sessions?sort=startedAt:DESC&size=1` — most recent session.
   - `GET /api/1/sessions/{uid}` — single-session details.
@@ -62,7 +62,6 @@ sets a `closed` flag so the close handler does not retry.
 |--------------------|--------|
 | `ServerStarted`    | Clear all in-memory state (session, telemetry, laps, track points, refs). The server is fresh; anything we held was stale. |
 | `SessionCreated`, `SessionStarted`, `SessionUpdated` | Replace `session`. Cache `playerCarId` in a ref. If `session.uid` changed, reset laps, track points, and telemetry — a new session has begun. |
-| `SessionFinished`  | Replace `session`. Cache `playerCarId`. Stash `finishedSessionUid` so the redirect timer fires. |
 | `LapCreated`       | Optimistically prepend the lap to local state (deduped by uid), then re-fetch the full server-side lap list for `(sessionUid, playerCarId)` and replace local state with it. |
 | `PlayerCarUpdated` | Replace `telemetry`. If the message is for a session we have not seen before (no prior lifecycle frame), fetch the session via REST and seed the lap list at the same time. Append the world-space coordinate to the track-points buffer; sync to React state every 5 samples; cap the buffer at 2 000 points. |
 
@@ -72,10 +71,11 @@ The WebSocket only delivers events that fire after it opens, so a page loaded
 mid-session has no record of laps recorded earlier. Three independent fetches
 fill the gap:
 
-1. **On mount** — `GET /api/1/sessions?sort=startedAt:DESC&size=1`. If the
-   latest session has `endedAt == null`, seed the `session` state and fetch its
-   lap list. If `endedAt` is set, do nothing — the next session lifecycle event
-   will populate it.
+1. **On mount** — `GET /api/1/sessions?sort=startedAt:DESC&size=1`, seed
+   `session` state, and fetch its lap list. (Sessions no longer carry a
+   "finished" flag — the most recent one is treated as the live session; if
+   nothing is currently being driven the page just sits idle waiting for the
+   next telemetry frame.)
 2. **On every `LapCreated`** — re-fetch the full lap list to overwrite local
    state with the authoritative server view (handles dedup, demoted PBs after
    a faster lap is recorded, and any laps the client missed).
@@ -137,13 +137,6 @@ session.
 - The client treats `valid` and `personalBest` as authoritative server fields
   and never derives them locally. PB derivation lives in
   `CreateLapService.kt`.
-
-## Session-End Redirect
-
-When `SessionFinished` arrives, the page sets `finishedSessionUid` and
-schedules a navigation to `/sessions/{uid}` after **2 seconds**. The delay
-gives the backend time to persist the final state before the detail screen
-loads. The timer is cleared on unmount or if `finishedSessionUid` changes.
 
 ## Ambient Caveat
 

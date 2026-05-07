@@ -22,7 +22,6 @@ import com.github.prule.laptimeinsights.application.port.`in`.car.FindCarCommand
 import com.github.prule.laptimeinsights.application.port.`in`.car.RecordRealtimeCarUpdateCommand
 import com.github.prule.laptimeinsights.application.port.`in`.lap.CreateLapCommand
 import com.github.prule.laptimeinsights.application.port.`in`.session.CreateSessionCommand
-import com.github.prule.laptimeinsights.application.port.`in`.session.FinishSessionCommand
 import com.github.prule.laptimeinsights.application.port.`in`.session.StartSessionCommand
 import com.github.prule.laptimeinsights.application.port.`in`.session.UpdateSessionCommand
 import kotlin.reflect.KClass
@@ -40,11 +39,6 @@ class ClientInitializer(private val appModule: AppModule) {
     listOf(
       AccBroadcastingInbound.SessionPhase.SESSION,
       AccBroadcastingInbound.SessionPhase.PRE_SESSION,
-    )
-  private var sessionFinishPhases =
-    listOf(
-      AccBroadcastingInbound.SessionPhase.SESSION_OVER,
-      AccBroadcastingInbound.SessionPhase.POST_SESSION,
     )
 
   suspend fun initializeClient(configuration: ApplicationClientConfiguration) {
@@ -97,15 +91,6 @@ class ClientInitializer(private val appModule: AppModule) {
                   StartSessionCommand(session!!.uid, Clock.System.now())
                 )
                 logger.info("Session started")
-              }
-
-              if (session != null && sessionFinishPhases.contains(message.phase())) {
-                appModule.session.finishSessionUseCase.finishSession(
-                  FinishSessionCommand(session!!.uid, Clock.System.now())
-                )
-                session = null
-                sessionState = null
-                logger.info("Session ended")
               }
 
               if (session != null && session!!.playerCarId?.value != message.focusedCarIndex()) {

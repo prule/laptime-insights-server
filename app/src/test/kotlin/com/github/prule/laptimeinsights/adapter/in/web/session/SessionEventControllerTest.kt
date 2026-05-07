@@ -43,7 +43,6 @@ class SessionEventControllerTest {
           id = SessionId(1L),
           uid = Uid(),
           startedAt = null,
-          finishedAt = null,
           simulator = Simulator.ACC,
           track = Track("Monza"),
           car = Car("Ferrari"),
