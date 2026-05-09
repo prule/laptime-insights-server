@@ -12,6 +12,7 @@ import com.github.prule.laptimeinsights.application.domain.model.LapNumber
 import com.github.prule.laptimeinsights.application.domain.model.LapSearchCriteria
 import com.github.prule.laptimeinsights.application.domain.model.LapTimeMs
 import com.github.prule.laptimeinsights.application.domain.model.PersonalBest
+import com.github.prule.laptimeinsights.application.domain.model.PlayerLap
 import com.github.prule.laptimeinsights.application.domain.model.Session
 import com.github.prule.laptimeinsights.application.domain.model.SessionId
 import com.github.prule.laptimeinsights.application.domain.model.SessionType
@@ -82,6 +83,29 @@ class LapRepositoryTest : RepositoryTest(listOf(LapTable, SessionTable)) {
 
       assertThat(result.items).hasSize(1)
       assertThat(result.items[0].personalBest).isTrue()
+    }
+  }
+
+  @Test
+  fun `should search for player laps only`() {
+    val playerLap = createTestLap(playerLap = true)
+    val competitorLap = createTestLap(playerLap = false)
+    val nullLap = createTestLap(playerLap = null)
+
+    transaction {
+      repository.create(playerLap)
+      repository.create(competitorLap)
+      repository.create(nullLap)
+
+      val result =
+        repository.search(
+          LapSearchCriteria(playerLap = PlayerLap(true)),
+          PageRequest(1),
+          Sort.noSort(),
+        )
+
+      assertThat(result.items).hasSize(1)
+      assertThat(result.items[0].playerLap).isTrue()
     }
   }
 
@@ -260,6 +284,7 @@ class LapRepositoryTest : RepositoryTest(listOf(LapTable, SessionTable)) {
     personalBest: PersonalBest = PersonalBest(false),
     valid: ValidLap = ValidLap(true),
     recordedAt: Instant = Clock.System.now(),
+    playerLap: Boolean? = true,
   ) =
     Lap(
       id = LapId(0L),
@@ -274,6 +299,6 @@ class LapRepositoryTest : RepositoryTest(listOf(LapTable, SessionTable)) {
       sessionUId = sessionUid,
       car = Car("testCar"),
       track = Track("testTrack"),
-      playerLap = true,
+      playerLap = playerLap,
     )
 }

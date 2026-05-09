@@ -135,6 +135,8 @@ export interface LapFilters {
   carId?: number;
   validLap?: boolean;
   personalBest?: boolean;
+  /** If true, restrict to laps recorded by the player's car in the owning session. */
+  playerLap?: boolean;
   /** Owning-session car name. Backend joins SESSION when set. */
   car?: string;
   /** Owning-session track name. Backend joins SESSION when set. */
@@ -212,6 +214,7 @@ export function useLaps(params: LapFilters & PagingAndSort = {}) {
           carId: params.carId,
           validLap: params.validLap,
           personalBest: params.personalBest,
+          playerLap: params.playerLap,
           car: params.car,
           track: params.track,
           simulator: params.simulator,

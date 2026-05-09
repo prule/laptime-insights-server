@@ -21,6 +21,7 @@ data class LapSearchCriteria(
   val carId: CarId? = null,
   val personalBest: PersonalBest? = null,
   val validLap: ValidLap? = null,
+  val playerLap: PlayerLap? = null,
   val car: Car? = null,
   val track: Track? = null,
   val simulator: Simulator? = null,
