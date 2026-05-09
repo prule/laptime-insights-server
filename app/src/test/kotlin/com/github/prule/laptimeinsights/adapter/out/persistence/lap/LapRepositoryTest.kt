@@ -342,9 +342,7 @@ class LapRepositoryTest : RepositoryTest(listOf(LapTable, SessionTable)) {
         )
       )
       // Null-track lap — must be dropped entirely (no track to attribute the best to)
-      repository.create(
-        createTestLap(track = null, lapTime = LapTimeMs(70_000L), playerLap = true)
-      )
+      repository.create(createTestLap(track = null, lapTime = LapTimeMs(70_000L), playerLap = true))
 
       val result =
         repository.search(
@@ -390,7 +388,8 @@ class LapRepositoryTest : RepositoryTest(listOf(LapTable, SessionTable)) {
           ),
         )
 
-      assertThat(result.items.map { it.track }).containsExactly("Brands Hatch", "Monza", "Zandvoort")
+      assertThat(result.items.map { it.track })
+        .containsExactly("Brands Hatch", "Monza", "Zandvoort")
     }
   }
 }
