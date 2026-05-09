@@ -25,7 +25,7 @@ Read MEMORY.md - this is what you've learned over time
 Use both to shape every task
 
 Memory system
-When I correct you or you learn something new, update the relevant section in MEMORY.md
+When I correct you, or you learn something new, update the relevant section in MEMORY.md
 
 Keep MEMORY.md current. When something changes update it in place - replace outdated info, don't just append it. The
 file should always reflect the latest state.

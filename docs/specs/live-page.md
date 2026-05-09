@@ -11,8 +11,10 @@ track being driven. Intended to be left up on a second monitor while driving.
 - **Live mode gating** — the page is only meaningful when the frontend is in
   `live` data mode (see `DataModeProvider`). In `mock` mode, render a placeholder
   prompting the user to switch modes via the sidebar toggle.
-- **Header** — show track name and session type (e.g. `Snetterton · Practice`)
-  for the active session, plus a connection-status badge.
+- **Header** — show track name, session type, player car model, and player car
+  index (e.g. `Snetterton · Practice · Audi R8 LMS Evo · #12`) for the active
+  session, plus a connection-status badge. Each part is omitted when the
+  corresponding session field is null.
 - **HUD** (gear, speed, position) — large, monospaced cards updated at the rate
   of the inbound `PlayerCarUpdated` stream.
 - **Lap-time row** (current, best, delta) — same telemetry source. Sentinel
@@ -23,7 +25,9 @@ track being driven. Intended to be left up on a second monitor while driving.
 - **Completed laps table** — the list of laps recorded so far for the player
   car in the active session, newest first, showing lap number, lap time, status
   (PB / INVALID / —), and a PB tick column. Server is the source of truth for
-  `valid` and `personalBest`; the client renders verbatim.
+  `valid` and `personalBest`; the client renders verbatim. The table updates
+  only on laps for the player car in the active session — `LapCreated` frames
+  for other cars or other sessions are ignored.
 - **Mid-session catch-up** — a page loaded after the session has already started
   populates immediately rather than staying empty until the next event arrives.
 - **Resilient connection** — transparently reconnect on WebSocket drop; show
@@ -62,7 +66,7 @@ sets a `closed` flag so the close handler does not retry.
 |--------------------|--------|
 | `ServerStarted`    | Clear all in-memory state (session, telemetry, laps, track points, refs). The server is fresh; anything we held was stale. |
 | `SessionCreated`, `SessionStarted`, `SessionUpdated` | Replace `session`. Cache `playerCarId` in a ref. If `session.uid` changed, reset laps, track points, and telemetry — a new session has begun. |
-| `LapCreated`       | Optimistically prepend the lap to local state (deduped by uid), then re-fetch the full server-side lap list for `(sessionUid, playerCarId)` and replace local state with it. |
+| `LapCreated`       | Ignore the frame if `lap.sessionUid` is not the active session, or if `playerCarId` is known and `lap.carId` does not match it. Otherwise, optimistically prepend the lap to local state (deduped by uid), then re-fetch the full server-side lap list for `(sessionUid, playerCarId)` and replace local state with it. |
 | `PlayerCarUpdated` | Replace `telemetry`. If the message is for a session we have not seen before (no prior lifecycle frame), fetch the session via REST and seed the lap list at the same time. Append the world-space coordinate to the track-points buffer; sync to React state every 5 samples; cap the buffer at 2 000 points. |
 
 ## Mid-Session Catch-Up
@@ -76,9 +80,11 @@ fill the gap:
    "finished" flag — the most recent one is treated as the live session; if
    nothing is currently being driven the page just sits idle waiting for the
    next telemetry frame.)
-2. **On every `LapCreated`** — re-fetch the full lap list to overwrite local
-   state with the authoritative server view (handles dedup, demoted PBs after
-   a faster lap is recorded, and any laps the client missed).
+2. **On every player-car `LapCreated` for the active session** — re-fetch the
+   full lap list to overwrite local state with the authoritative server view
+   (handles dedup, demoted PBs after a faster lap is recorded, and any laps the
+   client missed). `LapCreated` frames for other cars or other sessions do not
+   trigger a refetch.
 3. **On a `PlayerCarUpdated` for an unknown session** — fetch the session via
    `GET /api/1/sessions/{uid}` and seed its lap list.
 
