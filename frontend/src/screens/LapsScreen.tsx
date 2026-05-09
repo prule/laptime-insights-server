@@ -34,6 +34,7 @@ export function LapsScreen() {
   const showInvalid = getBool(params, "invalid", false);
   const validOnly = !showInvalid;
   const pbOnly = getBool(params, "pb", false);
+  const playerOnly = getBool(params, "player", false);
   const page = getInt(params, "page", 1);
   const facetsActive = !!(facets.track || facets.car || facets.simulator);
 
@@ -53,6 +54,7 @@ export function LapsScreen() {
     sort: "lapTime:ASC",
     validLap: validOnly ? true : undefined,
     personalBest: pbOnly ? true : undefined,
+    playerLap: playerOnly ? true : undefined,
     car: facets.car,
     track: facets.track,
     simulator: facets.simulator,
@@ -110,7 +112,12 @@ export function LapsScreen() {
             value={pbOnly}
             onChange={(v) => setMany({ pb: v ? true : undefined, page: undefined })}
           />
-          {(facetsActive || pbOnly || !validOnly) && (
+          <Toggle
+            label="My car only"
+            value={playerOnly}
+            onChange={(v) => setMany({ player: v ? true : undefined, page: undefined })}
+          />
+          {(facetsActive || pbOnly || playerOnly || !validOnly) && (
             <button
               onClick={() =>
                 setMany({
@@ -119,6 +126,7 @@ export function LapsScreen() {
                   simulator: undefined,
                   invalid: undefined,
                   pb: undefined,
+                  player: undefined,
                   page: undefined,
                 })
               }

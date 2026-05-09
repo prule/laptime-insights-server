@@ -6,6 +6,7 @@ import com.github.prule.laptimeinsights.application.domain.model.Car
 import com.github.prule.laptimeinsights.application.domain.model.CarId
 import com.github.prule.laptimeinsights.application.domain.model.LapSearchCriteria
 import com.github.prule.laptimeinsights.application.domain.model.PersonalBest
+import com.github.prule.laptimeinsights.application.domain.model.PlayerLap
 import com.github.prule.laptimeinsights.application.domain.model.Simulator
 import com.github.prule.laptimeinsights.application.domain.model.Track
 import com.github.prule.laptimeinsights.application.domain.model.Uid
@@ -94,6 +95,13 @@ class SearchLapController(application: Application, searchLapUseCase: SearchLapU
                   "as a strict boolean are silently ignored."
               required = false
             }
+            query("playerLap") {
+              description =
+                "If `true`, return only laps recorded by the player's car (the focused car of " +
+                  "the owning session). If `false`, return only competitor laps. Omit to ignore. " +
+                  "Values that don't parse as a strict boolean are silently ignored."
+              required = false
+            }
             query("carId") {
               description =
                 "Integer car number. Restricts results to laps recorded by the specified car " +
@@ -166,6 +174,7 @@ fun LapSearchCriteria.Companion.fromParameters(parameters: Parameters): LapSearc
     carId = parameters["carId"]?.toIntOrNull()?.let { CarId(it) },
     personalBest = parameters["personalBest"]?.toBooleanStrictOrNull()?.let { PersonalBest(it) },
     validLap = parameters["validLap"]?.toBooleanStrictOrNull()?.let { ValidLap(it) },
+    playerLap = parameters["playerLap"]?.toBooleanStrictOrNull()?.let { PlayerLap(it) },
     car = parameters["car"]?.let { Car(it) },
     track = parameters["track"]?.let { Track(it) },
     simulator = parameters["simulator"]?.let { Simulator.valueOf(it) },

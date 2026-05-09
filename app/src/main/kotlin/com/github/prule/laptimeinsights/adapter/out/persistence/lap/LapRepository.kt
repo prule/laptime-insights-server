@@ -74,6 +74,7 @@ fun LapSearchCriteria.toQuery(): Query {
   carId?.let { query.andWhere { LapTable.carId eq it.value } }
   personalBest?.let { query.andWhere { LapTable.personalBest eq it.value } }
   validLap?.let { query.andWhere { LapTable.valid eq it.value } }
+  playerLap?.let { query.andWhere { LapTable.playerLap eq it.value } }
 
   car?.let { query.andWhere { SessionTable.car eq it.value } }
   track?.let { query.andWhere { SessionTable.track eq it.value } }
