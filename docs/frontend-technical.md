@@ -80,7 +80,7 @@ The per-row compare buttons navigate to `/compare?track=…&lap1=…&lap2=…` s
 
 ### LapsScreen (`/laps`)
 
-URL params: `track`, `car`, `simulator`, `invalid` (bool, inverted to `validOnly`), `pb` (bool), `player` (bool — restricts to laps recorded by the player's car via `playerLap=true`), `page` (int, default 1). Page size is 50.
+URL params: `track`, `car`, `simulator`, `invalid` (bool, inverted to `validOnly`), `pb` (bool), `all` (bool, inverted — when absent the page filters via `playerLap=true`; set `all=true` to show competitor laps too), `page` (int, default 1). Page size is 50.
 
 Multi-select mode is local component state — selection is transient, not URL-serialised. Selecting a second lap when two are already chosen drops the oldest pick so the most recent two win. Navigates to `/compare` with `lap1` and `lap2` set, plus `track` if a track filter is active.
 
