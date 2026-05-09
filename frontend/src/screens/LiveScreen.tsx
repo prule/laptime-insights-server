@@ -162,6 +162,9 @@ function useLiveEvents(apiUrl: string) {
           }
           case "LapCreated": {
             const lap = msg.data as LapResource;
+            // Ignore laps from other cars or other sessions — the live page only tracks the player.
+            if (lap.sessionUid !== lastSessionUidRef.current) break;
+            if (playerCarIdRef.current !== null && lap.carId !== playerCarIdRef.current) break;
             // Optimistically prepend so the UI reflects the new lap immediately,
             // even if the follow-up REST fetch is slow.
             setLaps((prev) => (prev.some((l) => l.uid === lap.uid) ? prev : [lap, ...prev]));
@@ -396,7 +399,16 @@ export function LiveScreen() {
         <div>
           <div className="font-sans text-xl font-semibold text-text">Live</div>
           <div className="font-sans text-[13px] text-text-muted">
-            {session ? `${session.track ?? "Unknown track"} · ${session.sessionType}` : "Waiting for session…"}
+            {session
+              ? [
+                  session.track ?? "Unknown track",
+                  session.sessionType,
+                  session.car ?? "Unknown car",
+                  session.playerCarId !== null ? `#${session.playerCarId}` : null,
+                ]
+                  .filter(Boolean)
+                  .join(" · ")
+              : "Waiting for session…"}
           </div>
         </div>
         <div className="ml-auto flex items-center gap-4">
