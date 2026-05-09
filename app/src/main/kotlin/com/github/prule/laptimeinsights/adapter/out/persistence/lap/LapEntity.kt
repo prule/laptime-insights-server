@@ -14,6 +14,8 @@ class LapEntity(id: EntityID<Long>) : LongEntity(id) {
           "lapTime" to LapTable.lapTime,
           "valid" to LapTable.valid,
           "carId" to LapTable.carId,
+          "track" to LapTable.track,
+          "recordedAt" to LapTable.recordedAt,
         )
       )
   }

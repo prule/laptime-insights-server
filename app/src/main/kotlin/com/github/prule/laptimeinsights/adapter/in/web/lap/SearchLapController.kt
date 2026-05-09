@@ -2,6 +2,7 @@ package com.github.prule.laptimeinsights.adapter.`in`.web.lap
 
 import com.github.prule.laptimeinsights.adapter.`in`.web.toPageRequest
 import com.github.prule.laptimeinsights.adapter.`in`.web.toSort
+import com.github.prule.laptimeinsights.application.domain.model.AllTimeBest
 import com.github.prule.laptimeinsights.application.domain.model.Car
 import com.github.prule.laptimeinsights.application.domain.model.CarId
 import com.github.prule.laptimeinsights.application.domain.model.LapSearchCriteria
@@ -102,6 +103,14 @@ class SearchLapController(application: Application, searchLapUseCase: SearchLapU
                   "Values that don't parse as a strict boolean are silently ignored."
               required = false
             }
+            query("allTimeBest") {
+              description =
+                "If `true`, post-filter the matched rows to keep only the fastest lap per " +
+                  "`track` (rows with no track are dropped). Pair with `playerLap=true` and " +
+                  "`validLap=true` for the player's all-time best per track. `false` or omitted " +
+                  "leaves results unchanged."
+              required = false
+            }
             query("carId") {
               description =
                 "Integer car number. Restricts results to laps recorded by the specified car " +
@@ -175,6 +184,7 @@ fun LapSearchCriteria.Companion.fromParameters(parameters: Parameters): LapSearc
     personalBest = parameters["personalBest"]?.toBooleanStrictOrNull()?.let { PersonalBest(it) },
     validLap = parameters["validLap"]?.toBooleanStrictOrNull()?.let { ValidLap(it) },
     playerLap = parameters["playerLap"]?.toBooleanStrictOrNull()?.let { PlayerLap(it) },
+    allTimeBest = parameters["allTimeBest"]?.toBooleanStrictOrNull()?.let { AllTimeBest(it) },
     car = parameters["car"]?.let { Car(it) },
     track = parameters["track"]?.let { Track(it) },
     simulator = parameters["simulator"]?.let { Simulator.valueOf(it) },

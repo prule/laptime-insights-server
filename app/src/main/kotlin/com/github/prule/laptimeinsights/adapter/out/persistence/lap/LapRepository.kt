@@ -6,13 +6,16 @@ import com.github.prule.laptimeinsights.application.domain.model.LapSearchCriter
 import com.github.prule.laptimeinsights.tracker.utils.NotFoundException
 import com.github.prule.laptimeinsights.tracker.utils.data.FindByCriteriaRepository
 import com.github.prule.laptimeinsights.tracker.utils.data.FindByIdRepository
+import com.github.prule.laptimeinsights.tracker.utils.data.Order
 import com.github.prule.laptimeinsights.tracker.utils.data.Page
 import com.github.prule.laptimeinsights.tracker.utils.data.PageRequest
 import com.github.prule.laptimeinsights.tracker.utils.data.SearchRepository
 import com.github.prule.laptimeinsights.tracker.utils.data.Sort
 import com.github.prule.laptimeinsights.tracker.utils.data.exposed.firstOrNull
 import com.github.prule.laptimeinsights.tracker.utils.data.exposed.paginate
+import org.jetbrains.exposed.v1.core.Column
 import org.jetbrains.exposed.v1.core.JoinType
+import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.greaterEq
 import org.jetbrains.exposed.v1.core.lessEq
@@ -29,6 +32,9 @@ class LapRepository(private val mapper: LapMapper) :
   fun create(lap: Lap): LapEntity = LapEntity.new { mapper.toEntity(lap, this) }
 
   override fun searchForOne(criteria: LapSearchCriteria, sort: Sort): LapEntity? {
+    if (criteria.allTimeBest?.value == true) {
+      return bestPerTrack(criteria).sortedRows(sort).firstOrNull()?.let { LapEntity.wrapRow(it) }
+    }
     return criteria.toQuery().firstOrNull(sort, LapEntity.sortableFields) { LapEntity.wrapRow(it) }
   }
 
@@ -37,6 +43,14 @@ class LapRepository(private val mapper: LapMapper) :
     pageRequest: PageRequest,
     sort: Sort,
   ): Page<LapEntity> {
+    if (criteria.allTimeBest?.value == true) {
+      val rows = bestPerTrack(criteria).sortedRows(sort)
+      val total = rows.size.toLong()
+      val from = ((pageRequest.page - 1) * pageRequest.size).coerceAtLeast(0)
+      val to = (from + pageRequest.size).coerceAtMost(rows.size)
+      val items = if (from >= rows.size) emptyList() else rows.subList(from, to)
+      return Page(pageRequest, total, items.map { LapEntity.wrapRow(it) })
+    }
     return criteria.toQuery().paginate(pageRequest, sort, LapEntity.sortableFields) {
       LapEntity.wrapRow(it)
     }
@@ -45,6 +59,46 @@ class LapRepository(private val mapper: LapMapper) :
   fun update(lap: Lap): LapEntity {
     return LapEntity.findByIdAndUpdate(lap.id.value) { mapper.toEntity(lap, it) }
       ?: throw NotFoundException("Lap not found")
+  }
+
+  /**
+   * Compute-on-read for `allTimeBest = true`: pulls the rows matching the row-level filters and
+   * keeps the fastest lap per `LAP.track`. Rows with a null track are dropped — a "best per track"
+   * with no track to attribute it to has no meaning. Done in memory; the dashboard surface
+   * (best-per-track) is small (~dozens of tracks per player), and this avoids window-function
+   * gymnastics in Exposed.
+   */
+  private fun bestPerTrack(criteria: LapSearchCriteria): List<ResultRow> {
+    return criteria
+      .toQuery()
+      .toList()
+      .filter { it[LapTable.track] != null }
+      .groupBy { it[LapTable.track] }
+      .mapNotNull { (_, group) -> group.minByOrNull { it[LapTable.lapTime] } }
+  }
+
+  private fun List<ResultRow>.sortedRows(sort: Sort): List<ResultRow> {
+    if (sort.fields.isEmpty()) return this
+    val comparators =
+      sort.fields.mapNotNull { spec ->
+        val col = LapEntity.sortableFields.mapping[spec.field] as? Column<*> ?: return@mapNotNull null
+        @Suppress("UNCHECKED_CAST") val typedCol = col as Column<Comparable<Any>>
+        val nullSafe: Comparator<ResultRow> =
+          Comparator { a, b ->
+            val av = a[typedCol] as Comparable<Any>?
+            val bv = b[typedCol] as Comparable<Any>?
+            when {
+              av == null && bv == null -> 0
+              av == null -> 1
+              bv == null -> -1
+              else -> av.compareTo(bv)
+            }
+          }
+        if (spec.order == Order.ASC) nullSafe else nullSafe.reversed()
+      }
+    if (comparators.isEmpty()) return this
+    val combined = comparators.reduce { acc, c -> acc.then(c) }
+    return sortedWith(combined)
   }
 }
 

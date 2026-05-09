@@ -137,6 +137,8 @@ export async function mockHandler(path: string): Promise<unknown> {
     const carIdParam = query.get("carId");
     const personalBest = query.get("personalBest");
     const validLap = query.get("validLap");
+    const playerLap = query.get("playerLap");
+    const allTimeBest = query.get("allTimeBest");
     const uid = query.get("uid");
     const car = query.get("car");
     const track = query.get("track");
@@ -151,6 +153,8 @@ export async function mockHandler(path: string): Promise<unknown> {
     if (personalBest === "false") items = items.filter((l) => !l.personalBest);
     if (validLap === "true") items = items.filter((l) => l.valid);
     if (validLap === "false") items = items.filter((l) => !l.valid);
+    if (playerLap === "true") items = items.filter((l) => l.playerLap === true);
+    if (playerLap === "false") items = items.filter((l) => l.playerLap === false);
     if (car || track || simulator) {
       // Mirror the backend's SESSION join: filter laps by their owning
       // session's car / track / simulator.
@@ -163,6 +167,16 @@ export async function mockHandler(path: string): Promise<unknown> {
         if (simulator && session.simulator !== simulator) return false;
         return true;
       });
+    }
+    if (allTimeBest === "true") {
+      // Mirror backend: keep the fastest lap per `track`, drop null-track laps.
+      const bestByTrack = new Map<string, LapResource>();
+      for (const l of items) {
+        if (!l.track) continue;
+        const cur = bestByTrack.get(l.track);
+        if (!cur || l.lapTime < cur.lapTime) bestByTrack.set(l.track, l);
+      }
+      items = Array.from(bestByTrack.values());
     }
     items = items.sort(compareLaps(query.get("sort")));
     return delay<Page<LapResource>>(paged(items, page, size));

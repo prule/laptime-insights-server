@@ -9,6 +9,7 @@ import { BarChart } from "../components/ui/BarChart";
 import { ErrorState, LoadingState } from "../components/ui/States";
 import { SessionRow } from "../components/SessionRow";
 import { TrackPracticeChart } from "../components/ui/TrackPracticeChart";
+import { AllTimeBestTable } from "../components/AllTimeBestTable";
 import { formatLapTime, formatNumber } from "../lib/format";
 
 const ONE_DAY_MS = 86_400_000;
@@ -64,6 +65,15 @@ export function OverviewScreen() {
   const from = fromIso ?? undefined;
   const sessionsQuery = useSessions({ size: 100, sort: "startedAt:DESC", from });
   const lapsQuery = useLaps({ size: 1000, sort: "lapTime:ASC", from });
+  // All-time best lap per track for the player. Independent of the time-range
+  // filter — "all-time" means all-time, regardless of the dashboard window.
+  const bestPerTrackQuery = useLaps({
+    playerLap: true,
+    validLap: true,
+    allTimeBest: true,
+    size: 100,
+    sort: "track:ASC",
+  });
   // Full universe of tracks the user has *ever* visited — feeds the practice
   // chart so tracks with zero laps in range still render as "haven't been here
   // lately" placeholders. Not bound to the active range on purpose.
@@ -208,6 +218,11 @@ export function OverviewScreen() {
           sub="Bubble area ∝ laps in range · dashed = no laps yet"
         />
         <TrackPracticeChart items={trackPractice} />
+      </Card>
+
+      <Card className="mb-6">
+        <SectionHeader title="All-time best per track" sub="Player's fastest valid lap" />
+        <AllTimeBestTable laps={bestPerTrackQuery.data?.items ?? []} />
       </Card>
 
       <Card>
