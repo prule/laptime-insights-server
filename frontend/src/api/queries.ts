@@ -137,6 +137,11 @@ export interface LapFilters {
   personalBest?: boolean;
   /** If true, restrict to laps recorded by the player's car in the owning session. */
   playerLap?: boolean;
+  /**
+   * If true, post-filter the matched rows to keep only the fastest lap per `track`.
+   * Pair with `playerLap: true` and `validLap: true` for the player's all-time best per track.
+   */
+  allTimeBest?: boolean;
   /** Owning-session car name. Backend joins SESSION when set. */
   car?: string;
   /** Owning-session track name. Backend joins SESSION when set. */
@@ -215,6 +220,7 @@ export function useLaps(params: LapFilters & PagingAndSort = {}) {
           validLap: params.validLap,
           personalBest: params.personalBest,
           playerLap: params.playerLap,
+          allTimeBest: params.allTimeBest,
           car: params.car,
           track: params.track,
           simulator: params.simulator,

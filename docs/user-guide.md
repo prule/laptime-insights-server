@@ -48,6 +48,10 @@ Short ranges (1M, 3M) use weekly buckets; longer ranges (6M, 1Y, All) switch to 
 
 A bubble chart shows every track you have ever visited. The **area of each bubble is proportional to the number of laps** recorded at that track within the active time range. Tracks with zero laps in the range are shown as dashed outlines — useful for spotting tracks you haven't been back to recently.
 
+### All-time best per track
+
+A table beneath the bubble chart lists the **fastest valid lap you've ever driven at each track**, one row per track. Unlike the rest of the Overview screen, this table is not bound to the active time range — "all-time" means all-time. Each row shows the track, the best lap time, the car you drove that lap in, and the date it was recorded. Click any row to jump to the detail page of the session in which that lap was driven.
+
 ### Recent sessions
 
 A list of your four most recent sessions is shown at the bottom. Click **View all** to jump to the Sessions screen, or click any session row to open its detail page.

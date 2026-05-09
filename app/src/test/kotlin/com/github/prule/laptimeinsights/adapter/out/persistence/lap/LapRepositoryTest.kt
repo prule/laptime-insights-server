@@ -4,6 +4,7 @@ import com.github.prule.laptimeinsights.adapter.out.persistence.RepositoryTest
 import com.github.prule.laptimeinsights.adapter.out.persistence.session.SessionMapper
 import com.github.prule.laptimeinsights.adapter.out.persistence.session.SessionRepository
 import com.github.prule.laptimeinsights.adapter.out.persistence.session.SessionTable
+import com.github.prule.laptimeinsights.application.domain.model.AllTimeBest
 import com.github.prule.laptimeinsights.application.domain.model.Car
 import com.github.prule.laptimeinsights.application.domain.model.CarId
 import com.github.prule.laptimeinsights.application.domain.model.Lap
@@ -285,20 +286,110 @@ class LapRepositoryTest : RepositoryTest(listOf(LapTable, SessionTable)) {
     valid: ValidLap = ValidLap(true),
     recordedAt: Instant = Clock.System.now(),
     playerLap: Boolean? = true,
+    lapTime: LapTimeMs = LapTimeMs(90000L),
+    track: Track? = Track("testTrack"),
   ) =
     Lap(
       id = LapId(0L),
       uid = Uid(),
       recordedAt = recordedAt,
       carId = CarId(1),
-      lapTime = LapTimeMs(90000L),
+      lapTime = lapTime,
       lapNumber = LapNumber(1),
       valid = valid,
       personalBest = personalBest,
       sessionId = sessionId,
       sessionUId = sessionUid,
       car = Car("testCar"),
-      track = Track("testTrack"),
+      track = track,
       playerLap = playerLap,
     )
+
+  @Test
+  fun `allTimeBest keeps fastest valid player lap per track`() {
+    transaction {
+      // Spa: three player laps, fastest is 90s
+      repository.create(
+        createTestLap(track = Track("Spa"), lapTime = LapTimeMs(95_000L), playerLap = true)
+      )
+      repository.create(
+        createTestLap(track = Track("Spa"), lapTime = LapTimeMs(90_000L), playerLap = true)
+      )
+      repository.create(
+        createTestLap(track = Track("Spa"), lapTime = LapTimeMs(92_000L), playerLap = true)
+      )
+      // Monza: two player laps, fastest is 88s
+      repository.create(
+        createTestLap(track = Track("Monza"), lapTime = LapTimeMs(88_000L), playerLap = true)
+      )
+      repository.create(
+        createTestLap(track = Track("Monza"), lapTime = LapTimeMs(89_000L), playerLap = true)
+      )
+      // Imola: a faster competitor lap that should be excluded by playerLap=true
+      repository.create(
+        createTestLap(track = Track("Imola"), lapTime = LapTimeMs(80_000L), playerLap = false)
+      )
+      repository.create(
+        createTestLap(track = Track("Imola"), lapTime = LapTimeMs(91_000L), playerLap = true)
+      )
+      // Spa: an invalid lap that's "faster" — must not become the best
+      repository.create(
+        createTestLap(
+          track = Track("Spa"),
+          lapTime = LapTimeMs(50_000L),
+          playerLap = true,
+          valid = ValidLap(false),
+        )
+      )
+      // Null-track lap — must be dropped entirely (no track to attribute the best to)
+      repository.create(createTestLap(track = null, lapTime = LapTimeMs(70_000L), playerLap = true))
+
+      val result =
+        repository.search(
+          LapSearchCriteria(
+            playerLap = PlayerLap(true),
+            validLap = ValidLap(true),
+            allTimeBest = AllTimeBest(true),
+          ),
+          PageRequest(1, 25),
+          Sort.noSort(),
+        )
+
+      assertThat(result.total).isEqualTo(3L)
+      val byTrack = result.items.associateBy({ it.track }, { it.lapTime })
+      assertThat(byTrack["Spa"]).isEqualTo(90_000L)
+      assertThat(byTrack["Monza"]).isEqualTo(88_000L)
+      assertThat(byTrack["Imola"]).isEqualTo(91_000L)
+    }
+  }
+
+  @Test
+  fun `allTimeBest with track sort orders by track name`() {
+    transaction {
+      repository.create(createTestLap(track = Track("Zandvoort"), lapTime = LapTimeMs(95_000L)))
+      repository.create(createTestLap(track = Track("Brands Hatch"), lapTime = LapTimeMs(80_000L)))
+      repository.create(createTestLap(track = Track("Monza"), lapTime = LapTimeMs(85_000L)))
+
+      val result =
+        repository.search(
+          LapSearchCriteria(
+            playerLap = PlayerLap(true),
+            validLap = ValidLap(true),
+            allTimeBest = AllTimeBest(true),
+          ),
+          PageRequest(1, 25),
+          com.github.prule.laptimeinsights.tracker.utils.data.Sort(
+            listOf(
+              com.github.prule.laptimeinsights.tracker.utils.data.SortBy(
+                "track",
+                com.github.prule.laptimeinsights.tracker.utils.data.Order.ASC,
+              )
+            )
+          ),
+        )
+
+      assertThat(result.items.map { it.track })
+        .containsExactly("Brands Hatch", "Monza", "Zandvoort")
+    }
+  }
 }

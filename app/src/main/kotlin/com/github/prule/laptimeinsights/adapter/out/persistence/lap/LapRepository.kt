@@ -13,11 +13,18 @@ import com.github.prule.laptimeinsights.tracker.utils.data.Sort
 import com.github.prule.laptimeinsights.tracker.utils.data.exposed.firstOrNull
 import com.github.prule.laptimeinsights.tracker.utils.data.exposed.paginate
 import org.jetbrains.exposed.v1.core.JoinType
+import org.jetbrains.exposed.v1.core.RowNumber
+import org.jetbrains.exposed.v1.core.SortOrder
+import org.jetbrains.exposed.v1.core.alias
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.greaterEq
+import org.jetbrains.exposed.v1.core.inSubQuery
+import org.jetbrains.exposed.v1.core.isNotNull
 import org.jetbrains.exposed.v1.core.lessEq
+import org.jetbrains.exposed.v1.core.longLiteral
 import org.jetbrains.exposed.v1.jdbc.Query
 import org.jetbrains.exposed.v1.jdbc.andWhere
+import org.jetbrains.exposed.v1.jdbc.select
 import org.jetbrains.exposed.v1.jdbc.selectAll
 
 class LapRepository(private val mapper: LapMapper) :
@@ -29,7 +36,9 @@ class LapRepository(private val mapper: LapMapper) :
   fun create(lap: Lap): LapEntity = LapEntity.new { mapper.toEntity(lap, this) }
 
   override fun searchForOne(criteria: LapSearchCriteria, sort: Sort): LapEntity? {
-    return criteria.toQuery().firstOrNull(sort, LapEntity.sortableFields) { LapEntity.wrapRow(it) }
+    return resolvedQuery(criteria).firstOrNull(sort, LapEntity.sortableFields) {
+      LapEntity.wrapRow(it)
+    }
   }
 
   override fun search(
@@ -37,7 +46,7 @@ class LapRepository(private val mapper: LapMapper) :
     pageRequest: PageRequest,
     sort: Sort,
   ): Page<LapEntity> {
-    return criteria.toQuery().paginate(pageRequest, sort, LapEntity.sortableFields) {
+    return resolvedQuery(criteria).paginate(pageRequest, sort, LapEntity.sortableFields) {
       LapEntity.wrapRow(it)
     }
   }
@@ -45,6 +54,39 @@ class LapRepository(private val mapper: LapMapper) :
   fun update(lap: Lap): LapEntity {
     return LapEntity.findByIdAndUpdate(lap.id.value) { mapper.toEntity(lap, it) }
       ?: throw NotFoundException("Lap not found")
+  }
+
+  private fun resolvedQuery(criteria: LapSearchCriteria): Query =
+    if (criteria.allTimeBest?.value == true) bestPerTrackQuery(criteria) else criteria.toQuery()
+
+  /**
+   * SQL-side dedup for `allTimeBest = true`: ranks each filtered row with `ROW_NUMBER()`
+   * partitioned by `LAP.track` and ordered by `lap_time, id`, then keeps `rn = 1`. The `id`
+   * tiebreaker makes the pick deterministic when two laps share the same time on the same track.
+   * Rows with a null track are dropped — a "best per track" with no track to attribute it to has no
+   * meaning.
+   *
+   * Returns a regular `LapTable` query whose rows are the best laps; the caller still applies sort
+   * and pagination at the DB level via `paginate(...)`.
+   */
+  private fun bestPerTrackQuery(criteria: LapSearchCriteria): Query {
+    val rnAlias =
+      RowNumber()
+        .over()
+        .partitionBy(LapTable.track)
+        .orderBy(LapTable.lapTime to SortOrder.ASC, LapTable.id to SortOrder.ASC)
+        .alias("rn")
+
+    val ranked =
+      criteria
+        .toQuery()
+        .andWhere { LapTable.track.isNotNull() }
+        .adjustSelect { select(LapTable.id, rnAlias) }
+        .alias("ranked")
+
+    val bestIds = ranked.select(ranked[LapTable.id]).where { ranked[rnAlias] eq longLiteral(1L) }
+
+    return LapTable.selectAll().where { LapTable.id inSubQuery bestIds }
   }
 }
 

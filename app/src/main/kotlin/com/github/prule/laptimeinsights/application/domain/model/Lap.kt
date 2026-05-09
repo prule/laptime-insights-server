@@ -38,6 +38,8 @@ value class LapTimeMs(val value: Long) {
 
 @Serializable @JvmInline value class PlayerLap(val value: Boolean)
 
+@Serializable @JvmInline value class AllTimeBest(val value: Boolean)
+
 @Serializable
 data class Lap(
   val id: LapId,
