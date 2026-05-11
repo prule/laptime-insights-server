@@ -30,10 +30,9 @@ Four stat cards sit at the top of the page:
 
 - **Total Sessions** — how many sessions fall inside the active time range.
 - **Total Laps** — total lap count for the range.
-- **Best Lap** — your fastest valid lap across all sessions in the range.
-- **Avg Lap** — mean lap time across all valid laps in the range.
+- **Driving Time** — total on-track time for your car across all sessions in the range (sum of player-car lap times; pit/idle periods are excluded).
 
-The header also displays your **Personal Best** in large text in the top-right corner.
+The header also displays your **Streak** in the top-right corner — the number of consecutive calendar days, ending on your most recent session, on which you drove. The label beneath the number shows when the streak last ticked: `today` or `yesterday` means it's still alive (green), anything older means the streak has ended (muted) and the badge shows the date it broke.
 
 ### Activity charts
 

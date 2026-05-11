@@ -10,10 +10,50 @@ import { ErrorState, LoadingState } from "../components/ui/States";
 import { SessionRow } from "../components/SessionRow";
 import { TrackPracticeChart } from "../components/ui/TrackPracticeChart";
 import { AllTimeBestTable } from "../components/AllTimeBestTable";
-import { formatLapTime, formatNumber } from "../lib/format";
+import { formatDrivingTime, formatNumber } from "../lib/format";
 
 const ONE_DAY_MS = 86_400_000;
 const ONE_WEEK_MS = 7 * ONE_DAY_MS;
+
+/**
+ * Local-calendar key (YYYY-MM-DD) so two timestamps on the same day collapse to one streak entry
+ * regardless of time-of-day. Uses local timezone — a session that starts late at night counts on
+ * the day the player perceives it as.
+ */
+function dayKey(ms: number): string {
+  const d = new Date(ms);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+function parseDayKey(key: string): Date {
+  const [y, m, d] = key.split("-").map(Number);
+  return new Date(y!, (m ?? 1) - 1, d ?? 1);
+}
+
+/**
+ * Number of consecutive calendar days ending at the most recent session day. `lastDate` is the
+ * most recent day with a session (or null when there are no sessions). The header decides whether
+ * the streak is "live" (last day is today or yesterday) or "ended" based on `lastDate`.
+ */
+function computeStreak(timestamps: string[]): { days: number; lastDate: Date | null } {
+  if (timestamps.length === 0) return { days: 0, lastDate: null };
+  const keys = Array.from(new Set(timestamps.map((t) => dayKey(new Date(t).getTime())))).sort();
+  const desc = keys.slice().reverse();
+  const lastDate = parseDayKey(desc[0]!);
+  let streak = 1;
+  let prev = lastDate;
+  for (let i = 1; i < desc.length; i++) {
+    const cur = parseDayKey(desc[i]!);
+    const diffDays = Math.round((prev.getTime() - cur.getTime()) / ONE_DAY_MS);
+    if (diffDays === 1) {
+      streak++;
+      prev = cur;
+    } else {
+      break;
+    }
+  }
+  return { days: streak, lastDate };
+}
 
 /**
  * Group timestamps into N contiguous buckets ending at `anchor`. Bucket width
@@ -98,21 +138,40 @@ export function OverviewScreen() {
 
   const stats = useMemo(() => {
     const sessions = sessionsQuery.data?.items ?? [];
-    const validLaps = playerLaps.filter((l) => l.valid);
-    const bestLap = validLaps.length > 0
-      ? validLaps.reduce((best, l) => (l.lapTime < best ? l.lapTime : best), validLaps[0]!.lapTime)
-      : null;
-    const avgMs =
-      validLaps.length > 0
-        ? validLaps.reduce((acc, l) => acc + l.lapTime, 0) / validLaps.length
-        : null;
+    // Sum of session driving time (player-car on-track time) over the visible window. Bounded by
+    // the sessions page size (100); for ranges with more sessions a server-side aggregate would
+    // be the next step.
+    const drivingTimeMs = sessions.reduce(
+      (acc, s) => acc + (s.drivingTimeMs ?? 0),
+      0,
+    );
     return {
       totalSessions: sessionsQuery.data?.total ?? sessions.length,
       totalLaps: playerLaps.length,
-      bestLap,
-      avgLap: avgMs,
+      drivingTimeMs,
     };
   }, [sessionsQuery.data, playerLaps]);
+
+  // Streak is a global property of the activity timeline, intentionally not bound to the time
+  // range filter — a streak truncated by the range would be misleading.
+  const streak = useMemo(() => {
+    const timestamps = (sessionsQuery.data?.items ?? [])
+      .map((s) => s.startedAt)
+      .filter((t): t is string => !!t);
+    const { days, lastDate } = computeStreak(timestamps);
+    if (days === 0 || !lastDate) return { days: 0, live: false, lastLabel: null as string | null };
+    const today = new Date();
+    const todayMs = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
+    const diffDays = Math.round((todayMs - lastDate.getTime()) / ONE_DAY_MS);
+    const live = diffDays <= 1; // today or yesterday → still alive
+    const lastLabel =
+      diffDays === 0
+        ? "today"
+        : diffDays === 1
+          ? "yesterday"
+          : `ended ${lastDate.toLocaleDateString("en-GB", { day: "2-digit", month: "short" })}`;
+    return { days, live, lastLabel };
+  }, [sessionsQuery.data]);
 
   const sessionStarts = useMemo(
     () => (sessionsQuery.data?.items ?? []).map((s) => s.startedAt).filter((t): t is string => !!t),
@@ -189,16 +248,22 @@ export function OverviewScreen() {
           </div>
         </div>
         <div className="ml-auto text-right">
-          <div className="font-mono text-[11px] tracking-[0.08em] text-text-muted">PERSONAL BEST</div>
-          <div className="font-mono text-2xl font-bold text-ok">{formatLapTime(stats.bestLap)}</div>
+          <div className="font-mono text-[11px] tracking-[0.08em] text-text-muted">STREAK</div>
+          <div
+            className={`font-mono text-2xl font-bold ${streak.live ? "text-ok" : "text-text-muted"}`}
+          >
+            {streak.days > 0 ? `${streak.days}d` : "—"}
+          </div>
+          {streak.lastLabel && (
+            <div className="font-sans text-[11px] text-text-muted">{streak.lastLabel}</div>
+          )}
         </div>
       </div>
 
-      <div className="mb-6 grid grid-cols-4 gap-3">
+      <div className="mb-6 grid grid-cols-3 gap-3">
         <StatCard label="Total Sessions" value={formatNumber(stats.totalSessions)} accent="cyan" sub="all-time" />
         <StatCard label="Total Laps" value={formatNumber(stats.totalLaps)} accent="accent" sub="all-time" />
-        <StatCard label="Best Lap" value={formatLapTime(stats.bestLap)} accent="ok" />
-        <StatCard label="Avg Lap" value={formatLapTime(stats.avgLap)} accent="warn" sub="across valid laps" />
+        <StatCard label="Driving Time" value={formatDrivingTime(stats.drivingTimeMs)} accent="warn" sub="player on-track time" />
       </div>
 
       <div className="mb-6 grid grid-cols-2 gap-4">
