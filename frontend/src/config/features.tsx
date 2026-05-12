@@ -5,6 +5,7 @@ import { LiveScreen } from "../screens/LiveScreen";
 import { OverviewScreen } from "../screens/OverviewScreen";
 import { SessionDetailScreen } from "../screens/SessionDetailScreen";
 import { SessionsScreen } from "../screens/SessionsScreen";
+import type { Feature } from "./feature-types";
 
 /**
  * Frontend mirror of the backend `Feature` enum. Each entry is the single source of truth for one
@@ -15,10 +16,11 @@ import { SessionsScreen } from "../screens/SessionsScreen";
  * `rel` matches the link relation emitted by `GET /api/1` on the backend — when that link is
  * absent the feature is treated as disabled, its nav + routes are hidden, and its queries are
  * short-circuited (see `FeaturesProvider` + `useFeatureEnabled`).
+ *
+ * The `Feature` union and `FEATURES` list live in `feature-types.ts` (no React/screen imports)
+ * to keep low-level modules — providers and api hooks — out of the screen-component cycle.
  */
-export type Feature = "overview" | "sessions" | "laps" | "compare" | "live";
-
-export const FEATURES: Feature[] = ["overview", "sessions", "laps", "compare", "live"];
+export { FEATURES, type Feature } from "./feature-types";
 
 export interface FeatureRoute {
   /** React Router path relative to the AppShell root. */
