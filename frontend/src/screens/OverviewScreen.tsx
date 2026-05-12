@@ -97,14 +97,29 @@ function bucketStarts(plan: BucketPlan, anchor: number): Date[] {
 
 /**
  * Bar-chart x-axis labels. Kept short so they fit in the 3-column dashboard layout — full date
- * context is implicit in the card's `bucketSub` ("last N weeks/months"). Weeks show the day of
- * month; months show the 3-letter month name. `truncate` on the label container is the backstop
- * when the column is very narrow.
+ * context is exposed on hover via the chart's `title` tooltip. Weeks show the day of month;
+ * months show the 3-letter month name.
  */
 function bucketLabel(start: Date, unit: BucketPlan["unit"]): string {
   return unit === "week"
     ? start.toLocaleDateString("en-GB", { day: "2-digit" })
     : start.toLocaleDateString("en-GB", { month: "short" });
+}
+
+/**
+ * Hover-tooltip text for a bucket: the full human-readable date so the reader can disambiguate
+ * the terse on-screen label. Format mirrors the format we use elsewhere in the UI ("Mon, 06 Apr
+ * 2026" / "Apr 2026").
+ */
+function bucketTitle(start: Date, unit: BucketPlan["unit"]): string {
+  return unit === "week"
+    ? `Week of ${start.toLocaleDateString("en-GB", {
+        weekday: "short",
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+      })}`
+    : start.toLocaleDateString("en-GB", { month: "long", year: "numeric" });
 }
 
 /**
@@ -130,10 +145,11 @@ function alignAggregate<B extends { key: string }>(
   plan: BucketPlan,
   anchor: number,
   getValue: (b: B) => number,
-): { label: string; value: number }[] {
+): { label: string; title: string; value: number }[] {
   const lookup = new Map((buckets ?? []).map((b) => [b.key, getValue(b)]));
   return bucketStarts(plan, anchor).map((start) => ({
     label: bucketLabel(start, plan.unit),
+    title: bucketTitle(start, plan.unit),
     value: lookup.get(bucketStartKey(start, plan.unit)) ?? 0,
   }));
 }

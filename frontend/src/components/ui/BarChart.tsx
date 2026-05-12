@@ -1,5 +1,10 @@
 export interface BarChartProps {
-  data: { label: string; value: number }[];
+  /**
+   * One entry per bar. `label` renders below the bar (kept terse to fit narrow columns);
+   * `title`, when supplied, becomes the native hover tooltip — use it to expose the full date
+   * or any extra context that doesn't fit in the visible label.
+   */
+  data: { label: string; value: number; title?: string }[];
   /** Tailwind color class root (e.g. `cyan`, `accent`). */
   colorClass?: "cyan" | "accent" | "warn" | "ok";
   height?: number;
@@ -20,11 +25,11 @@ export function BarChart({ data, colorClass = "cyan", height = 80 }: BarChartPro
       {data.map((d, i) => (
         <div
           key={`${d.label}-${i}`}
+          title={d.title}
           // min-w-0 lets the column shrink narrower than its label width — needed in 3-column card
-          // layouts where bars get crowded. The label below is then allowed to overflow into the
-          // gap *visually*, but the column itself stays inside the card and the parent's
-          // overflow-hidden clips any genuine overflow at the chart edge.
-          className="flex h-full min-w-0 flex-1 flex-col items-center gap-1"
+          // layouts where bars get crowded. The parent's overflow-hidden clips any genuine
+          // overflow at the chart edge. `title` surfaces the full context on hover.
+          className="flex h-full min-w-0 flex-1 cursor-default flex-col items-center gap-1"
         >
           <div className="flex w-full flex-1 items-end">
             <div
