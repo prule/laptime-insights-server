@@ -33,6 +33,7 @@ class IndexLinkFactory(
     }
     if (Feature.LAPS in enabledFeatures) {
       links[Feature.LAPS.rel] = application.href(LapRoutes())
+      links["lapsAggregate"] = application.href(LapRoutes.Aggregate())
     }
     if (Feature.COMPARE in enabledFeatures) {
       links[Feature.COMPARE.rel] = application.href(LapRoutes.Compare())
