@@ -36,10 +36,11 @@ The header also displays your **Streak** in the top-right corner — the number 
 
 ### Activity charts
 
-Two bar charts show your pace of activity over the active range:
+Three bar charts show your pace of activity over the active range — order mirrors the stat cards above:
 
+- **Sessions per week / month** — how many sessions you ran in each bucket.
 - **Laps per week / month** — how many laps you recorded in each bucket.
-- **Sessions per week / month** — how many sessions you ran.
+- **Driving time per week / month** — total on-track time in each bucket.
 
 Short ranges (1M, 3M) use weekly buckets; longer ranges (6M, 1Y, All) switch to monthly buckets so the chart stays readable.
 
