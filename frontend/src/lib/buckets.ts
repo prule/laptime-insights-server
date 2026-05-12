@@ -1,7 +1,5 @@
 import type { BucketPlan } from "../providers/TimeRangeProvider";
 
-const ONE_DAY_MS = 86_400_000;
-
 /**
  * Build the N bucket start dates the dashboard chart layout uses, ending at the calendar bucket
  * containing `anchor`. Calendar-aligned: weeks start on Monday, months on the 1st. Returned in
@@ -96,7 +94,10 @@ export function latestBucketDate(
 ): Date | null {
   if (!buckets || buckets.length === 0) return null;
   // `YYYY-MM-DD` / `YYYY-MM` sort lexicographically and chronologically.
-  const latestKey = buckets.map((b) => b.key).sort()[buckets.length - 1]!;
+  const latestKey = buckets
+    .map((b) => b.key)
+    .sort()
+    .at(-1)!;
   return parseBucketKey(latestKey, unit);
 }
 
@@ -118,5 +119,3 @@ export function alignAggregate<B extends { key: string }>(
     value: lookup.get(bucketStartKey(start, plan.unit)) ?? 0,
   }));
 }
-
-export { ONE_DAY_MS };
