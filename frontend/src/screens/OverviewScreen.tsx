@@ -1,6 +1,5 @@
 import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import type { UseQueryResult } from "@tanstack/react-query";
 import {
   useLapAggregate,
   useLaps,
@@ -20,18 +19,8 @@ import { TrackPracticeChart } from "../components/ui/TrackPracticeChart";
 import { AllTimeBestTable } from "../components/AllTimeBestTable";
 import { formatDrivingTime, formatNumber } from "../lib/format";
 import { alignAggregate, latestBucketDate } from "../lib/buckets";
+import { combineQueryState } from "../lib/query";
 import { computeStreak, describeStreakFreshness } from "../lib/streak";
-
-/** Reduces a list of TanStack queries down to a single combined loading / first-error view. */
-function combineQueryState(queries: UseQueryResult<unknown>[]): {
-  isLoading: boolean;
-  error: unknown | null;
-} {
-  return {
-    isLoading: queries.some((q) => q.isLoading),
-    error: queries.find((q) => q.isError)?.error ?? null,
-  };
-}
 
 export function OverviewScreen() {
   const navigate = useNavigate();
@@ -249,21 +238,24 @@ export function OverviewScreen() {
         <AllTimeBestTable
           laps={bestPerTrackQuery.data?.items ?? []}
           isLoading={bestPerTrackQuery.isLoading}
+          isError={bestPerTrackQuery.isError}
         />
       </Card>
 
-      <Card>
-        <SectionHeader
-          title="Recent sessions"
-          action={sessionsEnabled ? "View all" : undefined}
-          onAction={sessionsEnabled ? () => navigate("/sessions") : undefined}
-        />
-        <div className="flex flex-col gap-1">
-          {recentSessions.map((s) => (
-            <SessionRow key={s.uid} session={s} />
-          ))}
-        </div>
-      </Card>
+      {sessionsEnabled && (
+        <Card>
+          <SectionHeader
+            title="Recent sessions"
+            action="View all"
+            onAction={() => navigate("/sessions")}
+          />
+          <div className="flex flex-col gap-1">
+            {recentSessions.map((s) => (
+              <SessionRow key={s.uid} session={s} />
+            ))}
+          </div>
+        </Card>
+      )}
     </div>
   );
 }

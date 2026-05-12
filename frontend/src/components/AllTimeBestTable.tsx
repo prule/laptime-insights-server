@@ -12,14 +12,23 @@ import { formatDate, formatLapTime } from "../lib/format";
 export function AllTimeBestTable({
   laps,
   isLoading = false,
+  isError = false,
 }: {
   laps: LapResource[];
   isLoading?: boolean;
+  isError?: boolean;
 }) {
   const navigate = useNavigate();
 
   if (isLoading) {
     return <div className="font-sans text-[12px] text-text-muted">Loading…</div>;
+  }
+  if (isError) {
+    return (
+      <div className="font-sans text-[12px] text-warn">
+        Couldn't load all-time bests.
+      </div>
+    );
   }
   if (laps.length === 0) {
     return (

@@ -1,4 +1,4 @@
-import { ONE_DAY_MS } from "./buckets";
+import { ONE_DAY_MS } from "./time";
 
 /**
  * Local-calendar key (YYYY-MM-DD) so two timestamps on the same day collapse to one streak entry
