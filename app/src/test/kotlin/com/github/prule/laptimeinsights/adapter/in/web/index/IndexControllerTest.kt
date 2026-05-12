@@ -38,8 +38,17 @@ class IndexControllerTest {
     assertThat(response.status).isEqualTo(HttpStatusCode.OK)
     val links = parseLinks(response.bodyAsText())
     assertThat(links.keys)
-      .containsExactlyInAnyOrder("self", "sessions", "sessionOptions", "laps", "compare", "live")
+      .containsExactlyInAnyOrder(
+        "self",
+        "overview",
+        "sessions",
+        "sessionOptions",
+        "laps",
+        "compare",
+        "live",
+      )
     assertThat(links["self"]).isEqualTo("/api/1")
+    assertThat(links["overview"]).isEqualTo("/api/1/sessions")
     assertThat(links["sessions"]).isEqualTo("/api/1/sessions")
     assertThat(links["sessionOptions"]).isEqualTo("/api/1/sessions/options")
     assertThat(links["laps"]).isEqualTo("/api/1/laps")
@@ -61,7 +70,7 @@ class IndexControllerTest {
     val links = parseLinks(client.get("/api/1").bodyAsText())
 
     assertThat(links.keys).containsExactlyInAnyOrder("self", "sessions", "sessionOptions", "laps")
-    assertThat(links).doesNotContainKeys("compare", "live")
+    assertThat(links).doesNotContainKeys("overview", "compare", "live")
   }
 
   @Test

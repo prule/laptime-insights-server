@@ -22,9 +22,12 @@ class IndexLinkFactory(
   override fun build(resource: Unit): Map<String, String> {
     val links = linkedMapOf<String, String>()
     links["self"] = application.href(IndexRoutes())
-    if (Feature.OVERVIEW in enabledFeatures || Feature.SESSIONS in enabledFeatures) {
-      // Overview is a frontend view backed by the sessions feed, so it shares the sessions link.
-      // Either toggle being on is enough to expose the sessions entry-point.
+    // Overview is a frontend-only view backed by the sessions feed; it gets its own rel so the
+    // frontend can hide just the Overview nav without disabling the sessions API.
+    if (Feature.OVERVIEW in enabledFeatures) {
+      links[Feature.OVERVIEW.rel] = application.href(SessionRoutes())
+    }
+    if (Feature.SESSIONS in enabledFeatures) {
       links[Feature.SESSIONS.rel] = application.href(SessionRoutes())
       links["sessionOptions"] = application.href(SessionRoutes.Options())
     }

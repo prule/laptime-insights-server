@@ -58,6 +58,22 @@ function compareLaps(sort: string | null) {
 export async function mockHandler(path: string): Promise<unknown> {
   const { pathname, query } = parsePath(path);
 
+  if (pathname === "/api/1") {
+    // Mock mode mirrors a fully-featured backend so every feature is on. Real-mode toggling is
+    // driven by the Ktor `FEATURE_<NAME>` env vars.
+    return delay({
+      _links: {
+        self: "/api/1",
+        overview: "/api/1/sessions",
+        sessions: "/api/1/sessions",
+        sessionOptions: "/api/1/sessions/options",
+        laps: "/api/1/laps",
+        compare: "/api/1/laps/compare",
+        live: "/api/1/events",
+      },
+    });
+  }
+
   if (pathname === "/api/1/sessions/options") {
     return delay<SessionOptionsResource>(OPTIONS);
   }

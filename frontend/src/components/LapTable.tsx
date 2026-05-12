@@ -133,7 +133,9 @@ export function LapTable({
           <>
             {prefixColumn && <div>{prefixColumn.cell(lap)}</div>}
             <div className="truncate" title={lap.sessionUid}>
-              {onSessionClick ? (
+              {/* Per-record HATEOAS gate: render as a link only when the backend exposed the
+                  `session` rel for this lap (i.e. the `sessions` feature is enabled). */}
+              {onSessionClick && lap._links.session ? (
                 <button
                   type="button"
                   onClick={(e) => { e.stopPropagation(); onSessionClick(lap.sessionUid); }}

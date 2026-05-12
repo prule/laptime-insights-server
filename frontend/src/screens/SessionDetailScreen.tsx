@@ -15,14 +15,18 @@ import { Sparkline } from "../components/ui/Sparkline";
 import { StatCard } from "../components/ui/StatCard";
 import { ErrorState, LoadingState, EmptyState } from "../components/ui/States";
 import { formatDate, formatDrivingTime, formatLapTime, formatTime } from "../lib/format";
+import { useFeatureEnabled } from "../providers/FeaturesProvider";
 
 export function SessionDetailScreen() {
   const { uid } = useParams();
   const navigate = useNavigate();
   const sessionQuery = useSession(uid);
-  const lapsQuery = useSessionLaps(uid);
-  const sessionBestQuery = useSessionBestLap(uid);
-  const trackBestQuery = useTrackBestLap(sessionQuery.data?.track ?? null);
+  const session = sessionQuery.data;
+  const lapsQuery = useSessionLaps(session);
+  const sessionBestQuery = useSessionBestLap(session);
+  const trackBestQuery = useTrackBestLap(session?.track ?? null);
+  const sessionsEnabled = useFeatureEnabled("sessions");
+  const compareEnabled = useFeatureEnabled("compare");
 
   // null = all cars shown
   const [selectedCarId, setSelectedCarId] = useState<number | null>(null);
@@ -66,9 +70,8 @@ export function SessionDetailScreen() {
         <ErrorState error={sessionQuery.error} onRetry={() => sessionQuery.refetch()} />
       </div>
     );
-  if (!sessionQuery.data) return <div className="p-8"><EmptyState title="Session not found" /></div>;
+  if (!session) return <div className="p-8"><EmptyState title="Session not found" /></div>;
 
-  const session = sessionQuery.data;
   const allLaps = lapsQuery.data?.items ?? [];
   const sessionBest = sessionBestQuery.data ?? null;
   const trackBest = trackBestQuery.data ?? null;
@@ -78,12 +81,14 @@ export function SessionDetailScreen() {
 
   return (
     <div className="h-full overflow-y-auto px-8 py-7">
-      <button
-        onClick={() => navigate("/sessions")}
-        className="mb-4 font-mono text-[11px] uppercase tracking-[0.08em] text-text-muted hover:text-text"
-      >
-        ← Back to sessions
-      </button>
+      {sessionsEnabled && (
+        <button
+          onClick={() => navigate("/sessions")}
+          className="mb-4 font-mono text-[11px] uppercase tracking-[0.08em] text-text-muted hover:text-text"
+        >
+          ← Back to sessions
+        </button>
+      )}
 
       <Card className="mb-4">
         <div className="flex items-center gap-5">
@@ -154,50 +159,62 @@ export function SessionDetailScreen() {
             laps={visibleLaps}
             onSessionClick={(uid) => navigate(`/sessions/${uid}`)}
             isRowDimmed={(lap) => playerCarId !== null && lap.carId !== playerCarId}
-            extraColumns={[{
-              header: "Compare",
-              width: "220px",
-              cell: (lap) => {
-                const sessionBestUid = sessionBest?.uid;
-                const trackBestUid = trackBest?.uid;
-                const canVsSessionBest = lap.valid && !!sessionBestUid && sessionBestUid !== lap.uid;
-                const canVsTrackBest = lap.valid && !!trackBestUid && trackBestUid !== lap.uid;
-                return (
-                  <div className="flex flex-wrap gap-1">
-                    <CompareButton
-                      label="vs best"
-                      title={
-                        !canVsSessionBest && lap.uid === sessionBestUid
-                          ? "This lap is the session's best"
-                          : "Compare against this session's fastest valid lap"
-                      }
-                      enabled={canVsSessionBest}
-                      onClick={() => sessionBestUid && navigate(compareUrl(lap.uid, sessionBestUid))}
-                    />
-                    <CompareButton
-                      label="vs PB"
-                      title={
-                        !canVsTrackBest && lap.uid === trackBestUid
-                          ? "This lap is the track PB"
-                          : "Compare against the all-time fastest valid lap at this track"
-                      }
-                      enabled={canVsTrackBest}
-                      onClick={() => trackBestUid && navigate(compareUrl(lap.uid, trackBestUid))}
-                    />
-                    <CompareButton
-                      label="pick…"
-                      title="Open compare screen with this lap pre-selected — pick any other lap to compare against"
-                      enabled={true}
-                      onClick={() =>
-                        navigate(
-                          `/compare?track=${encodeURIComponent(session.track ?? "")}&lap1=${lap.uid}`,
-                        )
-                      }
-                    />
-                  </div>
-                );
-              },
-            }]}
+            extraColumns={
+              compareEnabled
+                ? [
+                    {
+                      header: "Compare",
+                      width: "220px",
+                      cell: (lap) => {
+                        const sessionBestUid = sessionBest?.uid;
+                        const trackBestUid = trackBest?.uid;
+                        const canVsSessionBest =
+                          lap.valid && !!sessionBestUid && sessionBestUid !== lap.uid;
+                        const canVsTrackBest =
+                          lap.valid && !!trackBestUid && trackBestUid !== lap.uid;
+                        return (
+                          <div className="flex flex-wrap gap-1">
+                            <CompareButton
+                              label="vs best"
+                              title={
+                                !canVsSessionBest && lap.uid === sessionBestUid
+                                  ? "This lap is the session's best"
+                                  : "Compare against this session's fastest valid lap"
+                              }
+                              enabled={canVsSessionBest}
+                              onClick={() =>
+                                sessionBestUid && navigate(compareUrl(lap.uid, sessionBestUid))
+                              }
+                            />
+                            <CompareButton
+                              label="vs PB"
+                              title={
+                                !canVsTrackBest && lap.uid === trackBestUid
+                                  ? "This lap is the track PB"
+                                  : "Compare against the all-time fastest valid lap at this track"
+                              }
+                              enabled={canVsTrackBest}
+                              onClick={() =>
+                                trackBestUid && navigate(compareUrl(lap.uid, trackBestUid))
+                              }
+                            />
+                            <CompareButton
+                              label="pick…"
+                              title="Open compare screen with this lap pre-selected — pick any other lap to compare against"
+                              enabled={true}
+                              onClick={() =>
+                                navigate(
+                                  `/compare?track=${encodeURIComponent(session.track ?? "")}&lap1=${lap.uid}`,
+                                )
+                              }
+                            />
+                          </div>
+                        );
+                      },
+                    },
+                  ]
+                : undefined
+            }
           />
         )}
       </Card>

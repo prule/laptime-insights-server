@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useLaps, useSessionOptions, useSessions } from "../api/queries";
+import { useFeatureEnabled } from "../providers/FeaturesProvider";
 import { type BucketPlan, useTimeRange } from "../providers/TimeRangeProvider";
 import { Card } from "../components/ui/Card";
 import { SectionHeader } from "../components/ui/SectionHeader";
@@ -101,6 +102,7 @@ function groupByPlan(
 
 export function OverviewScreen() {
   const navigate = useNavigate();
+  const sessionsEnabled = useFeatureEnabled("sessions");
   const { fromIso, bucketPlan, range } = useTimeRange();
   const from = fromIso ?? undefined;
   const sessionsQuery = useSessions({ size: 100, sort: "startedAt:DESC", from });
@@ -291,7 +293,11 @@ export function OverviewScreen() {
       </Card>
 
       <Card>
-        <SectionHeader title="Recent sessions" action="View all" onAction={() => navigate("/sessions")} />
+        <SectionHeader
+          title="Recent sessions"
+          action={sessionsEnabled ? "View all" : undefined}
+          onAction={sessionsEnabled ? () => navigate("/sessions") : undefined}
+        />
         <div className="flex flex-col gap-1">
           {recentSessions.map((s) => (
             <SessionRow key={s.uid} session={s} />

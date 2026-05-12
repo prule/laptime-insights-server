@@ -1,10 +1,13 @@
 import { NavLink } from "react-router-dom";
-import { NAV_ITEMS } from "../../config/navigation";
+import { FEATURE_CONFIG, FEATURES } from "../../config/features";
 import { useDataMode } from "../../providers/DataModeProvider";
+import { useFeatures } from "../../providers/FeaturesProvider";
 
 export function Sidebar() {
   const { mode, apiUrl, setMode } = useDataMode();
+  const { isEnabled } = useFeatures();
   const isLive = mode === "live";
+  const navItems = FEATURES.filter(isEnabled).map((f) => ({ id: f, ...FEATURE_CONFIG[f].nav }));
 
   return (
     <aside className="flex h-full w-[220px] flex-shrink-0 flex-col border-r border-border bg-sidebar">
@@ -19,11 +22,11 @@ export function Sidebar() {
       </div>
 
       <nav className="flex-1 py-3">
-        {NAV_ITEMS.map((item) => (
+        {navItems.map((item) => (
           <NavLink
             key={item.id}
             to={item.path}
-            end={item.path === "/"}
+            end={item.end ?? false}
             className={({ isActive }) =>
               [
                 "mb-[2px] flex items-center gap-[10px] rounded-r-md border-l-2 px-[18px] py-[10px] text-left transition-colors",

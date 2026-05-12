@@ -74,3 +74,13 @@ export function buildQuery(params: Record<string, string | number | boolean | un
   for (const [k, v] of entries) search.set(k, String(v));
   return `?${search.toString()}`;
 }
+
+/** Append a query string to a URL that may already carry one. */
+export function appendQuery(
+  base: string,
+  params: Parameters<typeof buildQuery>[0],
+): string {
+  const q = buildQuery(params);
+  if (!q) return base;
+  return base.includes("?") ? `${base}&${q.slice(1)}` : `${base}${q}`;
+}
