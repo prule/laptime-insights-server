@@ -1,5 +1,9 @@
 # Memory
 
+## Workflow
+
+- **Run `./gradlew :app:ktfmtFormat` before every commit that touches Kotlin.** The repo formats with ktfmt; commits that skip it produce churn diffs the linter immediately undoes. Treat it as part of the commit, not an optional step.
+
 ## Architectural preferences
 
 - **Aggregate on the server.** When a screen needs a count, sum, group-by or bucketed metric, prefer adding a dedicated aggregation endpoint (e.g. `/laps/aggregate?groupBy=track`, `/sessions/aggregate?bucket=week`) over fetching a large `items` page and reducing on the client. Big queries / large responses are not acceptable just to compute a small number. Default to `size: 1` + server `.total` for "how many", and to a purpose-built aggregate response for "how many per X".
