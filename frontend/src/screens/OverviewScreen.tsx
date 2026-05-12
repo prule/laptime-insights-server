@@ -57,21 +57,23 @@ function computeStreak(timestamps: string[]): { days: number; lastDate: Date | n
 }
 
 /**
- * Group timestamps into N contiguous buckets ending at `anchor`. Bucket width
- * is fixed for `week` but variable for `month` (calendar months step naturally,
- * so each bucket aligns to the start of a real month).
+ * Bucket `points` into N contiguous time buckets ending at `anchor` and sum each bucket's `value`.
+ * Bucket width is fixed for `week` but variable for `month` (calendar months step naturally, so
+ * each bucket aligns to the start of a real month).
  *
- * `anchor` defaults to the most recent timestamp so an "all" range hugs the
- * data's actual end instead of rendering empty trailing buckets.
+ * `anchor` defaults to the most recent timestamp so an "all" range hugs the data's actual end
+ * instead of rendering empty trailing buckets. Pass `value: 1` to get a count chart.
  */
-function groupByPlan(
-  timestamps: string[],
+function bucketize(
+  points: { ts: string; value: number }[],
   plan: BucketPlan,
   anchor?: number,
 ): { label: string; value: number }[] {
-  if (timestamps.length === 0) return [];
-  const sortedMs = timestamps.map((t) => new Date(t).getTime()).sort((a, b) => a - b);
-  const end = anchor ?? sortedMs[sortedMs.length - 1]!;
+  if (points.length === 0) return [];
+  const sorted = points
+    .map((p) => ({ ms: new Date(p.ts).getTime(), value: p.value }))
+    .sort((a, b) => a.ms - b.ms);
+  const end = anchor ?? sorted[sorted.length - 1]!.ms;
 
   const starts: number[] = [];
   if (plan.unit === "week") {
@@ -90,13 +92,15 @@ function groupByPlan(
 
   return starts.map((start, i) => {
     const next = i < starts.length - 1 ? starts[i + 1]! : end + ONE_DAY_MS;
-    const count = sortedMs.filter((t) => t >= start && t < next).length;
+    const value = sorted
+      .filter((p) => p.ms >= start && p.ms < next)
+      .reduce((acc, p) => acc + p.value, 0);
     const date = new Date(start);
     const label =
       plan.unit === "week"
         ? date.toLocaleDateString("en-GB", { day: "2-digit", month: "short" })
         : date.toLocaleDateString("en-GB", { month: "short", year: "2-digit" });
-    return { label, value: count };
+    return { label, value };
   });
 }
 
@@ -175,25 +179,44 @@ export function OverviewScreen() {
     return { days, live, lastLabel };
   }, [sessionsQuery.data]);
 
-  const sessionStarts = useMemo(
-    () => (sessionsQuery.data?.items ?? []).map((s) => s.startedAt).filter((t): t is string => !!t),
-    [sessionsQuery.data],
-  );
-
   // Anchor every chart on "now" when a finite range is active so the rightmost
   // bucket means "this week / this month" — not the most recent data point.
   // For `all`, fall back to the data's max so we don't render empty trailing
   // buckets when the user hasn't recorded anything recently.
   const chartAnchor = range === "all" ? undefined : Date.now();
 
+  const sessionBuckets = useMemo(
+    () =>
+      bucketize(
+        (sessionsQuery.data?.items ?? [])
+          .filter((s): s is typeof s & { startedAt: string } => !!s.startedAt)
+          .map((s) => ({ ts: s.startedAt, value: 1 })),
+        bucketPlan,
+        chartAnchor,
+      ),
+    [sessionsQuery.data, bucketPlan, chartAnchor],
+  );
+
   const lapBuckets = useMemo(
-    () => groupByPlan(playerLaps.map((l) => l.recordedAt), bucketPlan, chartAnchor),
+    () =>
+      bucketize(
+        playerLaps.map((l) => ({ ts: l.recordedAt, value: 1 })),
+        bucketPlan,
+        chartAnchor,
+      ),
     [playerLaps, bucketPlan, chartAnchor],
   );
 
-  const sessionBuckets = useMemo(
-    () => groupByPlan(sessionStarts, bucketPlan, chartAnchor),
-    [sessionStarts, bucketPlan, chartAnchor],
+  const drivingTimeBuckets = useMemo(
+    () =>
+      bucketize(
+        (sessionsQuery.data?.items ?? [])
+          .filter((s): s is typeof s & { startedAt: string } => !!s.startedAt)
+          .map((s) => ({ ts: s.startedAt, value: s.drivingTimeMs ?? 0 })),
+        bucketPlan,
+        chartAnchor,
+      ),
+    [sessionsQuery.data, bucketPlan, chartAnchor],
   );
 
   const bucketSub =
@@ -268,14 +291,18 @@ export function OverviewScreen() {
         <StatCard label="Driving Time" value={formatDrivingTime(stats.drivingTimeMs)} accent="warn" sub="player on-track time" />
       </div>
 
-      <div className="mb-6 grid grid-cols-2 gap-4">
-        <Card>
-          <SectionHeader title={`Laps per ${bucketPlan.unit}`} sub={bucketSub} />
-          <BarChart data={lapBuckets} colorClass="cyan" height={90} />
-        </Card>
+      <div className="mb-6 grid grid-cols-3 gap-4">
         <Card>
           <SectionHeader title={`Sessions per ${bucketPlan.unit}`} sub={bucketSub} />
-          <BarChart data={sessionBuckets} colorClass="accent" height={90} />
+          <BarChart data={sessionBuckets} colorClass="cyan" height={90} />
+        </Card>
+        <Card>
+          <SectionHeader title={`Laps per ${bucketPlan.unit}`} sub={bucketSub} />
+          <BarChart data={lapBuckets} colorClass="accent" height={90} />
+        </Card>
+        <Card>
+          <SectionHeader title={`Driving time per ${bucketPlan.unit}`} sub={bucketSub} />
+          <BarChart data={drivingTimeBuckets} colorClass="warn" height={90} />
         </Card>
       </div>
 
