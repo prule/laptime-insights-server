@@ -24,12 +24,22 @@ object EnvironmentVariables {
   fun h2tcp() = parseBoolean("H2_TCP")
 
   /**
-   * Feature toggle. Each [Feature] is enabled by default; set the corresponding env var to a falsy
-   * value (`false`, `0`, `no`) to hide the feature's link from `GET /api/1`.
+   * Feature toggle. The in-code [Feature.defaultEnabled] applies unless the matching env var is
+   * set: truthy values (`true`, `1`, `yes`) force the feature on, falsy values (`false`, `0`, `no`)
+   * force it off, anything else falls back to the default. The override-via-env-var pattern lets
+   * ops flip a feature without redeploying while keeping the source of truth in code.
    */
   fun featureEnabled(feature: Feature): Boolean {
-    val value = System.getenv(feature.envVar) ?: return true
-    return value.lowercase() !in setOf("false", "0", "no")
+    val value = System.getenv(feature.envVar) ?: return feature.defaultEnabled
+    return when (value.lowercase()) {
+      "true",
+      "1",
+      "yes" -> true
+      "false",
+      "0",
+      "no" -> false
+      else -> feature.defaultEnabled
+    }
   }
 
   fun enabledFeatures(): Set<Feature> = Feature.entries.filter { featureEnabled(it) }.toSet()
