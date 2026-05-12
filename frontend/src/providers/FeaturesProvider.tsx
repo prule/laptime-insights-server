@@ -14,7 +14,7 @@ import { createContext, useContext, useMemo, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { apiGet } from "../api/client";
 import type { Links } from "../api/types";
-import { FEATURES, type Feature } from "../config/features";
+import { FEATURES, type Feature } from "../config/feature-types";
 import { useDataMode } from "./DataModeProvider";
 
 interface IndexResource {
