@@ -80,7 +80,10 @@ function buildSessions(): SessionResource[] {
       sessionType: p.sessionType,
       playerCarId: p.carId,
       drivingTimeMs,
-      _links: { self: `/api/1/sessions/${sessionUid}` },
+      _links: {
+        self: `/api/1/sessions/${sessionUid}`,
+        laps: `/api/1/laps?sessionUid=${sessionUid}`,
+      },
     };
   });
 }
@@ -121,7 +124,11 @@ function buildLapsFor(
       lapNumber: lapIndex,
       valid,
       personalBest,
-      _links: { self: `/api/1/laps/${lapUid}` },
+      _links: {
+        self: `/api/1/laps/${lapUid}`,
+        session: `/api/1/sessions/${session.uid}`,
+        telemetry: `/api/1/laps/${lapUid}/telemetry`,
+      },
     });
   }
   return out;
@@ -236,7 +243,10 @@ export const OPTIONS: SessionOptionsResource = {
     (acc, s) => (s.startedAt && s.startedAt > acc ? s.startedAt : acc),
     SESSIONS[0]?.startedAt ?? new Date(NOW).toISOString(),
   ),
-  _links: { self: "/api/1/sessions/options" },
+  _links: {
+    self: "/api/1/sessions/options",
+    sessions: "/api/1/sessions",
+  },
 };
 
 export function paged<T>(items: T[], page: number, size: number): Page<T> {

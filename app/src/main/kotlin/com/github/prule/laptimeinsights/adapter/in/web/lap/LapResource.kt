@@ -1,6 +1,9 @@
 package com.github.prule.laptimeinsights.adapter.`in`.web.lap
 
+import com.github.prule.laptimeinsights.Feature
 import com.github.prule.laptimeinsights.adapter.`in`.web.LinkFactory
+import com.github.prule.laptimeinsights.adapter.`in`.web.enabledFeatures
+import com.github.prule.laptimeinsights.adapter.`in`.web.session.SessionRoutes
 import com.github.prule.laptimeinsights.application.domain.model.CarId
 import com.github.prule.laptimeinsights.application.domain.model.Lap
 import com.github.prule.laptimeinsights.application.domain.model.LapNumber
@@ -50,6 +53,14 @@ data class LapResource(
 class LapLinkFactory(private val application: Application) : LinkFactory<Lap> {
   override fun build(resource: Lap): Map<String, String> {
     val lap = LapRoutes.LapId(uid = resource.uid.value)
-    return listOfNotNull("self" to application.href(lap)).toMap()
+    val features = application.enabledFeatures()
+    val links = linkedMapOf<String, String>("self" to application.href(lap))
+    if (Feature.SESSIONS in features) {
+      links["session"] = application.href(SessionRoutes.SessionId(uid = resource.sessionUId.value))
+    }
+    // Telemetry is part of the `laps` feature, so its rel is on the same gate as `self`. It only
+    // gets its own toggle if telemetry ever becomes a separate feature.
+    links["telemetry"] = application.href(LapRoutes.LapId.Telemetry(parent = lap))
+    return links
   }
 }

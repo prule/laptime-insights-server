@@ -1,6 +1,9 @@
 package com.github.prule.laptimeinsights.adapter.`in`.web.session
 
+import com.github.prule.laptimeinsights.Feature
 import com.github.prule.laptimeinsights.adapter.`in`.web.LinkFactory
+import com.github.prule.laptimeinsights.adapter.`in`.web.enabledFeatures
+import com.github.prule.laptimeinsights.adapter.`in`.web.lap.LapRoutes
 import com.github.prule.laptimeinsights.application.domain.model.Car
 import com.github.prule.laptimeinsights.application.domain.model.Session
 import com.github.prule.laptimeinsights.application.domain.model.SessionType
@@ -46,6 +49,13 @@ data class SessionResource(
 class SessionLinkFactory(private val application: Application) : LinkFactory<Session> {
   override fun build(resource: Session): Map<String, String> {
     val session = SessionRoutes.SessionId(uid = resource.uid.value)
-    return listOfNotNull("self" to application.href(session)).toMap()
+    val features = application.enabledFeatures()
+    val links = linkedMapOf<String, String>("self" to application.href(session))
+    // Cross-feature rels are omitted when the target feature is off, so the frontend can
+    // gate per-record actions purely by link presence instead of consulting the global toggle.
+    if (Feature.LAPS in features) {
+      links["laps"] = application.href(LapRoutes()) + "?sessionUid=${resource.uid.value}"
+    }
+    return links
   }
 }

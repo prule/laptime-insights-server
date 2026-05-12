@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { appendQuery } from "../api/client";
 import { Card } from "../components/ui/Card";
 import { LapTable } from "../components/LapTable";
 import { SectionHeader } from "../components/ui/SectionHeader";
 import { formatLapTime } from "../lib/format";
 import { useDataMode } from "../providers/DataModeProvider";
-import type { LapResource, Page, SessionResource } from "../api/types";
+import { useFeatures } from "../providers/FeaturesProvider";
+import type { LapResource, Links, Page, SessionResource } from "../api/types";
 
 // ─── WebSocket message types (mirror WebSocketMessage.kt) ────────────────────
 
@@ -34,7 +36,7 @@ type WsMessage =
 
 type ConnectionStatus = "connecting" | "connected" | "disconnected" | "error";
 
-function useLiveEvents(apiUrl: string) {
+function useLiveEvents(apiUrl: string, indexLinks: Links) {
   const [status, setStatus] = useState<ConnectionStatus>("connecting");
   const [session, setSession] = useState<SessionResource | null>(null);
   const [telemetry, setTelemetry] = useState<PlayerCarUpdateData | null>(null);
@@ -45,39 +47,53 @@ function useLiveEvents(apiUrl: string) {
   const lastSessionUidRef = useRef<string | null>(null);
   // Tracks the player's car id without needing to re-create the WS handler on every session update.
   const playerCarIdRef = useRef<number | null>(null);
+  // The full session resource — we keep a ref so `LapCreated` handlers (which run inside a
+  // stale closure) can still follow `session._links.laps`.
+  const sessionRef = useRef<SessionResource | null>(null);
+  useEffect(() => {
+    sessionRef.current = session;
+  }, [session]);
 
-  /** Fetch session details via REST when we connect mid-session (no lifecycle WS event fires). */
+  /**
+   * Fetch session details via REST when we connect mid-session (no lifecycle WS event fires).
+   * Composes the URL from the index `sessions` rel; when that rel is absent the sessions
+   * feature is off and we skip the call.
+   */
   function fetchSession(uid: string, base: string) {
+    if (!indexLinks.sessions) return;
     const apiBase = base.replace(/^ws/, "http");
-    fetch(`${apiBase}/api/1/sessions/${uid}`)
+    fetch(`${apiBase}${indexLinks.sessions}/${uid}`)
       .then((r) => (r.ok ? r.json() : null))
       .then((data: SessionResource | null) => {
         if (data) {
           setSession(data);
           playerCarIdRef.current = data.playerCarId;
-          // Also pull whatever laps already exist so the table is populated immediately,
-          // not only after the next LapCreated event arrives.
-          fetchSessionLaps(data.uid, base, data.playerCarId);
+          // Once we have the session resource, follow its `laps` rel rather than rebuilding
+          // the URL ourselves.
+          fetchSessionLaps(data, base);
         }
       })
       .catch(() => {/* ignore — we'll show what we can */});
   }
 
   /**
-   * Fetch the full list of laps for `sessionUid` (optionally restricted to `carId`)
-   * and replace local lap state. Called on every `LapCreated` so a freshly loaded
-   * page picks up laps recorded before the WS connected.
+   * Fetch the full list of laps for `session` (restricted to its `playerCarId` when known)
+   * and replace local lap state. Follows `session._links.laps` so the URL — and the
+   * laps-feature gate — stays server-driven.
    */
-  function fetchSessionLaps(uid: string, base: string, carId: number | null) {
+  function fetchSessionLaps(session: SessionResource, base: string) {
+    const lapsLink = session._links.laps;
+    if (!lapsLink) return;
     const apiBase = base.replace(/^ws/, "http");
-    const params = new URLSearchParams({
-      sessionUid: uid,
-      page: "1",
-      size: "200",
-      sort: "lapNumber:DESC",
-    });
-    if (carId !== null) params.set("carId", String(carId));
-    fetch(`${apiBase}/api/1/laps?${params.toString()}`)
+    const url =
+      apiBase +
+      appendQuery(lapsLink, {
+        page: 1,
+        size: 200,
+        sort: "lapNumber:DESC",
+        carId: session.playerCarId ?? undefined,
+      });
+    fetch(url)
       .then((r) => (r.ok ? r.json() : null))
       .then((data: Page<LapResource> | null) => {
         if (!data) return;
@@ -87,8 +103,11 @@ function useLiveEvents(apiUrl: string) {
   }
 
   useEffect(() => {
+    const liveLink = indexLinks.live;
+    const sessionsLink = indexLinks.sessions;
+    if (!liveLink) return;
     const base = apiUrl || window.location.origin;
-    const wsUrl = base.replace(/^http/, "ws") + "/api/1/events";
+    const wsUrl = base.replace(/^http/, "ws") + liveLink;
     let ws: WebSocket;
     let closed = false;
 
@@ -96,9 +115,11 @@ function useLiveEvents(apiUrl: string) {
     // page is populated even before any WS event fires. Without this, a freshly loaded page
     // during a lull in telemetry would stay empty until the next PlayerCarUpdated/LapCreated.
     // (Sessions no longer carry a finished flag — the most recent one is treated as live.)
-    {
+    if (sessionsLink) {
       const apiBase = base.replace(/^ws/, "http");
-      fetch(`${apiBase}/api/1/sessions?sort=startedAt:DESC&size=1`)
+      const url =
+        apiBase + appendQuery(sessionsLink, { sort: "startedAt:DESC", size: 1 });
+      fetch(url)
         .then((r) => (r.ok ? r.json() : null))
         .then((page: Page<SessionResource> | null) => {
           const latest = page?.items?.[0];
@@ -106,7 +127,7 @@ function useLiveEvents(apiUrl: string) {
           setSession(latest);
           playerCarIdRef.current = latest.playerCarId;
           lastSessionUidRef.current = latest.uid;
-          fetchSessionLaps(latest.uid, base, latest.playerCarId);
+          fetchSessionLaps(latest, base);
         })
         .catch(() => {/* ignore — WS will populate state once events arrive */});
     }
@@ -168,9 +189,10 @@ function useLiveEvents(apiUrl: string) {
             // Optimistically prepend so the UI reflects the new lap immediately,
             // even if the follow-up REST fetch is slow.
             setLaps((prev) => (prev.some((l) => l.uid === lap.uid) ? prev : [lap, ...prev]));
-            // Then refetch the authoritative full list for this session + player car so
-            // a page that loaded mid-session picks up earlier laps too.
-            fetchSessionLaps(lap.sessionUid, base, playerCarIdRef.current);
+            // Then refetch the authoritative full list. We need the current session resource
+            // (for its `_links.laps`) to do that — `sessionRef.current` carries it.
+            const currentSession = sessionRef.current;
+            if (currentSession) fetchSessionLaps(currentSession, base);
             break;
           }
           case "PlayerCarUpdated": {
@@ -200,7 +222,7 @@ function useLiveEvents(apiUrl: string) {
       closed = true;
       ws?.close();
     };
-  }, [apiUrl]);
+  }, [apiUrl, indexLinks.live, indexLinks.sessions]);
 
   return { status, session, telemetry, laps, trackPoints };
 }
@@ -360,7 +382,8 @@ function LiveTrackMap({
 export function LiveScreen() {
   const navigate = useNavigate();
   const { mode, apiUrl } = useDataMode();
-  const { status, session, telemetry, laps, trackPoints } = useLiveEvents(apiUrl);
+  const { links } = useFeatures();
+  const { status, session, telemetry, laps, trackPoints } = useLiveEvents(apiUrl, links);
 
   const isLiveMode = mode === "live";
 
