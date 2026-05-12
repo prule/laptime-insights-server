@@ -7,8 +7,8 @@ import com.github.prule.laptimeinsights.adapter.out.persistence.session.SessionT
 import com.github.prule.laptimeinsights.application.domain.model.AllTimeBest
 import com.github.prule.laptimeinsights.application.domain.model.Car
 import com.github.prule.laptimeinsights.application.domain.model.CarId
-import com.github.prule.laptimeinsights.application.domain.model.LapAggregateGroupBy
 import com.github.prule.laptimeinsights.application.domain.model.Lap
+import com.github.prule.laptimeinsights.application.domain.model.LapAggregateGroupBy
 import com.github.prule.laptimeinsights.application.domain.model.LapId
 import com.github.prule.laptimeinsights.application.domain.model.LapNumber
 import com.github.prule.laptimeinsights.application.domain.model.LapSearchCriteria
@@ -434,10 +434,9 @@ class LapRepositoryTest : RepositoryTest(listOf(LapTable, SessionTable)) {
       repository.create(createTestLap(recordedAt = day3))
 
       val buckets =
-        repository.aggregate(LapSearchCriteria(), LapAggregateGroupBy.DAY).associateBy(
-          { it.key },
-          { it.count },
-        )
+        repository
+          .aggregate(LapSearchCriteria(), LapAggregateGroupBy.DAY)
+          .associateBy({ it.key }, { it.count })
 
       assertThat(buckets).containsOnlyKeys(dayKey(day1Morning), dayKey(day2), dayKey(day3))
       assertThat(buckets[dayKey(day1Morning)]).isEqualTo(2L)

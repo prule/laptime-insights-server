@@ -5,8 +5,5 @@ import com.github.prule.laptimeinsights.application.domain.model.SessionAggregat
 import com.github.prule.laptimeinsights.application.domain.model.SessionSearchCriteria
 
 interface AggregateSessionsUseCase {
-  fun aggregate(
-    criteria: SessionSearchCriteria,
-    groupBy: SessionAggregateGroupBy,
-  ): SessionAggregate
+  fun aggregate(criteria: SessionSearchCriteria, groupBy: SessionAggregateGroupBy): SessionAggregate
 }

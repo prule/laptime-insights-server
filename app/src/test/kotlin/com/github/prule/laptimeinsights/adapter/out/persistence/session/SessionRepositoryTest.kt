@@ -118,8 +118,12 @@ class SessionRepositoryTest : RepositoryTest(listOf(SessionTable)) {
     val day1Evening = localTime(2026, 4, 10, 18, 0)
     val day2 = localTime(2026, 4, 11, 12, 0)
     transaction {
-      repository.create(createTestSession(startedAt = day1Morning, drivingTime = LapTimeMs(60_000L)))
-      repository.create(createTestSession(startedAt = day1Evening, drivingTime = LapTimeMs(40_000L)))
+      repository.create(
+        createTestSession(startedAt = day1Morning, drivingTime = LapTimeMs(60_000L))
+      )
+      repository.create(
+        createTestSession(startedAt = day1Evening, drivingTime = LapTimeMs(40_000L))
+      )
       repository.create(createTestSession(startedAt = day2, drivingTime = LapTimeMs(30_000L)))
       // Session with no startedAt — must be dropped from the aggregate.
       repository.create(createTestSession(startedAt = null, drivingTime = LapTimeMs(99_999L)))

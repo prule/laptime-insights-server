@@ -5,8 +5,5 @@ import com.github.prule.laptimeinsights.application.domain.model.LapAggregateGro
 import com.github.prule.laptimeinsights.application.domain.model.LapSearchCriteria
 
 interface AggregateLapsPort {
-  fun aggregate(
-    criteria: LapSearchCriteria,
-    groupBy: LapAggregateGroupBy,
-  ): List<LapAggregateBucket>
+  fun aggregate(criteria: LapSearchCriteria, groupBy: LapAggregateGroupBy): List<LapAggregateBucket>
 }

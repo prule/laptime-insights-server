@@ -12,9 +12,9 @@ import io.ktor.utils.io.ExperimentalKtorApi
 
 /**
  * REST controller exposing **`GET /api/1/sessions/aggregate?groupBy={day|week|month}&…`** —
- * server-side `COUNT(*) + SUM(driving_time_ms)` aggregation over the same filter set
- * `GET /api/1/sessions` supports. Each bucket carries both metrics so the dashboard's
- * "Sessions per …" and "Driving time per …" charts share a single request.
+ * server-side `COUNT(*) + SUM(driving_time_ms)` aggregation over the same filter set `GET
+ * /api/1/sessions` supports. Each bucket carries both metrics so the dashboard's "Sessions per …"
+ * and "Driving time per …" charts share a single request.
  *
  * `groupBy` is required; any missing or unknown value yields `400 Bad Request`.
  */

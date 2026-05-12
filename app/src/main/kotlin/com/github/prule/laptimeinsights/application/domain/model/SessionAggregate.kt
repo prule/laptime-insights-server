@@ -3,8 +3,8 @@ package com.github.prule.laptimeinsights.application.domain.model
 import kotlinx.serialization.Serializable
 
 /**
- * Time-bucket dimensions for session aggregations. Sessions only support time grouping (there is
- * no useful per-track bucket for sessions — that lives on the laps aggregate).
+ * Time-bucket dimensions for session aggregations. Sessions only support time grouping (there is no
+ * useful per-track bucket for sessions — that lives on the laps aggregate).
  *
  * Keys are emitted as UTC strings (`YYYY-MM-DD` for day/week, `YYYY-MM` for month).
  */
@@ -22,11 +22,7 @@ enum class SessionAggregateGroupBy {
  * charts share a single endpoint.
  */
 @Serializable
-data class SessionAggregateBucket(
-  val key: String,
-  val count: Long,
-  val drivingTimeMs: Long,
-)
+data class SessionAggregateBucket(val key: String, val count: Long, val drivingTimeMs: Long)
 
 /** Sparse result — empty buckets are omitted; the client fills any zero-count gaps for layout. */
 @Serializable

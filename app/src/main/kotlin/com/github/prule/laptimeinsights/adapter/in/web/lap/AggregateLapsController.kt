@@ -12,10 +12,10 @@ import io.ktor.utils.io.ExperimentalKtorApi
 
 /**
  * REST controller exposing **`GET /api/1/laps/aggregate?groupBy={track|day|week|month}&…`** —
- * server-side `COUNT(*)` aggregation over the same filter set [LapSearchCriteria] supports for
- * `GET /api/1/laps`. The endpoint returns one bucket per dimension value (sparse — empty buckets
- * are omitted) so dashboards can render counts-per-track or counts-per-time-window without ever
- * pulling lap rows.
+ * server-side `COUNT(*)` aggregation over the same filter set [LapSearchCriteria] supports for `GET
+ * /api/1/laps`. The endpoint returns one bucket per dimension value (sparse — empty buckets are
+ * omitted) so dashboards can render counts-per-track or counts-per-time-window without ever pulling
+ * lap rows.
  *
  * `groupBy` is required; any missing or unknown value yields `400 Bad Request`.
  */
@@ -66,8 +66,7 @@ class AggregateLapsController(
 
           parameters {
             query("groupBy") {
-              description =
-                "Required. One of: `track`, `day`, `week`, `month`. Case-insensitive."
+              description = "Required. One of: `track`, `day`, `week`, `month`. Case-insensitive."
               required = true
             }
             query("playerLap") {
@@ -91,7 +90,9 @@ class AggregateLapsController(
           }
 
           responses {
-            HttpStatusCode.OK { description = "Aggregate result with one bucket per dimension value." }
+            HttpStatusCode.OK {
+              description = "Aggregate result with one bucket per dimension value."
+            }
             HttpStatusCode.BadRequest {
               description = "`groupBy` is missing or not one of the supported values."
             }
