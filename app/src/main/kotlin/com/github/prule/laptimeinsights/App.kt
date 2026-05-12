@@ -2,6 +2,7 @@ package com.github.prule.laptimeinsights
 
 import com.github.prule.laptimeinsights.adapter.`in`.web.index.IndexController
 import com.github.prule.laptimeinsights.adapter.`in`.web.setEnabledFeatures
+import com.github.prule.laptimeinsights.adapter.`in`.web.lap.AggregateLapsController
 import com.github.prule.laptimeinsights.adapter.`in`.web.lap.CompareLapsController
 import com.github.prule.laptimeinsights.adapter.`in`.web.lap.FindLapController
 import com.github.prule.laptimeinsights.adapter.`in`.web.lap.FindLapTelemetryController
@@ -140,9 +141,10 @@ private fun Application.initializeSessionControllers(appModule: AppModule) {
 
 private fun Application.initializeLapControllers(appModule: AppModule) {
   SearchLapController(this, appModule.lap.searchLapUseCase)
-  // `Compare` must be registered before `LapId` so the `/compare` literal wins
-  // over the `/{uid}` placeholder when the router resolves a request.
+  // `Compare` and `Aggregate` must be registered before `LapId` so their `/compare` and
+  // `/aggregate` literals win over the `/{uid}` placeholder when the router resolves a request.
   CompareLapsController(this, appModule.lap.compareLapsUseCase)
+  AggregateLapsController(this, appModule.lap.aggregateLapsUseCase)
   FindLapController(this, appModule.lap.findLapUseCase)
   FindLapTelemetryController(this, appModule.lap.findLapTelemetryUseCase)
 }

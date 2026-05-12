@@ -7,6 +7,7 @@ import com.github.prule.laptimeinsights.adapter.out.persistence.session.SessionT
 import com.github.prule.laptimeinsights.application.domain.model.AllTimeBest
 import com.github.prule.laptimeinsights.application.domain.model.Car
 import com.github.prule.laptimeinsights.application.domain.model.CarId
+import com.github.prule.laptimeinsights.application.domain.model.LapAggregateGroupBy
 import com.github.prule.laptimeinsights.application.domain.model.Lap
 import com.github.prule.laptimeinsights.application.domain.model.LapId
 import com.github.prule.laptimeinsights.application.domain.model.LapNumber
@@ -26,6 +27,8 @@ import com.github.prule.laptimeinsights.tracker.utils.data.Sort
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.days
 import kotlin.time.Instant
+import kotlin.time.toJavaInstant
+import kotlin.time.toKotlinInstant
 import org.assertj.core.api.Assertions.assertThat
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.junit.jupiter.api.Test
@@ -390,6 +393,113 @@ class LapRepositoryTest : RepositoryTest(listOf(LapTable, SessionTable)) {
 
       assertThat(result.items.map { it.track })
         .containsExactly("Brands Hatch", "Monza", "Zandvoort")
+    }
+  }
+
+  @Test
+  fun `aggregate by track counts player laps per track and drops null-track rows`() {
+    transaction {
+      repeat(3) { repository.create(createTestLap(track = Track("Spa"), playerLap = true)) }
+      repeat(2) { repository.create(createTestLap(track = Track("Monza"), playerLap = true)) }
+      // Competitor laps should be excluded when filtering playerLap=true.
+      repository.create(createTestLap(track = Track("Spa"), playerLap = false))
+      // Null-track lap must not appear in any bucket.
+      repository.create(createTestLap(track = null, playerLap = true))
+
+      val buckets =
+        repository.aggregate(
+          LapSearchCriteria(playerLap = PlayerLap(true)),
+          LapAggregateGroupBy.TRACK,
+        )
+
+      val byTrack = buckets.associateBy({ it.key }, { it.count })
+      assertThat(byTrack).containsOnlyKeys("Spa", "Monza")
+      assertThat(byTrack["Spa"]).isEqualTo(3L)
+      assertThat(byTrack["Monza"]).isEqualTo(2L)
+    }
+  }
+
+  @Test
+  fun `aggregate by day groups laps by recordedAt date`() {
+    // Anchor times at local midday so they fall on the same wall-clock day in every reasonable TZ;
+    // expected keys are derived from the same system zone the repo uses so the test is portable.
+    val day1Morning = localTime(2026, 4, 10, 9, 0)
+    val day1Evening = localTime(2026, 4, 10, 18, 0)
+    val day2 = localTime(2026, 4, 11, 12, 0)
+    val day3 = localTime(2026, 4, 12, 12, 0)
+    transaction {
+      repository.create(createTestLap(recordedAt = day1Morning))
+      repository.create(createTestLap(recordedAt = day1Evening))
+      repository.create(createTestLap(recordedAt = day2))
+      repository.create(createTestLap(recordedAt = day3))
+
+      val buckets =
+        repository.aggregate(LapSearchCriteria(), LapAggregateGroupBy.DAY).associateBy(
+          { it.key },
+          { it.count },
+        )
+
+      assertThat(buckets).containsOnlyKeys(dayKey(day1Morning), dayKey(day2), dayKey(day3))
+      assertThat(buckets[dayKey(day1Morning)]).isEqualTo(2L)
+      assertThat(buckets[dayKey(day2)]).isEqualTo(1L)
+      assertThat(buckets[dayKey(day3)]).isEqualTo(1L)
+    }
+  }
+
+  @Test
+  fun `aggregate by month emits YYYY-MM keys`() {
+    // Mid-month anchors are TZ-stable; expected keys derived from system zone.
+    val mar = localTime(2026, 3, 15, 12, 0)
+    val apr1 = localTime(2026, 4, 14, 12, 0)
+    val apr2 = localTime(2026, 4, 28, 12, 0)
+    transaction {
+      repository.create(createTestLap(recordedAt = mar))
+      repository.create(createTestLap(recordedAt = apr1))
+      repository.create(createTestLap(recordedAt = apr2))
+
+      val buckets =
+        repository
+          .aggregate(LapSearchCriteria(), LapAggregateGroupBy.MONTH)
+          .associateBy({ it.key }, { it.count })
+
+      assertThat(buckets).containsOnlyKeys(monthKey(mar), monthKey(apr1))
+      assertThat(buckets[monthKey(apr1)]).isEqualTo(2L)
+      assertThat(buckets[monthKey(mar)]).isEqualTo(1L)
+    }
+  }
+
+  /** Build an `Instant` for the supplied year/month/day at the local-TZ wall-clock time. */
+  private fun localTime(year: Int, month: Int, day: Int, hour: Int, minute: Int): Instant =
+    java.time.LocalDateTime.of(year, month, day, hour, minute)
+      .atZone(java.time.ZoneId.systemDefault())
+      .toInstant()
+      .toKotlinInstant()
+
+  private fun dayKey(instant: Instant): String =
+    instant.toJavaInstant().atZone(java.time.ZoneId.systemDefault()).toLocalDate().toString()
+
+  private fun monthKey(instant: Instant): String =
+    instant
+      .toJavaInstant()
+      .atZone(java.time.ZoneId.systemDefault())
+      .toLocalDate()
+      .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM"))
+
+  @Test
+  fun `aggregate honours from and to filters`() {
+    val anchor = Instant.parse("2026-04-15T12:00:00Z")
+    transaction {
+      repository.create(createTestLap(recordedAt = anchor.minus(10.days)))
+      repository.create(createTestLap(recordedAt = anchor.minus(2.days)))
+      repository.create(createTestLap(recordedAt = anchor))
+
+      val buckets =
+        repository.aggregate(
+          LapSearchCriteria(from = anchor.minus(7.days)),
+          LapAggregateGroupBy.DAY,
+        )
+
+      assertThat(buckets.sumOf { it.count }).isEqualTo(2L)
     }
   }
 }

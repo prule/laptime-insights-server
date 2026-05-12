@@ -12,6 +12,7 @@ import com.github.prule.laptimeinsights.adapter.out.persistence.session.SessionP
 import com.github.prule.laptimeinsights.adapter.out.persistence.session.SessionRepository
 import com.github.prule.laptimeinsights.application.domain.service.car.FindCarService
 import com.github.prule.laptimeinsights.application.domain.service.car.RecordRealtimeCarUpdateService
+import com.github.prule.laptimeinsights.application.domain.service.lap.AggregateLapsService
 import com.github.prule.laptimeinsights.application.domain.service.lap.CompareLapsService
 import com.github.prule.laptimeinsights.application.domain.service.lap.CreateLapService
 import com.github.prule.laptimeinsights.application.domain.service.lap.FindLapService
@@ -58,6 +59,7 @@ class AppModule {
         eventPort,
       )
     val searchLapUseCase = SearchLapService(lapPort)
+    val aggregateLapsUseCase = AggregateLapsService(lapPort)
     val findLapUseCase = FindLapService(lapPort)
     val findLapTelemetryUseCase =
       FindLapTelemetryService(lapPort, car.findRealtimeCarUpdateByLapPort)

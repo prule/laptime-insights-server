@@ -44,6 +44,31 @@ function compareSessions(sort: string | null) {
   };
 }
 
+/**
+ * Mirror the backend's `formatBucketKey` — UTC date string for day/week, UTC `YYYY-MM` for month,
+ * lap.track for track. Week uses Monday as start of week (ISO).
+ */
+function aggregateKey(lap: LapResource, groupBy: "track" | "day" | "week" | "month"): string {
+  if (groupBy === "track") return lap.track ?? "";
+  const d = new Date(lap.recordedAt);
+  const y = d.getUTCFullYear();
+  const m = String(d.getUTCMonth() + 1).padStart(2, "0");
+  if (groupBy === "month") return `${y}-${m}`;
+  if (groupBy === "day") {
+    const dd = String(d.getUTCDate()).padStart(2, "0");
+    return `${y}-${m}-${dd}`;
+  }
+  // ISO week start (Monday) in UTC.
+  const dayOfWeek = (d.getUTCDay() + 6) % 7; // 0=Mon … 6=Sun
+  const monday = new Date(
+    Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() - dayOfWeek),
+  );
+  const wy = monday.getUTCFullYear();
+  const wm = String(monday.getUTCMonth() + 1).padStart(2, "0");
+  const wd = String(monday.getUTCDate()).padStart(2, "0");
+  return `${wy}-${wm}-${wd}`;
+}
+
 function compareLaps(sort: string | null) {
   if (!sort) return (a: LapResource, b: LapResource) => a.lapNumber - b.lapNumber;
   const [field, order] = sort.split(",")[0]!.split(":");
@@ -68,6 +93,7 @@ export async function mockHandler(path: string): Promise<unknown> {
         sessions: "/api/1/sessions",
         sessionOptions: "/api/1/sessions/options",
         laps: "/api/1/laps",
+        lapsAggregate: "/api/1/laps/aggregate",
         compare: "/api/1/laps/compare",
         live: "/api/1/events",
       },
@@ -102,6 +128,34 @@ export async function mockHandler(path: string): Promise<unknown> {
     const session = SESSIONS.find((s) => s.uid === sessionMatch[1]);
     if (!session) return undefined;
     return delay(session);
+  }
+
+  // /api/1/laps/aggregate must be matched before the /api/1/laps/{uid} pattern.
+  if (pathname === "/api/1/laps/aggregate") {
+    const groupBy = (query.get("groupBy") ?? "") as "track" | "day" | "week" | "month";
+    if (!["track", "day", "week", "month"].includes(groupBy)) return undefined;
+    // Mirror the backend lap filters (subset that matters for the dashboards).
+    let items = LAPS.slice();
+    const playerLap = query.get("playerLap");
+    const validLap = query.get("validLap");
+    const from = query.get("from");
+    const to = query.get("to");
+    const track = query.get("track");
+    if (playerLap === "true") items = items.filter((l) => l.playerLap === true);
+    if (playerLap === "false") items = items.filter((l) => l.playerLap === false);
+    if (validLap === "true") items = items.filter((l) => l.valid);
+    if (validLap === "false") items = items.filter((l) => !l.valid);
+    if (from) items = items.filter((l) => l.recordedAt >= from);
+    if (to) items = items.filter((l) => l.recordedAt <= to);
+    if (track) items = items.filter((l) => l.track === track);
+    if (groupBy === "track") items = items.filter((l) => !!l.track);
+    const counts = new Map<string, number>();
+    for (const l of items) {
+      const key = aggregateKey(l, groupBy);
+      counts.set(key, (counts.get(key) ?? 0) + 1);
+    }
+    const buckets = Array.from(counts, ([key, count]) => ({ key, count }));
+    return delay({ groupBy, buckets });
   }
 
   // /api/1/laps/compare must be matched before the /api/1/laps/{uid} pattern.

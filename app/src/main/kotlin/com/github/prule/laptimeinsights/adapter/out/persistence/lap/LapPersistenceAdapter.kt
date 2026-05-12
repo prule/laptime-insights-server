@@ -1,7 +1,10 @@
 package com.github.prule.laptimeinsights.adapter.out.persistence.lap
 
 import com.github.prule.laptimeinsights.application.domain.model.Lap
+import com.github.prule.laptimeinsights.application.domain.model.LapAggregateBucket
+import com.github.prule.laptimeinsights.application.domain.model.LapAggregateGroupBy
 import com.github.prule.laptimeinsights.application.domain.model.LapSearchCriteria
+import com.github.prule.laptimeinsights.application.port.out.lap.AggregateLapsPort
 import com.github.prule.laptimeinsights.application.port.out.lap.CreateLapPort
 import com.github.prule.laptimeinsights.application.port.out.lap.SearchLapPort
 import com.github.prule.laptimeinsights.application.port.out.lap.UpdateLapPort
@@ -10,7 +13,7 @@ import com.github.prule.laptimeinsights.tracker.utils.data.PageRequest
 import com.github.prule.laptimeinsights.tracker.utils.data.Sort
 
 class LapPersistenceAdapter(private val repository: LapRepository, private val mapper: LapMapper) :
-  SearchLapPort, CreateLapPort, UpdateLapPort {
+  SearchLapPort, CreateLapPort, UpdateLapPort, AggregateLapsPort {
   override fun search(
     criteria: LapSearchCriteria,
     pageRequest: PageRequest,
@@ -32,4 +35,9 @@ class LapPersistenceAdapter(private val repository: LapRepository, private val m
     val entity = repository.update(lap)
     return mapper.toDomain(entity)
   }
+
+  override fun aggregate(
+    criteria: LapSearchCriteria,
+    groupBy: LapAggregateGroupBy,
+  ): List<LapAggregateBucket> = repository.aggregate(criteria, groupBy)
 }
