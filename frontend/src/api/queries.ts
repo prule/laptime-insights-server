@@ -94,6 +94,47 @@ export interface LapFilters {
   to?: string;
 }
 
+export type SessionAggregateGroupBy = "day" | "week" | "month";
+
+export interface SessionAggregateBucket {
+  key: string;
+  count: number;
+  drivingTimeMs: number;
+}
+
+export interface SessionAggregateResource {
+  groupBy: SessionAggregateGroupBy;
+  buckets: SessionAggregateBucket[];
+}
+
+/**
+ * Server-side `COUNT(*) + SUM(driving_time_ms)` over sessions, grouped by time bucket. Drives
+ * the Overview's "Sessions per …" and "Driving time per …" charts from one request. Filters
+ * mirror `useSessions`. Result is sparse — caller fills any zero-count gaps for layout.
+ */
+export function useSessionAggregate(
+  params: { groupBy: SessionAggregateGroupBy } & SessionFilters,
+) {
+  const ctx = useApiContext();
+  const base = useIndexLink("sessionsAggregate");
+  const href =
+    base &&
+    appendQuery(base, {
+      groupBy: params.groupBy,
+      car: params.car,
+      track: params.track,
+      simulator: params.simulator,
+      from: params.from,
+      to: params.to,
+    });
+  return useQuery({
+    queryKey: ["sessions-aggregate", ctx.mode, ctx.apiBase, href] as const,
+    queryFn: () => apiGet<SessionAggregateResource>(ctx, href!),
+    enabled: !!href,
+    placeholderData: (previous) => previous,
+  });
+}
+
 export type LapAggregateGroupBy = "track" | "day" | "week" | "month";
 
 export interface LapAggregateBucket {

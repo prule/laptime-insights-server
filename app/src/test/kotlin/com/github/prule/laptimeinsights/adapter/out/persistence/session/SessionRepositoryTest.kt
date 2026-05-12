@@ -2,7 +2,9 @@ package com.github.prule.laptimeinsights.adapter.out.persistence.session
 
 import com.github.prule.laptimeinsights.adapter.out.persistence.RepositoryTest
 import com.github.prule.laptimeinsights.application.domain.model.Car
+import com.github.prule.laptimeinsights.application.domain.model.LapTimeMs
 import com.github.prule.laptimeinsights.application.domain.model.Session
+import com.github.prule.laptimeinsights.application.domain.model.SessionAggregateGroupBy
 import com.github.prule.laptimeinsights.application.domain.model.SessionId
 import com.github.prule.laptimeinsights.application.domain.model.SessionSearchCriteria
 import com.github.prule.laptimeinsights.application.domain.model.SessionType
@@ -10,7 +12,10 @@ import com.github.prule.laptimeinsights.application.domain.model.Simulator
 import com.github.prule.laptimeinsights.application.domain.model.Track
 import com.github.prule.laptimeinsights.application.domain.model.Uid
 import kotlin.time.Clock
+import kotlin.time.Duration.Companion.days
 import kotlin.time.Instant
+import kotlin.time.toJavaInstant
+import kotlin.time.toKotlinInstant
 import org.assertj.core.api.Assertions.assertThat
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.junit.jupiter.api.Test
@@ -94,6 +99,7 @@ class SessionRepositoryTest : RepositoryTest(listOf(SessionTable)) {
     car: Car = Car("Ferrari"),
     track: Track = Track("Monza"),
     startedAt: Instant? = Clock.System.now(),
+    drivingTime: LapTimeMs = LapTimeMs(0L),
   ) =
     Session(
       id = SessionId(0L), // ID is ignored during creation
@@ -103,5 +109,93 @@ class SessionRepositoryTest : RepositoryTest(listOf(SessionTable)) {
       track = track,
       car = car,
       sessionType = SessionType("Race"),
+      drivingTime = drivingTime,
     )
+
+  @Test
+  fun `aggregate by day counts sessions and sums driving time per day`() {
+    val day1Morning = localTime(2026, 4, 10, 9, 0)
+    val day1Evening = localTime(2026, 4, 10, 18, 0)
+    val day2 = localTime(2026, 4, 11, 12, 0)
+    transaction {
+      repository.create(createTestSession(startedAt = day1Morning, drivingTime = LapTimeMs(60_000L)))
+      repository.create(createTestSession(startedAt = day1Evening, drivingTime = LapTimeMs(40_000L)))
+      repository.create(createTestSession(startedAt = day2, drivingTime = LapTimeMs(30_000L)))
+      // Session with no startedAt — must be dropped from the aggregate.
+      repository.create(createTestSession(startedAt = null, drivingTime = LapTimeMs(99_999L)))
+
+      val buckets =
+        repository.aggregate(SessionSearchCriteria(), SessionAggregateGroupBy.DAY).associateBy {
+          it.key
+        }
+
+      assertThat(buckets).containsOnlyKeys(dayKey(day1Morning), dayKey(day2))
+      assertThat(buckets[dayKey(day1Morning)]?.count).isEqualTo(2L)
+      assertThat(buckets[dayKey(day1Morning)]?.drivingTimeMs).isEqualTo(100_000L)
+      assertThat(buckets[dayKey(day2)]?.count).isEqualTo(1L)
+      assertThat(buckets[dayKey(day2)]?.drivingTimeMs).isEqualTo(30_000L)
+    }
+  }
+
+  @Test
+  fun `aggregate by month emits YYYY-MM keys with summed driving time`() {
+    val mar = localTime(2026, 3, 15, 12, 0)
+    val apr = localTime(2026, 4, 14, 12, 0)
+    transaction {
+      repository.create(createTestSession(startedAt = mar, drivingTime = LapTimeMs(100_000L)))
+      repository.create(createTestSession(startedAt = apr, drivingTime = LapTimeMs(50_000L)))
+      repository.create(createTestSession(startedAt = apr, drivingTime = LapTimeMs(70_000L)))
+
+      val buckets =
+        repository.aggregate(SessionSearchCriteria(), SessionAggregateGroupBy.MONTH).associateBy {
+          it.key
+        }
+
+      assertThat(buckets).containsOnlyKeys(monthKey(mar), monthKey(apr))
+      assertThat(buckets[monthKey(mar)]?.count).isEqualTo(1L)
+      assertThat(buckets[monthKey(mar)]?.drivingTimeMs).isEqualTo(100_000L)
+      assertThat(buckets[monthKey(apr)]?.count).isEqualTo(2L)
+      assertThat(buckets[monthKey(apr)]?.drivingTimeMs).isEqualTo(120_000L)
+    }
+  }
+
+  @Test
+  fun `aggregate honours from filter`() {
+    val anchor = localTime(2026, 4, 15, 12, 0)
+    transaction {
+      repository.create(
+        createTestSession(startedAt = anchor.minus(10.days), drivingTime = LapTimeMs(1L))
+      )
+      repository.create(
+        createTestSession(startedAt = anchor.minus(2.days), drivingTime = LapTimeMs(2L))
+      )
+      repository.create(createTestSession(startedAt = anchor, drivingTime = LapTimeMs(3L)))
+
+      val buckets =
+        repository.aggregate(
+          SessionSearchCriteria(from = anchor.minus(7.days)),
+          SessionAggregateGroupBy.DAY,
+        )
+
+      assertThat(buckets.sumOf { it.count }).isEqualTo(2L)
+      assertThat(buckets.sumOf { it.drivingTimeMs }).isEqualTo(5L)
+    }
+  }
+
+  /** Build an `Instant` for the supplied year/month/day at the local-TZ wall-clock time. */
+  private fun localTime(year: Int, month: Int, day: Int, hour: Int, minute: Int): Instant =
+    java.time.LocalDateTime.of(year, month, day, hour, minute)
+      .atZone(java.time.ZoneId.systemDefault())
+      .toInstant()
+      .toKotlinInstant()
+
+  private fun dayKey(instant: Instant): String =
+    instant.toJavaInstant().atZone(java.time.ZoneId.systemDefault()).toLocalDate().toString()
+
+  private fun monthKey(instant: Instant): String =
+    instant
+      .toJavaInstant()
+      .atZone(java.time.ZoneId.systemDefault())
+      .toLocalDate()
+      .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM"))
 }

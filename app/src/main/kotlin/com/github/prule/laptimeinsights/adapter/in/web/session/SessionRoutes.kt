@@ -11,6 +11,10 @@ data class SessionRoutes(val dummy: String? = null) {
   data class Options(val parent: SessionRoutes = SessionRoutes())
 
   @Serializable
+  @Resource("/aggregate")
+  data class Aggregate(val parent: SessionRoutes = SessionRoutes())
+
+  @Serializable
   @Resource("/{uid}")
   data class SessionId(val parent: SessionRoutes = SessionRoutes(), val uid: String)
 }

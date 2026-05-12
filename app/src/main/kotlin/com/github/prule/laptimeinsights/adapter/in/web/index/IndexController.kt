@@ -30,8 +30,8 @@ class IndexController(application: Application, enabledFeatures: Set<Feature>) {
             `FEATURE_<NAME>` environment variable is omitted from the map; clients should treat a
             missing link as "feature off" and hide the corresponding UI.
 
-            Stable link relations: `self`, `sessions`, `sessionOptions`, `laps`, `lapsAggregate`,
-            `compare`, `live`.
+            Stable link relations: `self`, `sessions`, `sessionOptions`, `sessionsAggregate`,
+            `laps`, `lapsAggregate`, `compare`, `live`.
             """
               .trimIndent()
 

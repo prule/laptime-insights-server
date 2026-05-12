@@ -1,7 +1,12 @@
 package com.github.prule.laptimeinsights.adapter.out.persistence.session
 
+import com.github.prule.laptimeinsights.adapter.out.persistence.TimeBucketUnit
+import com.github.prule.laptimeinsights.adapter.out.persistence.dateTrunc
+import com.github.prule.laptimeinsights.adapter.out.persistence.formatTimeBucketKey
 import com.github.prule.laptimeinsights.application.domain.model.Car
 import com.github.prule.laptimeinsights.application.domain.model.Session
+import com.github.prule.laptimeinsights.application.domain.model.SessionAggregateBucket
+import com.github.prule.laptimeinsights.application.domain.model.SessionAggregateGroupBy
 import com.github.prule.laptimeinsights.application.domain.model.SessionOptions
 import com.github.prule.laptimeinsights.application.domain.model.SessionSearchCriteria
 import com.github.prule.laptimeinsights.application.domain.model.Simulator
@@ -15,11 +20,14 @@ import com.github.prule.laptimeinsights.tracker.utils.data.SearchRepository
 import com.github.prule.laptimeinsights.tracker.utils.data.Sort
 import com.github.prule.laptimeinsights.tracker.utils.data.exposed.firstOrNull
 import com.github.prule.laptimeinsights.tracker.utils.data.exposed.paginate
+import org.jetbrains.exposed.v1.core.count
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.greaterEq
+import org.jetbrains.exposed.v1.core.isNotNull
 import org.jetbrains.exposed.v1.core.lessEq
 import org.jetbrains.exposed.v1.core.max
 import org.jetbrains.exposed.v1.core.min
+import org.jetbrains.exposed.v1.core.sum
 import org.jetbrains.exposed.v1.jdbc.Query
 import org.jetbrains.exposed.v1.jdbc.andWhere
 import org.jetbrains.exposed.v1.jdbc.select
@@ -89,7 +97,44 @@ class SessionRepository(private val mapper: SessionMapper) :
       to = rangeRow?.get(maxStartedAt),
     )
   }
+
+  /**
+   * `COUNT(*)` and `SUM(driving_time_ms)` over the filtered sessions, grouped by the truncated
+   * `started_at`. Sessions with a null `started_at` are dropped — they have no timeline position
+   * and would aggregate to a meaningless `null` bucket. Both metrics come back from one round-trip
+   * so the dashboard's "Sessions per …" and "Driving time per …" charts share a single fetch.
+   */
+  fun aggregate(
+    criteria: SessionSearchCriteria,
+    groupBy: SessionAggregateGroupBy,
+  ): List<SessionAggregateBucket> {
+    val unit = groupBy.timeBucketUnit
+    val truncExpr = dateTrunc(unit, SessionTable.startedAt)
+    val countExpr = SessionTable.id.count()
+    val sumExpr = SessionTable.drivingTimeMs.sum()
+    val q =
+      criteria
+        .toQuery()
+        .andWhere { SessionTable.startedAt.isNotNull() }
+        .adjustSelect { select(truncExpr, countExpr, sumExpr) }
+        .groupBy(truncExpr)
+    return q.map { row ->
+      SessionAggregateBucket(
+        key = formatTimeBucketKey(row[truncExpr], unit),
+        count = row[countExpr],
+        drivingTimeMs = row[sumExpr] ?: 0L,
+      )
+    }
+  }
 }
+
+private val SessionAggregateGroupBy.timeBucketUnit: TimeBucketUnit
+  get() =
+    when (this) {
+      SessionAggregateGroupBy.DAY -> TimeBucketUnit.DAY
+      SessionAggregateGroupBy.WEEK -> TimeBucketUnit.WEEK
+      SessionAggregateGroupBy.MONTH -> TimeBucketUnit.MONTH
+    }
 
 fun SessionSearchCriteria.toQuery(): Query {
   val query = SessionTable.selectAll()

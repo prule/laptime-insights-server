@@ -1,6 +1,12 @@
 import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { useLapAggregate, useLaps, useSessionOptions, useSessions } from "../api/queries";
+import {
+  useLapAggregate,
+  useLaps,
+  useSessionAggregate,
+  useSessionOptions,
+  useSessions,
+} from "../api/queries";
 import { useFeatureEnabled } from "../providers/FeaturesProvider";
 import {
   type BucketPlan,
@@ -62,8 +68,7 @@ function computeStreak(timestamps: string[]): { days: number; lastDate: Date | n
 /**
  * Build the N bucket start dates the dashboard chart layout uses, ending at the calendar bucket
  * containing `anchor`. Calendar-aligned: weeks start on Monday, months on the 1st. Returned in
- * chronological order. Used both by the in-memory `bucketize` (sessions, driving-time) and by the
- * aggregate-API path (laps) so all three charts share the same x-axis.
+ * chronological order. Joins onto aggregate-API responses by matching `bucketStartKey`.
  */
 function bucketStarts(plan: BucketPlan, anchor: number): Date[] {
   const anchorDate = new Date(anchor);
@@ -110,42 +115,17 @@ function bucketStartKey(start: Date, unit: BucketPlan["unit"]): string {
 }
 
 /**
- * Bucket `points` into the N calendar buckets ending at `anchor` and sum each bucket's `value`.
- * `anchor` defaults to the most recent point — keeps an "all" range hugging the data's end rather
- * than rendering empty trailing buckets. Pass `value: 1` to get a count chart.
+ * Drop the sparse `buckets` from an aggregate endpoint onto the dense `bucketStarts` grid.
+ * Missing buckets become `value: 0` so the chart renders gaps as empty bars. `getValue` selects
+ * which metric to chart — e.g. `b => b.count` or `b => b.drivingTimeMs`.
  */
-function bucketize(
-  points: { ts: string; value: number }[],
-  plan: BucketPlan,
-  anchor?: number,
-): { label: string; value: number }[] {
-  if (points.length === 0) return [];
-  const sorted = points
-    .map((p) => ({ ms: new Date(p.ts).getTime(), value: p.value }))
-    .sort((a, b) => a.ms - b.ms);
-  const end = anchor ?? sorted[sorted.length - 1]!.ms;
-  const starts = bucketStarts(plan, end);
-
-  return starts.map((start, i) => {
-    const startMs = start.getTime();
-    const nextMs = i < starts.length - 1 ? starts[i + 1]!.getTime() : end + ONE_DAY_MS;
-    const value = sorted
-      .filter((p) => p.ms >= startMs && p.ms < nextMs)
-      .reduce((acc, p) => acc + p.value, 0);
-    return { label: bucketLabel(start, plan.unit), value };
-  });
-}
-
-/**
- * Drop the sparse `buckets` from the aggregate endpoint onto the dense `bucketStarts` grid.
- * Missing buckets become `value: 0` so the chart renders gaps as empty bars.
- */
-function alignAggregate(
-  buckets: readonly { key: string; count: number }[] | undefined,
+function alignAggregate<B extends { key: string }>(
+  buckets: readonly B[] | undefined,
   plan: BucketPlan,
   anchor: number,
+  getValue: (b: B) => number,
 ): { label: string; value: number }[] {
-  const lookup = new Map((buckets ?? []).map((b) => [b.key, b.count]));
+  const lookup = new Map((buckets ?? []).map((b) => [b.key, getValue(b)]));
   return bucketStarts(plan, anchor).map((start) => ({
     label: bucketLabel(start, plan.unit),
     value: lookup.get(bucketStartKey(start, plan.unit)) ?? 0,
@@ -157,7 +137,12 @@ export function OverviewScreen() {
   const sessionsEnabled = useFeatureEnabled("sessions");
   const { fromIso, bucketPlan, range } = useTimeRange();
   const from = fromIso ?? undefined;
+  // Recent sessions list + streak both want raw session rows. Stat-card totals and the activity
+  // charts use the aggregate endpoints below.
   const sessionsQuery = useSessions({ size: 100, sort: "startedAt:DESC", from });
+  // Server-aggregated per-bucket session count + summed driving time. Single request drives both
+  // the "Sessions per …" and "Driving time per …" charts and the Driving Time stat card.
+  const sessionAggQuery = useSessionAggregate({ groupBy: bucketPlan.unit, from });
   // Tiny count-only query for the "Total Laps" stat card — `size: 1` so the server still computes
   // `.total` but we don't pay the cost of transferring rows we'd ignore.
   const lapsCountQuery = useLaps({ playerLap: true, size: 1, from });
@@ -189,22 +174,20 @@ export function OverviewScreen() {
   const optionsQuery = useSessionOptions();
 
   const stats = useMemo(() => {
-    const sessions = sessionsQuery.data?.items ?? [];
-    // Sum of session driving time (player-car on-track time) over the visible window. Bounded by
-    // the sessions page size (100); for ranges with more sessions a server-side aggregate would
-    // be the next step.
-    const drivingTimeMs = sessions.reduce(
-      (acc, s) => acc + (s.drivingTimeMs ?? 0),
+    // Server-aggregated sum across buckets — accurate regardless of session-page size.
+    const drivingTimeMs = (sessionAggQuery.data?.buckets ?? []).reduce(
+      (acc, b) => acc + b.drivingTimeMs,
       0,
     );
     return {
-      totalSessions: sessionsQuery.data?.total ?? sessions.length,
-      // Server-reported total from the dedicated count query — `size: 1` so we only pay for the
-      // count, not for any row payload. Always accurate regardless of the in-range count.
+      // Server-reported totals from the count-only queries — `size: 1` for laps; sessionsQuery
+      // already supplies `.total` from its own pagination.
+      totalSessions:
+        sessionsQuery.data?.total ?? sessionsQuery.data?.items.length ?? 0,
       totalLaps: lapsCountQuery.data?.total ?? 0,
       drivingTimeMs,
     };
-  }, [sessionsQuery.data, lapsCountQuery.data]);
+  }, [sessionsQuery.data, sessionAggQuery.data, lapsCountQuery.data]);
 
   // Streak is a global property of the activity timeline, intentionally not bound to the time
   // range filter — a streak truncated by the range would be misleading.
@@ -235,33 +218,37 @@ export function OverviewScreen() {
 
   const sessionBuckets = useMemo(
     () =>
-      bucketize(
-        (sessionsQuery.data?.items ?? [])
-          .filter((s): s is typeof s & { startedAt: string } => !!s.startedAt)
-          .map((s) => ({ ts: s.startedAt, value: 1 })),
+      alignAggregate(
+        sessionAggQuery.data?.buckets,
         bucketPlan,
-        chartAnchor,
+        chartAnchor ?? Date.now(),
+        (b) => b.count,
       ),
-    [sessionsQuery.data, bucketPlan, chartAnchor],
+    [sessionAggQuery.data, bucketPlan, chartAnchor],
   );
 
   // Aggregate response lands the count on the same calendar grid the chart renders, so the join
   // is a simple key lookup. Missing buckets render as zero.
   const lapBuckets = useMemo(
-    () => alignAggregate(lapsByBucketQuery.data?.buckets, bucketPlan, chartAnchor ?? Date.now()),
+    () =>
+      alignAggregate(
+        lapsByBucketQuery.data?.buckets,
+        bucketPlan,
+        chartAnchor ?? Date.now(),
+        (b) => b.count,
+      ),
     [lapsByBucketQuery.data, bucketPlan, chartAnchor],
   );
 
   const drivingTimeBuckets = useMemo(
     () =>
-      bucketize(
-        (sessionsQuery.data?.items ?? [])
-          .filter((s): s is typeof s & { startedAt: string } => !!s.startedAt)
-          .map((s) => ({ ts: s.startedAt, value: s.drivingTimeMs ?? 0 })),
+      alignAggregate(
+        sessionAggQuery.data?.buckets,
         bucketPlan,
-        chartAnchor,
+        chartAnchor ?? Date.now(),
+        (b) => b.drivingTimeMs,
       ),
-    [sessionsQuery.data, bucketPlan, chartAnchor],
+    [sessionAggQuery.data, bucketPlan, chartAnchor],
   );
 
   const bucketSub =

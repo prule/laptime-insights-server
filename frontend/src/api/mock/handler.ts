@@ -45,16 +45,15 @@ function compareSessions(sort: string | null) {
 }
 
 /**
- * Mirror the backend's `formatBucketKey` — UTC date string for day/week, UTC `YYYY-MM` for month,
- * lap.track for track. Week uses Monday as start of week (ISO).
+ * Mirror the backend's `formatTimeBucketKey` — UTC date string for day/week, UTC `YYYY-MM` for
+ * month. Week uses Monday as start of week (ISO).
  */
-function aggregateKey(lap: LapResource, groupBy: "track" | "day" | "week" | "month"): string {
-  if (groupBy === "track") return lap.track ?? "";
-  const d = new Date(lap.recordedAt);
+function timeBucketKey(iso: string, unit: "day" | "week" | "month"): string {
+  const d = new Date(iso);
   const y = d.getUTCFullYear();
   const m = String(d.getUTCMonth() + 1).padStart(2, "0");
-  if (groupBy === "month") return `${y}-${m}`;
-  if (groupBy === "day") {
+  if (unit === "month") return `${y}-${m}`;
+  if (unit === "day") {
     const dd = String(d.getUTCDate()).padStart(2, "0");
     return `${y}-${m}-${dd}`;
   }
@@ -67,6 +66,15 @@ function aggregateKey(lap: LapResource, groupBy: "track" | "day" | "week" | "mon
   const wm = String(monday.getUTCMonth() + 1).padStart(2, "0");
   const wd = String(monday.getUTCDate()).padStart(2, "0");
   return `${wy}-${wm}-${wd}`;
+}
+
+function aggregateKey(lap: LapResource, groupBy: "track" | "day" | "week" | "month"): string {
+  if (groupBy === "track") return lap.track ?? "";
+  return timeBucketKey(lap.recordedAt, groupBy);
+}
+
+function sessionAggregateKey(iso: string, groupBy: "day" | "week" | "month"): string {
+  return timeBucketKey(iso, groupBy);
 }
 
 function compareLaps(sort: string | null) {
@@ -92,11 +100,42 @@ export async function mockHandler(path: string): Promise<unknown> {
         overview: "/api/1/sessions",
         sessions: "/api/1/sessions",
         sessionOptions: "/api/1/sessions/options",
+        sessionsAggregate: "/api/1/sessions/aggregate",
         laps: "/api/1/laps",
         lapsAggregate: "/api/1/laps/aggregate",
         compare: "/api/1/laps/compare",
         live: "/api/1/events",
       },
+    });
+  }
+
+  // /api/1/sessions/aggregate must be matched before /api/1/sessions/{uid}.
+  if (pathname === "/api/1/sessions/aggregate") {
+    const groupBy = (query.get("groupBy") ?? "") as "day" | "week" | "month";
+    if (!["day", "week", "month"].includes(groupBy)) return undefined;
+    let items = SESSIONS.slice();
+    const car = query.get("car");
+    const track = query.get("track");
+    const simulator = query.get("simulator");
+    const from = query.get("from");
+    const to = query.get("to");
+    if (car) items = items.filter((s) => s.car === car);
+    if (track) items = items.filter((s) => s.track === track);
+    if (simulator) items = items.filter((s) => s.simulator === simulator);
+    if (from) items = items.filter((s) => (s.startedAt ?? "") >= from);
+    if (to) items = items.filter((s) => (s.startedAt ?? "") <= to);
+    items = items.filter((s) => !!s.startedAt);
+    const buckets = new Map<string, { count: number; drivingTimeMs: number }>();
+    for (const s of items) {
+      const key = sessionAggregateKey(s.startedAt!, groupBy);
+      const cur = buckets.get(key) ?? { count: 0, drivingTimeMs: 0 };
+      cur.count += 1;
+      cur.drivingTimeMs += s.drivingTimeMs ?? 0;
+      buckets.set(key, cur);
+    }
+    return delay({
+      groupBy,
+      buckets: Array.from(buckets, ([key, v]) => ({ key, ...v })),
     });
   }
 
