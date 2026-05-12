@@ -2,7 +2,11 @@ import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useLaps, useSessionOptions, useSessions } from "../api/queries";
 import { useFeatureEnabled } from "../providers/FeaturesProvider";
-import { type BucketPlan, useTimeRange } from "../providers/TimeRangeProvider";
+import {
+  type BucketPlan,
+  TIME_RANGE_OPTIONS,
+  useTimeRange,
+} from "../providers/TimeRangeProvider";
 import { Card } from "../components/ui/Card";
 import { SectionHeader } from "../components/ui/SectionHeader";
 import { StatCard } from "../components/ui/StatCard";
@@ -224,6 +228,11 @@ export function OverviewScreen() {
       ? `last ${bucketPlan.count} weeks`
       : `last ${bucketPlan.count} months`;
 
+  // Sub-label for the range-bound stat cards. Mirrors the time-range pill's wording so the
+  // header, pills and cards all read with the same vocabulary.
+  const rangeSub =
+    TIME_RANGE_OPTIONS.find((o) => o.key === range)?.sub.toLowerCase() ?? "all time";
+
   // Bubble-per-track view. Lap rows don't carry track directly, so we join
   // through the in-range sessions: sessionUid → track. Tracks present in
   // session-options but absent from the join surface as zero-count placeholders
@@ -286,9 +295,9 @@ export function OverviewScreen() {
       </div>
 
       <div className="mb-6 grid grid-cols-3 gap-3">
-        <StatCard label="Total Sessions" value={formatNumber(stats.totalSessions)} accent="cyan" sub="all-time" />
-        <StatCard label="Total Laps" value={formatNumber(stats.totalLaps)} accent="accent" sub="all-time" />
-        <StatCard label="Driving Time" value={formatDrivingTime(stats.drivingTimeMs)} accent="warn" sub="player on-track time" />
+        <StatCard label="Total Sessions" value={formatNumber(stats.totalSessions)} accent="cyan" sub={rangeSub} />
+        <StatCard label="Total Laps" value={formatNumber(stats.totalLaps)} accent="accent" sub={rangeSub} />
+        <StatCard label="Driving Time" value={formatDrivingTime(stats.drivingTimeMs)} accent="warn" sub={rangeSub} />
       </div>
 
       <div className="mb-6 grid grid-cols-3 gap-4">
