@@ -1,5 +1,6 @@
 package com.github.prule.laptimeinsights
 
+import com.github.prule.laptimeinsights.adapter.`in`.web.index.IndexController
 import com.github.prule.laptimeinsights.adapter.`in`.web.lap.CompareLapsController
 import com.github.prule.laptimeinsights.adapter.`in`.web.lap.FindLapController
 import com.github.prule.laptimeinsights.adapter.`in`.web.lap.FindLapTelemetryController
@@ -49,6 +50,7 @@ fun Application.module(
   configuration: ApplicationConfiguration,
   appModule: AppModule = AppModule(),
   jdbcUrl: String = EnvironmentVariables.jdbcUrl(),
+  enabledFeatures: Set<Feature> = EnvironmentVariables.enabledFeatures(),
 ) {
 
   install(Resources)
@@ -96,6 +98,7 @@ fun Application.module(
       .seed()
   }
 
+  IndexController(this, enabledFeatures)
   initializeSessionControllers(appModule)
   initializeLapControllers(appModule)
   SessionEventController(this, appModule.eventPort)

@@ -23,6 +23,17 @@ object EnvironmentVariables {
   /** When truthy starts an H2 tcp server. */
   fun h2tcp() = parseBoolean("H2_TCP")
 
+  /**
+   * Feature toggle. Each [Feature] is enabled by default; set the corresponding env var to a falsy
+   * value (`false`, `0`, `no`) to hide the feature's link from `GET /api/1`.
+   */
+  fun featureEnabled(feature: Feature): Boolean {
+    val value = System.getenv(feature.envVar) ?: return true
+    return value.lowercase() !in setOf("false", "0", "no")
+  }
+
+  fun enabledFeatures(): Set<Feature> = Feature.entries.filter { featureEnabled(it) }.toSet()
+
   private fun parseBoolean(envVar: String): Boolean {
     val value = System.getenv(envVar) ?: return false
     return value.lowercase() in setOf("true", "1", "yes")
