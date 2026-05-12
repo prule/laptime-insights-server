@@ -6,6 +6,8 @@ import io.ktor.resources.Resource
 class LapRoutes {
   @Resource("/compare") class Compare(val parent: LapRoutes = LapRoutes())
 
+  @Resource("/aggregate") class Aggregate(val parent: LapRoutes = LapRoutes())
+
   @Resource("/{uid}")
   class LapId(val parent: LapRoutes = LapRoutes(), val uid: String) {
     @Resource("/telemetry") class Telemetry(val parent: LapId)

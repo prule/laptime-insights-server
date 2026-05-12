@@ -44,6 +44,7 @@ class IndexControllerTest {
         "sessions",
         "sessionOptions",
         "laps",
+        "lapsAggregate",
         "compare",
         "live",
       )
@@ -52,6 +53,7 @@ class IndexControllerTest {
     assertThat(links["sessions"]).isEqualTo("/api/1/sessions")
     assertThat(links["sessionOptions"]).isEqualTo("/api/1/sessions/options")
     assertThat(links["laps"]).isEqualTo("/api/1/laps")
+    assertThat(links["lapsAggregate"]).isEqualTo("/api/1/laps/aggregate")
     assertThat(links["compare"]).isEqualTo("/api/1/laps/compare")
     assertThat(links["live"]).isEqualTo("/api/1/events")
   }
@@ -69,7 +71,8 @@ class IndexControllerTest {
 
     val links = parseLinks(client.get("/api/1").bodyAsText())
 
-    assertThat(links.keys).containsExactlyInAnyOrder("self", "sessions", "sessionOptions", "laps")
+    assertThat(links.keys)
+      .containsExactlyInAnyOrder("self", "sessions", "sessionOptions", "laps", "lapsAggregate")
     assertThat(links).doesNotContainKeys("overview", "compare", "live")
   }
 

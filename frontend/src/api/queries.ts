@@ -94,6 +94,51 @@ export interface LapFilters {
   to?: string;
 }
 
+export type LapAggregateGroupBy = "track" | "day" | "week" | "month";
+
+export interface LapAggregateBucket {
+  key: string;
+  count: number;
+}
+
+export interface LapAggregateResource {
+  groupBy: LapAggregateGroupBy;
+  buckets: LapAggregateBucket[];
+}
+
+/**
+ * Server-side `COUNT(*) GROUP BY` over laps. The same filter set as `useLaps`; pair with
+ * `playerLap: true` for "player laps per …" charts. Result is sparse — the caller fills any
+ * zero-count buckets it needs for layout.
+ */
+export function useLapAggregate(
+  params: { groupBy: LapAggregateGroupBy } & LapFilters,
+) {
+  const ctx = useApiContext();
+  const base = useIndexLink("lapsAggregate");
+  const href =
+    base &&
+    appendQuery(base, {
+      groupBy: params.groupBy,
+      carId: params.carId,
+      validLap: params.validLap,
+      personalBest: params.personalBest,
+      playerLap: params.playerLap,
+      allTimeBest: params.allTimeBest,
+      car: params.car,
+      track: params.track,
+      simulator: params.simulator,
+      from: params.from,
+      to: params.to,
+    });
+  return useQuery({
+    queryKey: ["laps-aggregate", ctx.mode, ctx.apiBase, href] as const,
+    queryFn: () => apiGet<LapAggregateResource>(ctx, href!),
+    enabled: !!href,
+    placeholderData: (previous) => previous,
+  });
+}
+
 export function useLaps(params: LapFilters & PagingAndSort = {}) {
   const ctx = useApiContext();
   const base = useIndexLink("laps");

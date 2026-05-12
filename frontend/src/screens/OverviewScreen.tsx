@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { useLaps, useSessionOptions, useSessions } from "../api/queries";
+import { useLapAggregate, useLaps, useSessionOptions, useSessions } from "../api/queries";
 import { useFeatureEnabled } from "../providers/FeaturesProvider";
 import {
   type BucketPlan,
@@ -18,7 +18,6 @@ import { AllTimeBestTable } from "../components/AllTimeBestTable";
 import { formatDrivingTime, formatNumber } from "../lib/format";
 
 const ONE_DAY_MS = 86_400_000;
-const ONE_WEEK_MS = 7 * ONE_DAY_MS;
 
 /**
  * Local-calendar key (YYYY-MM-DD) so two timestamps on the same day collapse to one streak entry
@@ -61,12 +60,59 @@ function computeStreak(timestamps: string[]): { days: number; lastDate: Date | n
 }
 
 /**
- * Bucket `points` into N contiguous time buckets ending at `anchor` and sum each bucket's `value`.
- * Bucket width is fixed for `week` but variable for `month` (calendar months step naturally, so
- * each bucket aligns to the start of a real month).
- *
- * `anchor` defaults to the most recent timestamp so an "all" range hugs the data's actual end
- * instead of rendering empty trailing buckets. Pass `value: 1` to get a count chart.
+ * Build the N bucket start dates the dashboard chart layout uses, ending at the calendar bucket
+ * containing `anchor`. Calendar-aligned: weeks start on Monday, months on the 1st. Returned in
+ * chronological order. Used both by the in-memory `bucketize` (sessions, driving-time) and by the
+ * aggregate-API path (laps) so all three charts share the same x-axis.
+ */
+function bucketStarts(plan: BucketPlan, anchor: number): Date[] {
+  const anchorDate = new Date(anchor);
+  const starts: Date[] = [];
+  if (plan.unit === "week") {
+    const dayIndex = (anchorDate.getDay() + 6) % 7; // 0 = Monday
+    const anchorMonday = new Date(
+      anchorDate.getFullYear(),
+      anchorDate.getMonth(),
+      anchorDate.getDate() - dayIndex,
+    );
+    for (let i = plan.count - 1; i >= 0; i--) {
+      const start = new Date(anchorMonday);
+      start.setDate(start.getDate() - i * 7);
+      starts.push(start);
+    }
+  } else {
+    const baseYear = anchorDate.getFullYear();
+    const baseMonth = anchorDate.getMonth();
+    for (let i = plan.count - 1; i >= 0; i--) {
+      starts.push(new Date(baseYear, baseMonth - i, 1));
+    }
+  }
+  return starts;
+}
+
+function bucketLabel(start: Date, unit: BucketPlan["unit"]): string {
+  return unit === "week"
+    ? start.toLocaleDateString("en-GB", { day: "2-digit", month: "short" })
+    : start.toLocaleDateString("en-GB", { month: "short", year: "2-digit" });
+}
+
+/**
+ * Aggregate-API bucket key (matches the backend's `formatBucketKey`). `YYYY-MM-DD` for week
+ * (Monday) and day, `YYYY-MM` for month. Used to join the sparse aggregate response onto the
+ * dense `bucketStarts` grid.
+ */
+function bucketStartKey(start: Date, unit: BucketPlan["unit"]): string {
+  const y = start.getFullYear();
+  const m = String(start.getMonth() + 1).padStart(2, "0");
+  if (unit === "month") return `${y}-${m}`;
+  const d = String(start.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+/**
+ * Bucket `points` into the N calendar buckets ending at `anchor` and sum each bucket's `value`.
+ * `anchor` defaults to the most recent point — keeps an "all" range hugging the data's end rather
+ * than rendering empty trailing buckets. Pass `value: 1` to get a count chart.
  */
 function bucketize(
   points: { ts: string; value: number }[],
@@ -78,34 +124,32 @@ function bucketize(
     .map((p) => ({ ms: new Date(p.ts).getTime(), value: p.value }))
     .sort((a, b) => a.ms - b.ms);
   const end = anchor ?? sorted[sorted.length - 1]!.ms;
-
-  const starts: number[] = [];
-  if (plan.unit === "week") {
-    for (let i = plan.count - 1; i >= 0; i--) {
-      starts.push(end - i * ONE_WEEK_MS);
-    }
-  } else {
-    // Walk back month-by-month from the anchor's month start.
-    const anchorDate = new Date(end);
-    const baseYear = anchorDate.getFullYear();
-    const baseMonth = anchorDate.getMonth();
-    for (let i = plan.count - 1; i >= 0; i--) {
-      starts.push(new Date(baseYear, baseMonth - i, 1).getTime());
-    }
-  }
+  const starts = bucketStarts(plan, end);
 
   return starts.map((start, i) => {
-    const next = i < starts.length - 1 ? starts[i + 1]! : end + ONE_DAY_MS;
+    const startMs = start.getTime();
+    const nextMs = i < starts.length - 1 ? starts[i + 1]!.getTime() : end + ONE_DAY_MS;
     const value = sorted
-      .filter((p) => p.ms >= start && p.ms < next)
+      .filter((p) => p.ms >= startMs && p.ms < nextMs)
       .reduce((acc, p) => acc + p.value, 0);
-    const date = new Date(start);
-    const label =
-      plan.unit === "week"
-        ? date.toLocaleDateString("en-GB", { day: "2-digit", month: "short" })
-        : date.toLocaleDateString("en-GB", { month: "short", year: "2-digit" });
-    return { label, value };
+    return { label: bucketLabel(start, plan.unit), value };
   });
+}
+
+/**
+ * Drop the sparse `buckets` from the aggregate endpoint onto the dense `bucketStarts` grid.
+ * Missing buckets become `value: 0` so the chart renders gaps as empty bars.
+ */
+function alignAggregate(
+  buckets: readonly { key: string; count: number }[] | undefined,
+  plan: BucketPlan,
+  anchor: number,
+): { label: string; value: number }[] {
+  const lookup = new Map((buckets ?? []).map((b) => [b.key, b.count]));
+  return bucketStarts(plan, anchor).map((start) => ({
+    label: bucketLabel(start, plan.unit),
+    value: lookup.get(bucketStartKey(start, plan.unit)) ?? 0,
+  }));
 }
 
 export function OverviewScreen() {
@@ -117,9 +161,19 @@ export function OverviewScreen() {
   // Tiny count-only query for the "Total Laps" stat card — `size: 1` so the server still computes
   // `.total` but we don't pay the cost of transferring rows we'd ignore.
   const lapsCountQuery = useLaps({ playerLap: true, size: 1, from });
-  // Items query for the laps-per-bucket chart and the per-track bubble counts. Larger page so
-  // bucketing is accurate within the range; falls back to bounded behaviour past 1000 items.
-  const lapsQuery = useLaps({ playerLap: true, size: 1000, sort: "lapTime:ASC", from });
+  // Server-aggregated per-bucket lap count for the activity chart. The `groupBy` matches the
+  // dashboard's bucket plan so the response keys land exactly on the chart's x-axis grid.
+  const lapsByBucketQuery = useLapAggregate({
+    groupBy: bucketPlan.unit,
+    playerLap: true,
+    from,
+  });
+  // Server-aggregated per-track lap count for the "Tracks practiced" bubble chart.
+  const lapsByTrackQuery = useLapAggregate({
+    groupBy: "track",
+    playerLap: true,
+    from,
+  });
   // All-time best lap per track for the player. Independent of the time-range
   // filter — "all-time" means all-time, regardless of the dashboard window.
   const bestPerTrackQuery = useLaps({
@@ -133,9 +187,6 @@ export function OverviewScreen() {
   // chart so tracks with zero laps in range still render as "haven't been here
   // lately" placeholders. Not bound to the active range on purpose.
   const optionsQuery = useSessionOptions();
-
-  // `lapsQuery` already has `playerLap=true` applied server-side, so every item is a player lap.
-  const playerLaps = lapsQuery.data?.items ?? [];
 
   const stats = useMemo(() => {
     const sessions = sessionsQuery.data?.items ?? [];
@@ -194,14 +245,11 @@ export function OverviewScreen() {
     [sessionsQuery.data, bucketPlan, chartAnchor],
   );
 
+  // Aggregate response lands the count on the same calendar grid the chart renders, so the join
+  // is a simple key lookup. Missing buckets render as zero.
   const lapBuckets = useMemo(
-    () =>
-      bucketize(
-        playerLaps.map((l) => ({ ts: l.recordedAt, value: 1 })),
-        bucketPlan,
-        chartAnchor,
-      ),
-    [playerLaps, bucketPlan, chartAnchor],
+    () => alignAggregate(lapsByBucketQuery.data?.buckets, bucketPlan, chartAnchor ?? Date.now()),
+    [lapsByBucketQuery.data, bucketPlan, chartAnchor],
   );
 
   const drivingTimeBuckets = useMemo(
@@ -226,30 +274,20 @@ export function OverviewScreen() {
   const rangeSub =
     TIME_RANGE_OPTIONS.find((o) => o.key === range)?.sub.toLowerCase() ?? "all time";
 
-  // Bubble-per-track view. Lap rows don't carry track directly, so we join
-  // through the in-range sessions: sessionUid → track. Tracks present in
-  // session-options but absent from the join surface as zero-count placeholders
-  // so the user can see what they *haven't* practiced lately. NOTE: bounded by
-  // the page-size of `lapsQuery` (1000) — for ranges with more laps than that
-  // the counts undercount; a dedicated `/laps/aggregate?groupBy=track` endpoint
-  // would be the next step.
+  // Bubble-per-track view. Aggregate response gives one count per track in-range; the union with
+  // `optionsQuery.tracks` keeps zero-count placeholders for tracks the player has visited at some
+  // point but not within the active range — useful "haven't been back here lately" signal.
   const trackPractice = useMemo(() => {
     const allTracks = optionsQuery.data?.tracks ?? [];
-    const sessions = sessionsQuery.data?.items ?? [];
-    const sessionTrack = new Map<string, string | null>();
-    for (const s of sessions) sessionTrack.set(s.uid, s.track);
-
     const counts = new Map<string, number>();
     for (const t of allTracks) counts.set(t, 0);
-    for (const l of playerLaps) {
-      const track = sessionTrack.get(l.sessionUid);
-      if (!track) continue;
-      counts.set(track, (counts.get(track) ?? 0) + 1);
+    for (const b of lapsByTrackQuery.data?.buckets ?? []) {
+      counts.set(b.key, b.count);
     }
     return Array.from(counts, ([track, count]) => ({ track, count }));
-  }, [optionsQuery.data, sessionsQuery.data, playerLaps]);
+  }, [optionsQuery.data, lapsByTrackQuery.data]);
 
-  if (sessionsQuery.isLoading || lapsQuery.isLoading) {
+  if (sessionsQuery.isLoading || lapsByBucketQuery.isLoading) {
     return <div className="p-8"><LoadingState /></div>;
   }
   if (sessionsQuery.isError) {
