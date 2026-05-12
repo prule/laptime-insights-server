@@ -114,9 +114,11 @@ export function OverviewScreen() {
   const { fromIso, bucketPlan, range } = useTimeRange();
   const from = fromIso ?? undefined;
   const sessionsQuery = useSessions({ size: 100, sort: "startedAt:DESC", from });
-  // playerLap=true so the server-reported `.total` is the right number for the "Total Laps"
-  // stat card — no client-side post-filter, no under-count when the in-range count exceeds the
-  // page size.
+  // Tiny count-only query for the "Total Laps" stat card — `size: 1` so the server still computes
+  // `.total` but we don't pay the cost of transferring rows we'd ignore.
+  const lapsCountQuery = useLaps({ playerLap: true, size: 1, from });
+  // Items query for the laps-per-bucket chart and the per-track bubble counts. Larger page so
+  // bucketing is accurate within the range; falls back to bounded behaviour past 1000 items.
   const lapsQuery = useLaps({ playerLap: true, size: 1000, sort: "lapTime:ASC", from });
   // All-time best lap per track for the player. Independent of the time-range
   // filter — "all-time" means all-time, regardless of the dashboard window.
@@ -146,12 +148,12 @@ export function OverviewScreen() {
     );
     return {
       totalSessions: sessionsQuery.data?.total ?? sessions.length,
-      // Server-reported total respects the `from` + `playerLap=true` filters, so it stays
-      // accurate even when the in-range lap count exceeds the page size of `lapsQuery`.
-      totalLaps: lapsQuery.data?.total ?? playerLaps.length,
+      // Server-reported total from the dedicated count query — `size: 1` so we only pay for the
+      // count, not for any row payload. Always accurate regardless of the in-range count.
+      totalLaps: lapsCountQuery.data?.total ?? 0,
       drivingTimeMs,
     };
-  }, [sessionsQuery.data, lapsQuery.data, playerLaps]);
+  }, [sessionsQuery.data, lapsCountQuery.data]);
 
   // Streak is a global property of the activity timeline, intentionally not bound to the time
   // range filter — a streak truncated by the range would be misleading.
