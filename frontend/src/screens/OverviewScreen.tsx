@@ -114,7 +114,10 @@ export function OverviewScreen() {
   const { fromIso, bucketPlan, range } = useTimeRange();
   const from = fromIso ?? undefined;
   const sessionsQuery = useSessions({ size: 100, sort: "startedAt:DESC", from });
-  const lapsQuery = useLaps({ size: 1000, sort: "lapTime:ASC", from });
+  // playerLap=true so the server-reported `.total` is the right number for the "Total Laps"
+  // stat card — no client-side post-filter, no under-count when the in-range count exceeds the
+  // page size.
+  const lapsQuery = useLaps({ playerLap: true, size: 1000, sort: "lapTime:ASC", from });
   // All-time best lap per track for the player. Independent of the time-range
   // filter — "all-time" means all-time, regardless of the dashboard window.
   const bestPerTrackQuery = useLaps({
@@ -129,22 +132,8 @@ export function OverviewScreen() {
   // lately" placeholders. Not bound to the active range on purpose.
   const optionsQuery = useSessionOptions();
 
-  // Build sessionUid → playerCarId map from the fetched sessions.
-  const playerCarIdBySession = useMemo(() => {
-    const map = new Map<string, number | null>();
-    for (const s of sessionsQuery.data?.items ?? []) map.set(s.uid, s.playerCarId);
-    return map;
-  }, [sessionsQuery.data]);
-
-  // Filter laps to only those driven by the player in each session.
-  const playerLaps = useMemo(() => {
-    const laps = lapsQuery.data?.items ?? [];
-    return laps.filter((l) => {
-      const pcid = playerCarIdBySession.get(l.sessionUid);
-      // If we don't have the session in the window (e.g. outside time range), keep the lap.
-      return pcid === undefined || pcid === null || l.carId === pcid;
-    });
-  }, [lapsQuery.data, playerCarIdBySession]);
+  // `lapsQuery` already has `playerLap=true` applied server-side, so every item is a player lap.
+  const playerLaps = lapsQuery.data?.items ?? [];
 
   const stats = useMemo(() => {
     const sessions = sessionsQuery.data?.items ?? [];
@@ -157,10 +146,12 @@ export function OverviewScreen() {
     );
     return {
       totalSessions: sessionsQuery.data?.total ?? sessions.length,
-      totalLaps: playerLaps.length,
+      // Server-reported total respects the `from` + `playerLap=true` filters, so it stays
+      // accurate even when the in-range lap count exceeds the page size of `lapsQuery`.
+      totalLaps: lapsQuery.data?.total ?? playerLaps.length,
       drivingTimeMs,
     };
-  }, [sessionsQuery.data, playerLaps]);
+  }, [sessionsQuery.data, lapsQuery.data, playerLaps]);
 
   // Streak is a global property of the activity timeline, intentionally not bound to the time
   // range filter — a streak truncated by the range would be misleading.
