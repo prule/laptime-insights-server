@@ -29,9 +29,9 @@ enum class LapAggregateGroupBy {
  */
 @Serializable data class LapAggregateBucket(val key: String, val count: Long)
 
-/** Lap aggregation result. `buckets` is sparse — empty buckets are omitted, the client fills any gaps it needs for layout. */
+/**
+ * Lap aggregation result. `buckets` is sparse — empty buckets are omitted, the client fills any
+ * gaps it needs for layout.
+ */
 @Serializable
-data class LapAggregate(
-  val groupBy: LapAggregateGroupBy,
-  val buckets: List<LapAggregateBucket>,
-)
+data class LapAggregate(val groupBy: LapAggregateGroupBy, val buckets: List<LapAggregateBucket>)

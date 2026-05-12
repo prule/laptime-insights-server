@@ -1,7 +1,6 @@
 package com.github.prule.laptimeinsights
 
 import com.github.prule.laptimeinsights.adapter.`in`.web.index.IndexController
-import com.github.prule.laptimeinsights.adapter.`in`.web.setEnabledFeatures
 import com.github.prule.laptimeinsights.adapter.`in`.web.lap.AggregateLapsController
 import com.github.prule.laptimeinsights.adapter.`in`.web.lap.CompareLapsController
 import com.github.prule.laptimeinsights.adapter.`in`.web.lap.FindLapController
@@ -12,6 +11,7 @@ import com.github.prule.laptimeinsights.adapter.`in`.web.session.FindSessionCont
 import com.github.prule.laptimeinsights.adapter.`in`.web.session.SearchOptionsController
 import com.github.prule.laptimeinsights.adapter.`in`.web.session.SearchSessionController
 import com.github.prule.laptimeinsights.adapter.`in`.web.session.SessionEventController
+import com.github.prule.laptimeinsights.adapter.`in`.web.setEnabledFeatures
 import com.github.prule.laptimeinsights.adapter.out.persistence.JsonFileConfigurationRepository
 import com.github.prule.laptimeinsights.adapter.out.persistence.seed.DatabaseSeeder
 import com.github.prule.laptimeinsights.tracker.utils.NotFoundException as DomainNotFoundException

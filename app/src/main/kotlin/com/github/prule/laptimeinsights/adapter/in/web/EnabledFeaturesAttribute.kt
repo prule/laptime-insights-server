@@ -6,9 +6,9 @@ import io.ktor.util.AttributeKey
 
 /**
  * Carries the set of enabled [Feature]s through the Ktor application so link factories can omit
- * cross-feature rels for features the operator has turned off. Stored as an attribute (rather
- * than passed through every controller / factory constructor) because every controller already
- * receives [Application] and every link factory already takes it as an `Application` field.
+ * cross-feature rels for features the operator has turned off. Stored as an attribute (rather than
+ * passed through every controller / factory constructor) because every controller already receives
+ * [Application] and every link factory already takes it as an `Application` field.
  *
  * Set once in `Application.module(...)`; read by `SessionLinkFactory`, `LapLinkFactory`, and
  * `SessionOptionsLinkFactory`.

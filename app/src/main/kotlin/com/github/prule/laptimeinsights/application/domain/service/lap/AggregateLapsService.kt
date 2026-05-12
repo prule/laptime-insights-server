@@ -9,9 +9,8 @@ import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 
 class AggregateLapsService(private val aggregateLapsPort: AggregateLapsPort) :
   AggregateLapsUseCase {
-  override fun aggregate(
-    criteria: LapSearchCriteria,
-    groupBy: LapAggregateGroupBy,
-  ): LapAggregate =
-    transaction { LapAggregate(groupBy, aggregateLapsPort.aggregate(criteria, groupBy)) }
+  override fun aggregate(criteria: LapSearchCriteria, groupBy: LapAggregateGroupBy): LapAggregate =
+    transaction {
+      LapAggregate(groupBy, aggregateLapsPort.aggregate(criteria, groupBy))
+    }
 }

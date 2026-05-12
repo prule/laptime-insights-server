@@ -123,10 +123,7 @@ class LapRepository(private val mapper: LapMapper) :
       LapAggregateGroupBy.MONTH -> {
         val unit = groupBy.timeBucketUnit
         val truncExpr = dateTrunc(unit, LapTable.recordedAt)
-        val q =
-          baseQuery
-            .adjustSelect { select(truncExpr, countExpr) }
-            .groupBy(truncExpr)
+        val q = baseQuery.adjustSelect { select(truncExpr, countExpr) }.groupBy(truncExpr)
         q.map { row ->
           LapAggregateBucket(
             key = formatTimeBucketKey(row[truncExpr], unit),

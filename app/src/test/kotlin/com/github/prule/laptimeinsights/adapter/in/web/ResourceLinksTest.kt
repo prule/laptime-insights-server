@@ -4,13 +4,11 @@ import com.github.prule.laptimeinsights.AppModule
 import com.github.prule.laptimeinsights.ApplicationConfiguration
 import com.github.prule.laptimeinsights.Feature
 import com.github.prule.laptimeinsights.application.domain.model.Car
-import com.github.prule.laptimeinsights.application.domain.model.Lap
 import com.github.prule.laptimeinsights.application.domain.model.LapNumber
 import com.github.prule.laptimeinsights.application.domain.model.LapTimeMs
 import com.github.prule.laptimeinsights.application.domain.model.SessionType
 import com.github.prule.laptimeinsights.application.domain.model.Simulator
 import com.github.prule.laptimeinsights.application.domain.model.Track
-import com.github.prule.laptimeinsights.application.domain.model.Uid
 import com.github.prule.laptimeinsights.application.domain.model.ValidLap
 import com.github.prule.laptimeinsights.application.port.`in`.lap.CreateLapCommand
 import com.github.prule.laptimeinsights.application.port.`in`.session.CreateSessionCommand
@@ -60,17 +58,16 @@ class ResourceLinksTest {
     }
 
     startApplication()
-    val session =
-      transaction {
-        appModule.session.createSessionUseCase.createSession(
-          CreateSessionCommand(
-            simulator = Simulator.ACC,
-            sessionType = SessionType("Practice"),
-            track = Track("Monza"),
-            car = Car("Ferrari"),
-          )
+    val session = transaction {
+      appModule.session.createSessionUseCase.createSession(
+        CreateSessionCommand(
+          simulator = Simulator.ACC,
+          sessionType = SessionType("Practice"),
+          track = Track("Monza"),
+          car = Car("Ferrari"),
         )
-      }
+      )
+    }
 
     val response = client.get("/api/1/sessions/${session.uid.value}")
 
@@ -161,17 +158,16 @@ class ResourceLinksTest {
     }
 
     startApplication()
-    val session =
-      transaction {
-        appModule.session.createSessionUseCase.createSession(
-          CreateSessionCommand(
-            simulator = Simulator.ACC,
-            sessionType = SessionType("Practice"),
-            track = Track("Monza"),
-            car = Car("Ferrari"),
-          )
+    val session = transaction {
+      appModule.session.createSessionUseCase.createSession(
+        CreateSessionCommand(
+          simulator = Simulator.ACC,
+          sessionType = SessionType("Practice"),
+          track = Track("Monza"),
+          car = Car("Ferrari"),
         )
-      }
+      )
+    }
 
     val links = linksOf(client.get("/api/1/sessions/${session.uid.value}").bodyAsText())
     assertThat(links).containsKey("self").doesNotContainKey("laps")
@@ -214,7 +210,8 @@ class ResourceLinksTest {
       )
     }
 
-    val links = firstItemLinks(client.get("/api/1/laps?sessionUid=${session.uid.value}").bodyAsText())
+    val links =
+      firstItemLinks(client.get("/api/1/laps?sessionUid=${session.uid.value}").bodyAsText())
     assertThat(links).containsKeys("self", "telemetry").doesNotContainKey("session")
   }
 }

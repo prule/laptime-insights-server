@@ -9,9 +9,18 @@ import { formatDate, formatLapTime } from "../lib/format";
  * Each row navigates to the owning session's detail page on click when `lap._links.session`
  * is present (i.e. the backend exposed the rel because the `sessions` feature is on).
  */
-export function AllTimeBestTable({ laps }: { laps: LapResource[] }) {
+export function AllTimeBestTable({
+  laps,
+  isLoading = false,
+}: {
+  laps: LapResource[];
+  isLoading?: boolean;
+}) {
   const navigate = useNavigate();
 
+  if (isLoading) {
+    return <div className="font-sans text-[12px] text-text-muted">Loading…</div>;
+  }
   if (laps.length === 0) {
     return (
       <div className="font-sans text-[12px] text-text-muted">
