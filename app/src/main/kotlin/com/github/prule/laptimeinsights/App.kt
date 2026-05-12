@@ -7,6 +7,7 @@ import com.github.prule.laptimeinsights.adapter.`in`.web.lap.CompareLapsControll
 import com.github.prule.laptimeinsights.adapter.`in`.web.lap.FindLapController
 import com.github.prule.laptimeinsights.adapter.`in`.web.lap.FindLapTelemetryController
 import com.github.prule.laptimeinsights.adapter.`in`.web.lap.SearchLapController
+import com.github.prule.laptimeinsights.adapter.`in`.web.session.AggregateSessionsController
 import com.github.prule.laptimeinsights.adapter.`in`.web.session.FindSessionController
 import com.github.prule.laptimeinsights.adapter.`in`.web.session.SearchOptionsController
 import com.github.prule.laptimeinsights.adapter.`in`.web.session.SearchSessionController
@@ -137,6 +138,9 @@ private fun Application.initializeSessionControllers(appModule: AppModule) {
   FindSessionController(this, appModule.session.findSessionUseCase)
   SearchSessionController(this, appModule.session.searchSessionUseCase)
   SearchOptionsController(this, appModule.session.searchSessionOptionsUseCase)
+  // `Aggregate` must be registered before the `/{uid}` route so its literal wins over the
+  // placeholder when the router resolves a request.
+  AggregateSessionsController(this, appModule.session.aggregateSessionsUseCase)
 }
 
 private fun Application.initializeLapControllers(appModule: AppModule) {

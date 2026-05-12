@@ -30,6 +30,7 @@ class IndexLinkFactory(
     if (Feature.SESSIONS in enabledFeatures) {
       links[Feature.SESSIONS.rel] = application.href(SessionRoutes())
       links["sessionOptions"] = application.href(SessionRoutes.Options())
+      links["sessionsAggregate"] = application.href(SessionRoutes.Aggregate())
     }
     if (Feature.LAPS in enabledFeatures) {
       links[Feature.LAPS.rel] = application.href(LapRoutes())
