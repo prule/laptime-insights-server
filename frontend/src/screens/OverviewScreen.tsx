@@ -95,10 +95,16 @@ function bucketStarts(plan: BucketPlan, anchor: number): Date[] {
   return starts;
 }
 
+/**
+ * Bar-chart x-axis labels. Kept short so they fit in the 3-column dashboard layout — full date
+ * context is implicit in the card's `bucketSub` ("last N weeks/months"). Weeks show the day of
+ * month; months show the 3-letter month name. `truncate` on the label container is the backstop
+ * when the column is very narrow.
+ */
 function bucketLabel(start: Date, unit: BucketPlan["unit"]): string {
   return unit === "week"
-    ? start.toLocaleDateString("en-GB", { day: "2-digit", month: "short" })
-    : start.toLocaleDateString("en-GB", { month: "short", year: "2-digit" });
+    ? start.toLocaleDateString("en-GB", { day: "2-digit" })
+    : start.toLocaleDateString("en-GB", { month: "short" });
 }
 
 /**
