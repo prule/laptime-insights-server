@@ -1,3 +1,4 @@
 # Technical debt
 
 - DONE — `LapRepository.bestPerTrackQuery` (`allTimeBest=true`) now dedups at the DB level via `ROW_NUMBER() OVER (PARTITION BY track ORDER BY lap_time, id)` rather than pulling all matching rows and grouping in memory. Sort and pagination stay server-side.
+- `OverviewScreen` still pulls up to 1000 lap rows via `lapsQuery` to drive the **Laps per week/month** bar chart and the **Tracks practiced** bubble counts. Both are aggregations that belong on the server. Replace with dedicated endpoints (e.g. `/laps/aggregate?groupBy=track&from=…` and `/laps/aggregate?bucket=week|month&from=…`) so the dashboard transfers small aggregate responses instead of raw lap rows, and the chart counts stay accurate past 1000 laps. Same applies to `sessionsQuery` (size 100) feeding the driving-time-per-bucket chart and the session-track join in `trackPractice`.
