@@ -86,6 +86,16 @@ Unlike standard REST where URLs are hardcoded in the frontend, the React app fol
 responses to navigate. `client.ts` exposes `fetchLink(ctx, links, rel)` for following arbitrary link relations.
 If the backend changes its URL scheme, the frontend follows without code changes.
 
+### Bootstrap: `GET /api/1`
+
+The frontend boots from a single index resource at **`/api/1`** which returns an `IndexResource`
+carrying only `_links`. Each link relation corresponds to a high-level [Feature](../app/src/main/kotlin/com/github/prule/laptimeinsights/Feature.kt)
+(`overview`, `sessions`, `laps`, `compare`, `live`); a feature toggled off via its `FEATURE_<NAME>`
+environment variable has its link omitted, signalling the UI to hide the matching nav item. All
+features default to enabled — set e.g. `FEATURE_LIVE=false` to disable.
+
+Stable link relations: `self`, `sessions`, `sessionOptions`, `laps`, `compare`, `live`.
+
 ---
 
 ## 5. Data Flow: From Telemetry to Dashboard
