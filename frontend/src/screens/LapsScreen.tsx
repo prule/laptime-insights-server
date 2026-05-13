@@ -26,6 +26,7 @@ const PAGE_SIZE = 50;
 export function LapsScreen() {
   const navigate = useNavigate();
   const compareEnabled = useFeatureEnabled("compare");
+  const sessionsEnabled = useFeatureEnabled("sessions");
   const [params, setParam, setMany] = useUrlState();
 
   const facets = {
@@ -211,9 +212,9 @@ export function LapsScreen() {
               laps={items}
               onRowClick={(lap) => {
                 if (selectMode) return toggleSelect(lap.uid);
-                // Per-record HATEOAS gate: only navigate to session detail if the lap exposes
-                // the `session` rel (i.e. the `sessions` feature is enabled on the backend).
-                if (lap._links.session) navigate(`/sessions/${lap.sessionUid}`);
+                // Navigate only when the Sessions UI is enabled — the session detail route
+                // doesn't exist otherwise.
+                if (sessionsEnabled) navigate(`/sessions/${lap.sessionUid}`);
               }}
               onSessionClick={(uid) => navigate(`/sessions/${uid}`)}
               isRowSelected={(lap) => selected.includes(lap.uid)}

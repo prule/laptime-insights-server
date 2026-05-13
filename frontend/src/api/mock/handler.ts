@@ -92,8 +92,9 @@ export async function mockHandler(path: string): Promise<unknown> {
   const { pathname, query } = parsePath(path);
 
   if (pathname === "/api/1") {
-    // Mock mode mirrors a fully-featured backend so every feature is on. Real-mode toggling is
-    // driven by the Ktor `FEATURE_<NAME>` env vars.
+    // Mock mode mirrors a fully-featured backend so every UI feature is on. Real-mode toggling
+    // is driven by the Ktor `FEATURE_<NAME>` env vars. `_links` advertises capabilities (always
+    // complete); `enabledFeatures` advertises which UI surfaces to render.
     return delay({
       _links: {
         self: "/api/1",
@@ -106,6 +107,7 @@ export async function mockHandler(path: string): Promise<unknown> {
         compare: "/api/1/laps/compare",
         live: "/api/1/events",
       },
+      enabledFeatures: ["overview", "sessions", "laps", "compare", "live"],
     });
   }
 

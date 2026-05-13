@@ -9,6 +9,7 @@ import io.ktor.client.statement.bodyAsText
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.testing.testApplication
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import org.assertj.core.api.Assertions.assertThat
@@ -22,8 +23,27 @@ class IndexControllerTest {
     return links.mapValues { it.value.jsonPrimitive.content }
   }
 
+  private fun parseEnabledFeatures(body: String): List<String> {
+    val root = Json.parseToJsonElement(body).jsonObject
+    val arr = root["enabledFeatures"]?.jsonArray ?: error("missing enabledFeatures: $body")
+    return arr.map { it.jsonPrimitive.content }
+  }
+
+  private val ALL_LINKS =
+    listOf(
+      "self",
+      "overview",
+      "sessions",
+      "sessionOptions",
+      "sessionsAggregate",
+      "laps",
+      "lapsAggregate",
+      "compare",
+      "live",
+    )
+
   @Test
-  fun `returns all links when every feature is enabled`() = testApplication {
+  fun `_links always advertises every capability regardless of toggle state`() = testApplication {
     application {
       module(
         configuration = ApplicationConfiguration(),
@@ -37,18 +57,7 @@ class IndexControllerTest {
 
     assertThat(response.status).isEqualTo(HttpStatusCode.OK)
     val links = parseLinks(response.bodyAsText())
-    assertThat(links.keys)
-      .containsExactlyInAnyOrder(
-        "self",
-        "overview",
-        "sessions",
-        "sessionOptions",
-        "sessionsAggregate",
-        "laps",
-        "lapsAggregate",
-        "compare",
-        "live",
-      )
+    assertThat(links.keys).containsExactlyInAnyOrderElementsOf(ALL_LINKS)
     assertThat(links["self"]).isEqualTo("/api/1")
     assertThat(links["overview"]).isEqualTo("/api/1/sessions")
     assertThat(links["sessions"]).isEqualTo("/api/1/sessions")
@@ -61,32 +70,42 @@ class IndexControllerTest {
   }
 
   @Test
-  fun `omits links for disabled features`() = testApplication {
+  fun `enabledFeatures lists every Feature when all are on`() = testApplication {
     application {
       module(
         configuration = ApplicationConfiguration(),
         appModule = AppModule(),
-        jdbcUrl = "jdbc:h2:mem:test-index-partial;DB_CLOSE_DELAY=-1;",
-        enabledFeatures = setOf(Feature.SESSIONS, Feature.LAPS),
+        jdbcUrl = "jdbc:h2:mem:test-index-features-all;DB_CLOSE_DELAY=-1;",
+        enabledFeatures = Feature.entries.toSet(),
       )
     }
 
-    val links = parseLinks(client.get("/api/1").bodyAsText())
-
-    assertThat(links.keys)
-      .containsExactlyInAnyOrder(
-        "self",
-        "sessions",
-        "sessionOptions",
-        "sessionsAggregate",
-        "laps",
-        "lapsAggregate",
-      )
-    assertThat(links).doesNotContainKeys("overview", "compare", "live")
+    val features = parseEnabledFeatures(client.get("/api/1").bodyAsText())
+    assertThat(features)
+      .containsExactlyInAnyOrder("overview", "sessions", "laps", "compare", "live")
   }
 
   @Test
-  fun `returns only self when all features disabled`() = testApplication {
+  fun `enabledFeatures shrinks but _links stays complete when a feature is off`() =
+    testApplication {
+      application {
+        module(
+          configuration = ApplicationConfiguration(),
+          appModule = AppModule(),
+          jdbcUrl = "jdbc:h2:mem:test-index-partial;DB_CLOSE_DELAY=-1;",
+          enabledFeatures = setOf(Feature.OVERVIEW, Feature.LAPS),
+        )
+      }
+
+      val body = client.get("/api/1").bodyAsText()
+      // _links is unchanged: the data plane stays usable when only some UI surfaces are enabled.
+      assertThat(parseLinks(body).keys).containsExactlyInAnyOrderElementsOf(ALL_LINKS)
+      // enabledFeatures reflects the toggle.
+      assertThat(parseEnabledFeatures(body)).containsExactlyInAnyOrder("overview", "laps")
+    }
+
+  @Test
+  fun `enabledFeatures is empty when every UI feature is off`() = testApplication {
     application {
       module(
         configuration = ApplicationConfiguration(),
@@ -96,8 +115,8 @@ class IndexControllerTest {
       )
     }
 
-    val links = parseLinks(client.get("/api/1").bodyAsText())
-
-    assertThat(links).containsOnlyKeys("self")
+    val body = client.get("/api/1").bodyAsText()
+    assertThat(parseLinks(body).keys).containsExactlyInAnyOrderElementsOf(ALL_LINKS)
+    assertThat(parseEnabledFeatures(body)).isEmpty()
   }
 }
