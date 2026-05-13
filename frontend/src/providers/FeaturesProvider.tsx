@@ -1,14 +1,15 @@
 /**
- * Bootstraps the app by fetching `GET /api/1` and exposing which features the backend currently
- * advertises via HATEOAS `_links`. Every gating decision in the UI — sidebar, router, query
- * hooks, cross-screen action buttons — funnels through `useFeatureEnabled` so the toggle logic
- * lives in exactly one place.
+ * Bootstraps the app by fetching `GET /api/1`.
  *
- * The fetch follows the active `DataMode`. In mock mode the in-memory handler answers with every
- * feature on; in live mode the Ktor backend's link map drives what's enabled. While the index is
- * loading we optimistically assume every feature is on so nav doesn't flicker — the first paint
- * matches the steady-state for the common "everything enabled" case, and disabled features simply
- * disappear once the response lands.
+ * Two pieces of information come back:
+ * - `_links` — every API capability (always present). Hooks in `api/queries.ts` follow these
+ *   for actual data fetching, so a screen can consume data from another feature's API even
+ *   when that feature's UI is hidden.
+ * - `enabledFeatures` — the UI surfaces the operator turned on. `useFeatureEnabled(feature)`
+ *   reads from this list; the sidebar, router, and cross-screen action buttons gate on it.
+ *
+ * While the index is loading we optimistically assume every UI feature is on so nav doesn't
+ * flicker — once the response lands, anything the backend hasn't advertised disappears.
  */
 import { createContext, useContext, useMemo, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -19,6 +20,7 @@ import { useDataMode } from "./DataModeProvider";
 
 interface IndexResource {
   _links: Links;
+  enabledFeatures: string[];
 }
 
 interface FeaturesContextValue {
@@ -28,7 +30,7 @@ interface FeaturesContextValue {
   error: Error | null;
 }
 
-const ALL_LINKS: Links = Object.fromEntries(FEATURES.map((f) => [f, ""]));
+const ALL_FEATURES: ReadonlySet<string> = new Set(FEATURES);
 
 const FeaturesContext = createContext<FeaturesContextValue | null>(null);
 
@@ -41,10 +43,13 @@ export function FeaturesProvider({ children }: { children: ReactNode }) {
   });
 
   const value = useMemo<FeaturesContextValue>(() => {
-    const links = query.data?._links ?? ALL_LINKS;
+    const links = query.data?._links ?? {};
+    const enabled = query.data?.enabledFeatures
+      ? new Set<string>(query.data.enabledFeatures)
+      : ALL_FEATURES;
     return {
       links,
-      isEnabled: (feature) => feature in links,
+      isEnabled: (feature) => enabled.has(feature),
       isLoading: query.isLoading,
       error: query.error as Error | null,
     };

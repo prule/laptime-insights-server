@@ -89,13 +89,24 @@ If the backend changes its URL scheme, the frontend follows without code changes
 ### Bootstrap: `GET /api/1`
 
 The frontend boots from a single index resource at **`/api/1`** which returns an `IndexResource`
-carrying only `_links`. Each link relation corresponds to a high-level [Feature](../app/src/main/kotlin/com/github/prule/laptimeinsights/Feature.kt)
-(`overview`, `sessions`, `laps`, `compare`, `live`); a feature toggled off via its `FEATURE_<NAME>`
-environment variable has its link omitted, signalling the UI to hide the matching nav item. All
-features default to enabled — set e.g. `FEATURE_LIVE=false` to disable.
+carrying two pieces of information that are deliberately kept separate:
 
-Stable link relations: `self`, `overview`, `sessions`, `sessionOptions`, `laps`, `compare`,
-`live`.
+- **`_links` — API capabilities.** Every rel is always present. Hooks follow these to fetch data,
+  so a screen can consume data from another feature's API even when that feature's UI surface is
+  hidden (e.g. Overview keeps showing recent sessions and per-track bests when the Sessions UI is
+  disabled).
+- **`enabledFeatures` — UI surfaces.** Lists the [Feature](../app/src/main/kotlin/com/github/prule/laptimeinsights/Feature.kt)
+  ids whose nav items, routes, and cross-screen action buttons should render. Driven by
+  `FEATURE_<NAME>` env vars layered on top of `Feature.defaultEnabled`.
+
+This split fixes the failure mode where disabling, say, Sessions also broke Overview because
+Overview's data fetches were gated on the same toggle. Capability and UI presence are now
+independent.
+
+Stable link relations: `self`, `overview`, `sessions`, `sessionOptions`, `sessionsAggregate`,
+`laps`, `lapsAggregate`, `compare`, `live`.
+
+Stable feature ids: `overview`, `sessions`, `laps`, `compare`, `live`.
 
 **Frontend feature gating** is centralised in two places so adding a feature stays a one-line
 change everywhere downstream:
@@ -103,33 +114,25 @@ change everywhere downstream:
 - `frontend/src/config/features.tsx` — a `FEATURE_CONFIG` registry mapping each feature to its
   HATEOAS rel, sidebar nav config, and router routes.
 - `frontend/src/providers/FeaturesProvider.tsx` — fetches `/api/1` via TanStack Query, exposes
-  `useFeatures()` / `useFeatureEnabled(feature)`. While the index is loading every feature is
-  treated as on so the UI doesn't flicker; the response then prunes anything the backend hasn't
-  advertised.
+  `useFeatures()` (returns `links` + `isEnabled`) and `useFeatureEnabled(feature)`. While the
+  index is loading every feature is treated as on so the UI doesn't flicker.
 
 Everything else reads from those two:
 
-- `Sidebar` and `App.tsx` derive nav + routes from the registry filtered by `isEnabled`.
+- `Sidebar` and `App.tsx` derive nav + routes from the registry filtered by `isEnabled` (UI).
 - `api/queries.ts` is HATEOAS-first — every URL the hooks fetch comes from a link relation:
     - Listing hooks (`useSessions`, `useLaps`, `useSessionOptions`, `useTrackBestLap`,
       `useLapComparison`) follow the index `/api/1` `_links`.
     - Per-record hooks (`useSessionLaps(session)`, `useSessionBestLap(session)`,
-      `useLapTelemetry(lap)`) follow `_links` on the parent resource — so when the backend
-      omits a cross-feature rel because that feature is off, the hook short-circuits to
-      `enabled: false` automatically.
+      `useLapTelemetry(lap)`) follow `_links` on the parent resource. These rels are always
+      present (capability), so the hook only short-circuits when the parent record hasn't loaded
+      yet.
     - "By uid" entry points (`useSession(uid)`, `useLap(uid)`) compose `${indexLink}/{uid}`.
-- Cross-screen action UI:
+- Cross-screen action UI gates on the **UI feature** (`useFeatureEnabled`), not on link presence:
     - Per-record actions (clickable session column in a lap row, "go to session" buttons in
-      tables) gate on `record._links[rel]` presence — backend has already decided whether the
-      target feature is reachable for that record.
+      tables) — clickable when the *target* UI feature is enabled.
     - Global actions ("View all" → `/sessions`, the Compare toolbar in `LapsScreen`,
-      session-detail "Back to sessions") gate on `useFeatureEnabled(feature)` since they
-      aren't tied to one record.
-
-Backend-side: `Application.setEnabledFeatures(...)` (called once in `module(...)`) is read by
-`SessionLinkFactory`, `LapLinkFactory`, and `SessionOptionsLinkFactory` to decide which
-cross-feature rels to emit. The result is that *link presence is the gate* — the frontend never
-needs to consult a separate env-var mirror or feature flag map.
+      session-detail "Back to sessions") — same gate.
 
 ---
 

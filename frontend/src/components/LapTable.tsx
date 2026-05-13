@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import type { ReactNode } from "react";
 import type { LapResource } from "../api/types";
+import { useFeatureEnabled } from "../providers/FeaturesProvider";
 import { formatDate, formatLapTime, formatTime } from "../lib/format";
 
 export interface LapTableColumn {
@@ -69,6 +70,10 @@ export function LapTable({
   isRowDimmed,
   disabledTitle,
 }: LapTableProps) {
+  // The session column is clickable only when the Sessions UI is on. The lap's `session` rel
+  // exists regardless — that's a capability link — but navigating there would be pointless if
+  // the route is hidden.
+  const sessionsEnabled = useFeatureEnabled("sessions");
   // Compute session best (minimum valid lapTime) per session from the provided
   // laps. For single-session views this equals the session best; for cross-
   // session views it reflects the best among whichever laps are in view.
@@ -133,9 +138,10 @@ export function LapTable({
           <>
             {prefixColumn && <div>{prefixColumn.cell(lap)}</div>}
             <div className="truncate" title={lap.sessionUid}>
-              {/* Per-record HATEOAS gate: render as a link only when the backend exposed the
-                  `session` rel for this lap (i.e. the `sessions` feature is enabled). */}
-              {onSessionClick && lap._links.session ? (
+              {/* UI gate: render as a link only when the Sessions UI feature is enabled. The
+                  `lap._links.session` rel is always present (it's a capability), so we read the
+                  UI toggle instead. */}
+              {onSessionClick && sessionsEnabled ? (
                 <button
                   type="button"
                   onClick={(e) => { e.stopPropagation(); onSessionClick(lap.sessionUid); }}

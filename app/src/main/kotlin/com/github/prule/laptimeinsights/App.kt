@@ -11,7 +11,6 @@ import com.github.prule.laptimeinsights.adapter.`in`.web.session.FindSessionCont
 import com.github.prule.laptimeinsights.adapter.`in`.web.session.SearchOptionsController
 import com.github.prule.laptimeinsights.adapter.`in`.web.session.SearchSessionController
 import com.github.prule.laptimeinsights.adapter.`in`.web.session.SessionEventController
-import com.github.prule.laptimeinsights.adapter.`in`.web.setEnabledFeatures
 import com.github.prule.laptimeinsights.adapter.out.persistence.JsonFileConfigurationRepository
 import com.github.prule.laptimeinsights.adapter.out.persistence.seed.DatabaseSeeder
 import com.github.prule.laptimeinsights.tracker.utils.NotFoundException as DomainNotFoundException
@@ -101,7 +100,6 @@ fun Application.module(
       .seed()
   }
 
-  setEnabledFeatures(enabledFeatures)
   IndexController(this, enabledFeatures)
   initializeSessionControllers(appModule)
   initializeLapControllers(appModule)

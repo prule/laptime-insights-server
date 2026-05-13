@@ -146,41 +146,16 @@ class ResourceLinksTest {
   }
 
   @Test
-  fun `SessionResource omits laps rel when laps feature is off`() = testApplication {
+  fun `cross-feature rels stay present when a UI feature is disabled`() = testApplication {
+    // Capability links are independent of UI feature toggles — disabling the Sessions UI must
+    // not strip `lap._links.session`, otherwise screens like Overview that depend on the lap →
+    // session traversal silently break.
     val appModule = AppModule()
     application {
       module(
         configuration = ApplicationConfiguration(),
         appModule = appModule,
-        jdbcUrl = "jdbc:h2:mem:test-links-session-no-laps;DB_CLOSE_DELAY=-1;",
-        enabledFeatures = Feature.entries.toSet() - Feature.LAPS,
-      )
-    }
-
-    startApplication()
-    val session = transaction {
-      appModule.session.createSessionUseCase.createSession(
-        CreateSessionCommand(
-          simulator = Simulator.ACC,
-          sessionType = SessionType("Practice"),
-          track = Track("Monza"),
-          car = Car("Ferrari"),
-        )
-      )
-    }
-
-    val links = linksOf(client.get("/api/1/sessions/${session.uid.value}").bodyAsText())
-    assertThat(links).containsKey("self").doesNotContainKey("laps")
-  }
-
-  @Test
-  fun `LapResource omits session rel when sessions feature is off`() = testApplication {
-    val appModule = AppModule()
-    application {
-      module(
-        configuration = ApplicationConfiguration(),
-        appModule = appModule,
-        jdbcUrl = "jdbc:h2:mem:test-links-lap-no-session;DB_CLOSE_DELAY=-1;",
+        jdbcUrl = "jdbc:h2:mem:test-links-feature-off;DB_CLOSE_DELAY=-1;",
         enabledFeatures = Feature.entries.toSet() - Feature.SESSIONS,
       )
     }
@@ -210,8 +185,11 @@ class ResourceLinksTest {
       )
     }
 
-    val links =
+    val sessionLinks = linksOf(client.get("/api/1/sessions/${session.uid.value}").bodyAsText())
+    assertThat(sessionLinks).containsKeys("self", "laps")
+
+    val lapLinks =
       firstItemLinks(client.get("/api/1/laps?sessionUid=${session.uid.value}").bodyAsText())
-    assertThat(links).containsKeys("self", "telemetry").doesNotContainKey("session")
+    assertThat(lapLinks).containsKeys("self", "session", "telemetry")
   }
 }

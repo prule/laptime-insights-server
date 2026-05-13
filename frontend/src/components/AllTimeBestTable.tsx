@@ -1,13 +1,14 @@
 import { useNavigate } from "react-router-dom";
 import type { LapResource } from "../api/types";
+import { useFeatureEnabled } from "../providers/FeaturesProvider";
 import { formatDate, formatLapTime } from "../lib/format";
 
 /**
  * Dashboard table — one row per track, showing the player's all-time fastest valid lap.
  * Source: `/api/1/laps?playerLap=true&validLap=true&allTimeBest=true&sort=track:ASC`.
  *
- * Each row navigates to the owning session's detail page on click when `lap._links.session`
- * is present (i.e. the backend exposed the rel because the `sessions` feature is on).
+ * Each row navigates to the owning session's detail page when the Sessions UI is enabled;
+ * rows render as static summary entries otherwise.
  */
 export function AllTimeBestTable({
   laps,
@@ -19,6 +20,7 @@ export function AllTimeBestTable({
   isError?: boolean;
 }) {
   const navigate = useNavigate();
+  const sessionsEnabled = useFeatureEnabled("sessions");
 
   if (isLoading) {
     return <div className="font-sans text-[12px] text-text-muted">Loading…</div>;
@@ -47,7 +49,7 @@ export function AllTimeBestTable({
       </div>
       <div className="flex flex-col">
         {laps.map((l) => {
-          const canNavigate = !!l._links.session;
+          const canNavigate = sessionsEnabled;
           return (
           <button
             key={l.uid}
