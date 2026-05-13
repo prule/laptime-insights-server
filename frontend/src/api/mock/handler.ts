@@ -44,6 +44,39 @@ function compareSessions(sort: string | null) {
   };
 }
 
+/**
+ * Mirror the backend's `formatTimeBucketKey` — UTC date string for day/week, UTC `YYYY-MM` for
+ * month. Week uses Monday as start of week (ISO).
+ */
+function timeBucketKey(iso: string, unit: "day" | "week" | "month"): string {
+  const d = new Date(iso);
+  const y = d.getUTCFullYear();
+  const m = String(d.getUTCMonth() + 1).padStart(2, "0");
+  if (unit === "month") return `${y}-${m}`;
+  if (unit === "day") {
+    const dd = String(d.getUTCDate()).padStart(2, "0");
+    return `${y}-${m}-${dd}`;
+  }
+  // ISO week start (Monday) in UTC.
+  const dayOfWeek = (d.getUTCDay() + 6) % 7; // 0=Mon … 6=Sun
+  const monday = new Date(
+    Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() - dayOfWeek),
+  );
+  const wy = monday.getUTCFullYear();
+  const wm = String(monday.getUTCMonth() + 1).padStart(2, "0");
+  const wd = String(monday.getUTCDate()).padStart(2, "0");
+  return `${wy}-${wm}-${wd}`;
+}
+
+function aggregateKey(lap: LapResource, groupBy: "track" | "day" | "week" | "month"): string {
+  if (groupBy === "track") return lap.track ?? "";
+  return timeBucketKey(lap.recordedAt, groupBy);
+}
+
+function sessionAggregateKey(iso: string, groupBy: "day" | "week" | "month"): string {
+  return timeBucketKey(iso, groupBy);
+}
+
 function compareLaps(sort: string | null) {
   if (!sort) return (a: LapResource, b: LapResource) => a.lapNumber - b.lapNumber;
   const [field, order] = sort.split(",")[0]!.split(":");
@@ -57,6 +90,54 @@ function compareLaps(sort: string | null) {
 
 export async function mockHandler(path: string): Promise<unknown> {
   const { pathname, query } = parsePath(path);
+
+  if (pathname === "/api/1") {
+    // Mock mode mirrors a fully-featured backend so every feature is on. Real-mode toggling is
+    // driven by the Ktor `FEATURE_<NAME>` env vars.
+    return delay({
+      _links: {
+        self: "/api/1",
+        overview: "/api/1/sessions",
+        sessions: "/api/1/sessions",
+        sessionOptions: "/api/1/sessions/options",
+        sessionsAggregate: "/api/1/sessions/aggregate",
+        laps: "/api/1/laps",
+        lapsAggregate: "/api/1/laps/aggregate",
+        compare: "/api/1/laps/compare",
+        live: "/api/1/events",
+      },
+    });
+  }
+
+  // /api/1/sessions/aggregate must be matched before /api/1/sessions/{uid}.
+  if (pathname === "/api/1/sessions/aggregate") {
+    const groupBy = (query.get("groupBy") ?? "") as "day" | "week" | "month";
+    if (!["day", "week", "month"].includes(groupBy)) return undefined;
+    let items = SESSIONS.slice();
+    const car = query.get("car");
+    const track = query.get("track");
+    const simulator = query.get("simulator");
+    const from = query.get("from");
+    const to = query.get("to");
+    if (car) items = items.filter((s) => s.car === car);
+    if (track) items = items.filter((s) => s.track === track);
+    if (simulator) items = items.filter((s) => s.simulator === simulator);
+    if (from) items = items.filter((s) => (s.startedAt ?? "") >= from);
+    if (to) items = items.filter((s) => (s.startedAt ?? "") <= to);
+    items = items.filter((s) => !!s.startedAt);
+    const buckets = new Map<string, { count: number; drivingTimeMs: number }>();
+    for (const s of items) {
+      const key = sessionAggregateKey(s.startedAt!, groupBy);
+      const cur = buckets.get(key) ?? { count: 0, drivingTimeMs: 0 };
+      cur.count += 1;
+      cur.drivingTimeMs += s.drivingTimeMs ?? 0;
+      buckets.set(key, cur);
+    }
+    return delay({
+      groupBy,
+      buckets: Array.from(buckets, ([key, v]) => ({ key, ...v })),
+    });
+  }
 
   if (pathname === "/api/1/sessions/options") {
     return delay<SessionOptionsResource>(OPTIONS);
@@ -86,6 +167,34 @@ export async function mockHandler(path: string): Promise<unknown> {
     const session = SESSIONS.find((s) => s.uid === sessionMatch[1]);
     if (!session) return undefined;
     return delay(session);
+  }
+
+  // /api/1/laps/aggregate must be matched before the /api/1/laps/{uid} pattern.
+  if (pathname === "/api/1/laps/aggregate") {
+    const groupBy = (query.get("groupBy") ?? "") as "track" | "day" | "week" | "month";
+    if (!["track", "day", "week", "month"].includes(groupBy)) return undefined;
+    // Mirror the backend lap filters (subset that matters for the dashboards).
+    let items = LAPS.slice();
+    const playerLap = query.get("playerLap");
+    const validLap = query.get("validLap");
+    const from = query.get("from");
+    const to = query.get("to");
+    const track = query.get("track");
+    if (playerLap === "true") items = items.filter((l) => l.playerLap === true);
+    if (playerLap === "false") items = items.filter((l) => l.playerLap === false);
+    if (validLap === "true") items = items.filter((l) => l.valid);
+    if (validLap === "false") items = items.filter((l) => !l.valid);
+    if (from) items = items.filter((l) => l.recordedAt >= from);
+    if (to) items = items.filter((l) => l.recordedAt <= to);
+    if (track) items = items.filter((l) => l.track === track);
+    if (groupBy === "track") items = items.filter((l) => !!l.track);
+    const counts = new Map<string, number>();
+    for (const l of items) {
+      const key = aggregateKey(l, groupBy);
+      counts.set(key, (counts.get(key) ?? 0) + 1);
+    }
+    const buckets = Array.from(counts, ([key, count]) => ({ key, count }));
+    return delay({ groupBy, buckets });
   }
 
   // /api/1/laps/compare must be matched before the /api/1/laps/{uid} pattern.
@@ -137,6 +246,8 @@ export async function mockHandler(path: string): Promise<unknown> {
     const carIdParam = query.get("carId");
     const personalBest = query.get("personalBest");
     const validLap = query.get("validLap");
+    const playerLap = query.get("playerLap");
+    const allTimeBest = query.get("allTimeBest");
     const uid = query.get("uid");
     const car = query.get("car");
     const track = query.get("track");
@@ -151,6 +262,8 @@ export async function mockHandler(path: string): Promise<unknown> {
     if (personalBest === "false") items = items.filter((l) => !l.personalBest);
     if (validLap === "true") items = items.filter((l) => l.valid);
     if (validLap === "false") items = items.filter((l) => !l.valid);
+    if (playerLap === "true") items = items.filter((l) => l.playerLap === true);
+    if (playerLap === "false") items = items.filter((l) => l.playerLap === false);
     if (car || track || simulator) {
       // Mirror the backend's SESSION join: filter laps by their owning
       // session's car / track / simulator.
@@ -163,6 +276,16 @@ export async function mockHandler(path: string): Promise<unknown> {
         if (simulator && session.simulator !== simulator) return false;
         return true;
       });
+    }
+    if (allTimeBest === "true") {
+      // Mirror backend: keep the fastest lap per `track`, drop null-track laps.
+      const bestByTrack = new Map<string, LapResource>();
+      for (const l of items) {
+        if (!l.track) continue;
+        const cur = bestByTrack.get(l.track);
+        if (!cur || l.lapTime < cur.lapTime) bestByTrack.set(l.track, l);
+      }
+      items = Array.from(bestByTrack.values());
     }
     items = items.sort(compareLaps(query.get("sort")));
     return delay<Page<LapResource>>(paged(items, page, size));

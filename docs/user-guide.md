@@ -30,23 +30,27 @@ Four stat cards sit at the top of the page:
 
 - **Total Sessions** — how many sessions fall inside the active time range.
 - **Total Laps** — total lap count for the range.
-- **Best Lap** — your fastest valid lap across all sessions in the range.
-- **Avg Lap** — mean lap time across all valid laps in the range.
+- **Driving Time** — total on-track time for your car across all sessions in the range (sum of player-car lap times; pit/idle periods are excluded).
 
-The header also displays your **Personal Best** in large text in the top-right corner.
+The header also displays your **Streak** in the top-right corner — the number of consecutive calendar days, ending on your most recent session, on which you drove. The label beneath the number shows when the streak last ticked: `today` or `yesterday` means it's still alive (green), anything older means the streak has ended (muted) and the badge shows the date it broke.
 
 ### Activity charts
 
-Two bar charts show your pace of activity over the active range:
+Three bar charts show your pace of activity over the active range — order mirrors the stat cards above:
 
+- **Sessions per week / month** — how many sessions you ran in each bucket.
 - **Laps per week / month** — how many laps you recorded in each bucket.
-- **Sessions per week / month** — how many sessions you ran.
+- **Driving time per week / month** — total on-track time in each bucket.
 
 Short ranges (1M, 3M) use weekly buckets; longer ranges (6M, 1Y, All) switch to monthly buckets so the chart stays readable.
 
 ### Tracks practiced
 
 A bubble chart shows every track you have ever visited. The **area of each bubble is proportional to the number of laps** recorded at that track within the active time range. Tracks with zero laps in the range are shown as dashed outlines — useful for spotting tracks you haven't been back to recently.
+
+### All-time best per track
+
+A table beneath the bubble chart lists the **fastest valid lap you've ever driven at each track**, one row per track. Unlike the rest of the Overview screen, this table is not bound to the active time range — "all-time" means all-time. Each row shows the track, the best lap time, the car you drove that lap in, and the date it was recorded. Click any row to jump to the detail page of the session in which that lap was driven.
 
 ### Recent sessions
 

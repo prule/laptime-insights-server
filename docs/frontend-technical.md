@@ -32,13 +32,14 @@ frontend/src/
     LapPicker.tsx     # button + Modal wrapping LapBrowser for lap selection
     SessionRow.tsx    # single session row (Overview + Sessions screens)
   config/
-    navigation.ts     # NAV_ITEMS array driving the sidebar
+    features.tsx      # FEATURE_CONFIG registry: rel ↔ nav ↔ routes for every feature
   hooks/
     useUrlState.ts    # URL querystring read/write helpers
   lib/
     format.ts         # formatLapTime / formatDate / formatDrivingTime / formatNumber
   providers/
     DataModeProvider.tsx   # mock|live toggle + apiBase, persisted to localStorage
+    FeaturesProvider.tsx   # fetches GET /api/1; exposes useFeatureEnabled(feature)
     TimeRangeProvider.tsx  # global time range (1m/3m/6m/1y/all), persisted to localStorage
   screens/
     OverviewScreen.tsx
@@ -80,7 +81,7 @@ The per-row compare buttons navigate to `/compare?track=…&lap1=…&lap2=…` s
 
 ### LapsScreen (`/laps`)
 
-URL params: `track`, `car`, `simulator`, `invalid` (bool, inverted to `validOnly`), `pb` (bool), `page` (int, default 1). Page size is 50.
+URL params: `track`, `car`, `simulator`, `invalid` (bool, inverted to `validOnly`), `pb` (bool), `player` (bool — restricts to laps recorded by the player's car via `playerLap=true`), `page` (int, default 1). Page size is 50.
 
 Multi-select mode is local component state — selection is transient, not URL-serialised. Selecting a second lap when two are already chosen drops the oldest pick so the most recent two win. Navigates to `/compare` with `lap1` and `lap2` set, plus `track` if a track filter is active.
 
@@ -197,8 +198,22 @@ npm run build
 ## Adding a new screen
 
 1. Create `src/screens/NewScreen.tsx`.
-2. Add a route in `App.tsx`.
-3. Add an entry to `NAV_ITEMS` in `src/config/navigation.ts`.
-4. Drive any filter/pagination state through `useUrlState`.
-5. Add corresponding mock handler and query hook.
-6. Use `LoadingState`, `ErrorState`, `EmptyState` from `components/ui/States.tsx` for async states.
+2. Pick an existing feature in `src/config/features.tsx` (or add a new one — see below) and append
+   the screen's route to that feature's `routes` array. `App.tsx` and `Sidebar` derive from this
+   registry, so no further wiring is needed there.
+3. Drive any filter/pagination state through `useUrlState`.
+4. Add corresponding mock handler and query hook (call `useGate(feature, …)` inside the hook so
+   it short-circuits when the feature is off).
+5. Use `LoadingState`, `ErrorState`, `EmptyState` from `components/ui/States.tsx` for async states.
+
+## Adding a new feature
+
+A feature is the unit the backend toggles via `FEATURE_<NAME>` env vars and the frontend reads
+from `GET /api/1` `_links`.
+
+1. Add the enum entry to `app/.../Feature.kt` and emit its link in `IndexLinkFactory`.
+2. Add the matching string to the `Feature` union in `src/config/features.tsx` and append a
+   `FEATURE_CONFIG` entry with the rel, sidebar nav, and routes.
+3. Update the mock handler (`api/mock/handler.ts`) to advertise the rel in its `/api/1` response.
+4. Reference the feature via `useFeatureEnabled("yourFeature")` in any cross-screen action button
+   so it hides when the feature is disabled.

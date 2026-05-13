@@ -12,6 +12,11 @@ import kotlin.time.Instant
  *
  * `from` / `to` constrain `LAP.recordedAt`: `from` is inclusive, `to` is exclusive. Both are
  * optional and combined with logical AND.
+ *
+ * `allTimeBest = true` is a post-filter aggregation: after the row-level filters above are applied,
+ * only the fastest valid lap per `LAP.track` is kept (computed in memory at the persistence layer).
+ * Pair with `playerLap = true` and `validLap = true` for the "player's all-time best per track"
+ * dashboard query.
  */
 data class LapSearchCriteria(
   val id: LapId? = null,
@@ -21,6 +26,8 @@ data class LapSearchCriteria(
   val carId: CarId? = null,
   val personalBest: PersonalBest? = null,
   val validLap: ValidLap? = null,
+  val playerLap: PlayerLap? = null,
+  val allTimeBest: AllTimeBest? = null,
   val car: Car? = null,
   val track: Track? = null,
   val simulator: Simulator? = null,

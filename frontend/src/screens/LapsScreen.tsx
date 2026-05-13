@@ -8,6 +8,7 @@ import { FilterSelect } from "../components/ui/FilterSelect";
 import { SectionHeader } from "../components/ui/SectionHeader";
 import { LapTable } from "../components/LapTable";
 import { getBool, getInt, getString, useUrlState } from "../hooks/useUrlState";
+import { useFeatureEnabled } from "../providers/FeaturesProvider";
 import { useTimeRange } from "../providers/TimeRangeProvider";
 
 const PAGE_SIZE = 50;
@@ -24,6 +25,7 @@ const PAGE_SIZE = 50;
  */
 export function LapsScreen() {
   const navigate = useNavigate();
+  const compareEnabled = useFeatureEnabled("compare");
   const [params, setParam, setMany] = useUrlState();
 
   const facets = {
@@ -34,6 +36,7 @@ export function LapsScreen() {
   const showInvalid = getBool(params, "invalid", false);
   const validOnly = !showInvalid;
   const pbOnly = getBool(params, "pb", false);
+  const playerOnly = getBool(params, "player", false);
   const page = getInt(params, "page", 1);
   const facetsActive = !!(facets.track || facets.car || facets.simulator);
 
@@ -53,6 +56,7 @@ export function LapsScreen() {
     sort: "lapTime:ASC",
     validLap: validOnly ? true : undefined,
     personalBest: pbOnly ? true : undefined,
+    playerLap: playerOnly ? true : undefined,
     car: facets.car,
     track: facets.track,
     simulator: facets.simulator,
@@ -110,7 +114,12 @@ export function LapsScreen() {
             value={pbOnly}
             onChange={(v) => setMany({ pb: v ? true : undefined, page: undefined })}
           />
-          {(facetsActive || pbOnly || !validOnly) && (
+          <Toggle
+            label="My car only"
+            value={playerOnly}
+            onChange={(v) => setMany({ player: v ? true : undefined, page: undefined })}
+          />
+          {(facetsActive || pbOnly || playerOnly || !validOnly) && (
             <button
               onClick={() =>
                 setMany({
@@ -119,6 +128,7 @@ export function LapsScreen() {
                   simulator: undefined,
                   invalid: undefined,
                   pb: undefined,
+                  player: undefined,
                   page: undefined,
                 })
               }
@@ -153,35 +163,37 @@ export function LapsScreen() {
               )}
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            {selectMode ? (
-              <>
+          {compareEnabled && (
+            <div className="flex items-center gap-2">
+              {selectMode ? (
+                <>
+                  <button
+                    onClick={compareSelected}
+                    disabled={selected.length !== 2}
+                    className="rounded border border-cyan/40 bg-cyan/10 px-3 py-1 font-mono text-[11px] uppercase tracking-[0.08em] text-cyan transition-colors disabled:cursor-not-allowed disabled:opacity-30"
+                  >
+                    Compare selected
+                  </button>
+                  <button
+                    onClick={() => {
+                      setSelected([]);
+                      setSelectMode(false);
+                    }}
+                    className="rounded border border-border px-3 py-1 font-mono text-[11px] uppercase tracking-[0.08em] text-text-muted hover:text-text"
+                  >
+                    Cancel
+                  </button>
+                </>
+              ) : (
                 <button
-                  onClick={compareSelected}
-                  disabled={selected.length !== 2}
-                  className="rounded border border-cyan/40 bg-cyan/10 px-3 py-1 font-mono text-[11px] uppercase tracking-[0.08em] text-cyan transition-colors disabled:cursor-not-allowed disabled:opacity-30"
+                  onClick={() => setSelectMode(true)}
+                  className="rounded border border-border px-3 py-1 font-mono text-[11px] uppercase tracking-[0.08em] text-text-muted hover:border-cyan/40 hover:text-cyan"
                 >
-                  Compare selected
+                  Select to compare
                 </button>
-                <button
-                  onClick={() => {
-                    setSelected([]);
-                    setSelectMode(false);
-                  }}
-                  className="rounded border border-border px-3 py-1 font-mono text-[11px] uppercase tracking-[0.08em] text-text-muted hover:text-text"
-                >
-                  Cancel
-                </button>
-              </>
-            ) : (
-              <button
-                onClick={() => setSelectMode(true)}
-                className="rounded border border-border px-3 py-1 font-mono text-[11px] uppercase tracking-[0.08em] text-text-muted hover:border-cyan/40 hover:text-cyan"
-              >
-                Select to compare
-              </button>
-            )}
-          </div>
+              )}
+            </div>
+          )}
         </div>
         {lapsQuery.isLoading && <LoadingState />}
         {lapsQuery.isError && (
@@ -197,9 +209,12 @@ export function LapsScreen() {
           <>
             <LapTable
               laps={items}
-              onRowClick={(lap) =>
-                selectMode ? toggleSelect(lap.uid) : navigate(`/sessions/${lap.sessionUid}`)
-              }
+              onRowClick={(lap) => {
+                if (selectMode) return toggleSelect(lap.uid);
+                // Per-record HATEOAS gate: only navigate to session detail if the lap exposes
+                // the `session` rel (i.e. the `sessions` feature is enabled on the backend).
+                if (lap._links.session) navigate(`/sessions/${lap.sessionUid}`);
+              }}
               onSessionClick={(uid) => navigate(`/sessions/${uid}`)}
               isRowSelected={(lap) => selected.includes(lap.uid)}
               prefixColumn={

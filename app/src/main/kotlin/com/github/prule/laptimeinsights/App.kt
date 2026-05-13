@@ -1,13 +1,17 @@
 package com.github.prule.laptimeinsights
 
+import com.github.prule.laptimeinsights.adapter.`in`.web.index.IndexController
+import com.github.prule.laptimeinsights.adapter.`in`.web.lap.AggregateLapsController
 import com.github.prule.laptimeinsights.adapter.`in`.web.lap.CompareLapsController
 import com.github.prule.laptimeinsights.adapter.`in`.web.lap.FindLapController
 import com.github.prule.laptimeinsights.adapter.`in`.web.lap.FindLapTelemetryController
 import com.github.prule.laptimeinsights.adapter.`in`.web.lap.SearchLapController
+import com.github.prule.laptimeinsights.adapter.`in`.web.session.AggregateSessionsController
 import com.github.prule.laptimeinsights.adapter.`in`.web.session.FindSessionController
 import com.github.prule.laptimeinsights.adapter.`in`.web.session.SearchOptionsController
 import com.github.prule.laptimeinsights.adapter.`in`.web.session.SearchSessionController
 import com.github.prule.laptimeinsights.adapter.`in`.web.session.SessionEventController
+import com.github.prule.laptimeinsights.adapter.`in`.web.setEnabledFeatures
 import com.github.prule.laptimeinsights.adapter.out.persistence.JsonFileConfigurationRepository
 import com.github.prule.laptimeinsights.adapter.out.persistence.seed.DatabaseSeeder
 import com.github.prule.laptimeinsights.tracker.utils.NotFoundException as DomainNotFoundException
@@ -49,6 +53,7 @@ fun Application.module(
   configuration: ApplicationConfiguration,
   appModule: AppModule = AppModule(),
   jdbcUrl: String = EnvironmentVariables.jdbcUrl(),
+  enabledFeatures: Set<Feature> = EnvironmentVariables.enabledFeatures(),
 ) {
 
   install(Resources)
@@ -96,6 +101,8 @@ fun Application.module(
       .seed()
   }
 
+  setEnabledFeatures(enabledFeatures)
+  IndexController(this, enabledFeatures)
   initializeSessionControllers(appModule)
   initializeLapControllers(appModule)
   SessionEventController(this, appModule.eventPort)
@@ -131,13 +138,17 @@ private fun Application.initializeSessionControllers(appModule: AppModule) {
   FindSessionController(this, appModule.session.findSessionUseCase)
   SearchSessionController(this, appModule.session.searchSessionUseCase)
   SearchOptionsController(this, appModule.session.searchSessionOptionsUseCase)
+  // `Aggregate` must be registered before the `/{uid}` route so its literal wins over the
+  // placeholder when the router resolves a request.
+  AggregateSessionsController(this, appModule.session.aggregateSessionsUseCase)
 }
 
 private fun Application.initializeLapControllers(appModule: AppModule) {
   SearchLapController(this, appModule.lap.searchLapUseCase)
-  // `Compare` must be registered before `LapId` so the `/compare` literal wins
-  // over the `/{uid}` placeholder when the router resolves a request.
+  // `Compare` and `Aggregate` must be registered before `LapId` so their `/compare` and
+  // `/aggregate` literals win over the `/{uid}` placeholder when the router resolves a request.
   CompareLapsController(this, appModule.lap.compareLapsUseCase)
+  AggregateLapsController(this, appModule.lap.aggregateLapsUseCase)
   FindLapController(this, appModule.lap.findLapUseCase)
   FindLapTelemetryController(this, appModule.lap.findLapTelemetryUseCase)
 }

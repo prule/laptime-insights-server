@@ -12,11 +12,13 @@ import com.github.prule.laptimeinsights.adapter.out.persistence.session.SessionP
 import com.github.prule.laptimeinsights.adapter.out.persistence.session.SessionRepository
 import com.github.prule.laptimeinsights.application.domain.service.car.FindCarService
 import com.github.prule.laptimeinsights.application.domain.service.car.RecordRealtimeCarUpdateService
+import com.github.prule.laptimeinsights.application.domain.service.lap.AggregateLapsService
 import com.github.prule.laptimeinsights.application.domain.service.lap.CompareLapsService
 import com.github.prule.laptimeinsights.application.domain.service.lap.CreateLapService
 import com.github.prule.laptimeinsights.application.domain.service.lap.FindLapService
 import com.github.prule.laptimeinsights.application.domain.service.lap.FindLapTelemetryService
 import com.github.prule.laptimeinsights.application.domain.service.lap.SearchLapService
+import com.github.prule.laptimeinsights.application.domain.service.session.AggregateSessionsService
 import com.github.prule.laptimeinsights.application.domain.service.session.CreateSessionService
 import com.github.prule.laptimeinsights.application.domain.service.session.FindSessionService
 import com.github.prule.laptimeinsights.application.domain.service.session.SearchSessionOptionsService
@@ -58,6 +60,7 @@ class AppModule {
         eventPort,
       )
     val searchLapUseCase = SearchLapService(lapPort)
+    val aggregateLapsUseCase = AggregateLapsService(lapPort)
     val findLapUseCase = FindLapService(lapPort)
     val findLapTelemetryUseCase =
       FindLapTelemetryService(lapPort, car.findRealtimeCarUpdateByLapPort)
@@ -73,6 +76,7 @@ class AppModule {
     val createSessionUseCase = CreateSessionService(sessionPort, eventPort)
     val searchSessionUseCase = SearchSessionService(sessionPort)
     val searchSessionOptionsUseCase = SearchSessionOptionsService(sessionPort)
+    val aggregateSessionsUseCase = AggregateSessionsService(sessionPort)
     val updateSessionUseCase = UpdateSessionService(sessionPort, sessionPort, eventPort)
   }
 }

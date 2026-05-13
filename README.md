@@ -51,6 +51,11 @@ including HATEOAS `_links`, so screens behave identically across modes.
 |----------|----------|-------------|
 | `JDBC_URL` | yes | JDBC connection string for the H2 database (e.g. `jdbc:h2:./data/laptime;DB_CLOSE_DELAY=-1`). |
 | `DB_SEED` | no | Set to `true`, `1`, or `yes` to populate the database with sample sessions and laps on startup. The seeder is idempotent — it skips when data already exists. Intended for local development and demos only. |
+| `FEATURE_OVERVIEW` | no | Feature override. Truthy (`true`/`1`/`yes`) forces on, falsy (`false`/`0`/`no`) forces off, unset uses `Feature.OVERVIEW.defaultEnabled` from `Feature.kt`. Controls the Overview link in `GET /api/1`. |
+| `FEATURE_SESSIONS` | no | Feature override. Same semantics as `FEATURE_OVERVIEW`. Controls the `sessions` / `sessionOptions` / `sessionsAggregate` links. |
+| `FEATURE_LAPS` | no | Feature override. Same semantics. Controls the `laps` / `lapsAggregate` links. |
+| `FEATURE_COMPARE` | no | Feature override. Same semantics. Controls the `compare` link. |
+| `FEATURE_LIVE` | no | Feature override. Same semantics. Controls the `live` WebSocket link. |
 
 ### REST API
 
