@@ -155,10 +155,14 @@ class ClientInitializer(private val appModule: AppModule) {
             // ACC's broadcast SDK returns Int.MAX_VALUE (2_147_483_647 ms ≈ 35791 min) as the
             // "no lap yet" sentinel inside a non-null LapInfo. Normalize that to our own
             // Long.MAX_VALUE sentinel so downstream consumers have a single value to check.
-            bestLapTimeMs = message.bestSessionLap()?.lapTimeMs()?.normalizeLapMs() ?: Long.MAX_VALUE,
+            bestLapTimeMs =
+              message.bestSessionLap()?.lapTimeMs()?.normalizeLapMs() ?: Long.MAX_VALUE,
             lastLapTimeMs = message.lastLap()?.lapTimeMs()?.normalizeLapMs() ?: Long.MAX_VALUE,
             // Current lap uses 0 (not the sentinel) when no timed lap is in progress.
-            currentLapTimeMs = message.currentLap()?.lapTimeMs()?.let { if (it == Int.MAX_VALUE) 0L else it.toLong() } ?: 0L,
+            currentLapTimeMs =
+              message.currentLap()?.lapTimeMs()?.let {
+                if (it == Int.MAX_VALUE) 0L else it.toLong()
+              } ?: 0L,
             currentLapIsInvalid = message.currentLap()?.isInvalid() == 1,
             currentLapIsOutlap = message.currentLap()?.isOutlap() == 1,
             currentLapIsInlap = message.currentLap()?.isInlap() == 1,
@@ -257,8 +261,8 @@ class ClientInitializer(private val appModule: AppModule) {
 }
 
 /**
- * Map ACC's in-band "no lap" sentinel ([Int.MAX_VALUE]) to `null` so callers can chain
- * `?: Long.MAX_VALUE` to convert it to our own sentinel. Any other value is widened to Long.
+ * Map ACC's in-band "no lap" sentinel ([Int.MAX_VALUE]) to `null` so callers can chain `?:
+ * Long.MAX_VALUE` to convert it to our own sentinel. Any other value is widened to Long.
  */
 private fun Int.normalizeLapMs(): Long? = if (this == Int.MAX_VALUE) null else this.toLong()
 
