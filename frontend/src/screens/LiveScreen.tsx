@@ -229,9 +229,12 @@ function useLiveEvents(apiUrl: string, indexLinks: Links) {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-// Backend uses Long.MAX_VALUE (9_223_372_036_854_775_807) for "no lap yet".
-// JS can't represent that exactly, but any value > Number.MAX_SAFE_INTEGER signals "unset".
-const SENTINEL = Number.MAX_SAFE_INTEGER;
+// Backend uses Long.MAX_VALUE for "no lap yet", but ACC's broadcast SDK historically
+// reports Int.MAX_VALUE (2_147_483_647 ms ≈ 35791:23.647) as its own "no lap" sentinel.
+// The server normalizes Int.MAX_VALUE → Long.MAX_VALUE, but treat any value above the
+// Int sentinel as "unset" here too so a stale or unpatched server can't surface the
+// 35791:23.647 artifact in the HUD. A real lap will never exceed ~24 hours.
+const SENTINEL = 2_147_483_647;
 
 function formatDelta(ms: number): string {
   if (ms === 0) return "±0.000";
