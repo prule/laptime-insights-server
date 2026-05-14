@@ -3,25 +3,9 @@ import type { ReactNode } from "react";
 import type { LapResource } from "../api/types";
 import { useFeatureEnabled } from "../providers/FeaturesProvider";
 import { formatDate, formatLapTime, formatTime } from "../lib/format";
+import { SortableHeader, type SortState } from "./ui/SortableHeader";
 
-export type SortOrder = "ASC" | "DESC";
-export interface SortState {
-  field: string;
-  order: SortOrder;
-}
-
-/**
- * Maps each header label to the backend sort-field name it represents. Headers absent from this
- * map are never sortable (e.g. derived columns like "To best" or capability columns like Session).
- */
-const HEADER_TO_SORT_FIELD: Record<string, string> = {
-  Track: "track",
-  "Date / Time": "recordedAt",
-  Lap: "lapNumber",
-  "Car #": "carId",
-  "Lap time": "lapTime",
-  Status: "valid",
-};
+export type { SortOrder, SortState } from "./ui/SortableHeader";
 
 export interface LapTableColumn {
   header: ReactNode;
@@ -130,40 +114,19 @@ export function LapTable({
   ];
   const gridStyle = { gridTemplateColumns: allWidths.join(" ") };
 
-  const sortableSet = useMemo(() => new Set(sortableFields ?? []), [sortableFields]);
-
-  const renderHeader = (label: string) => {
-    const field = HEADER_TO_SORT_FIELD[label];
-    const isSortable = !!field && sortableSet.has(field) && !!onSortChange;
-    if (!isSortable) return <div>{label}</div>;
-
-    const active = sort?.field === field;
-    const nextSort: SortState | null = !active
-      ? { field: field!, order: "ASC" }
-      : sort!.order === "ASC"
-        ? { field: field!, order: "DESC" }
-        : null;
-
-    const arrow = active ? (sort!.order === "ASC" ? "▲" : "▼") : "↕";
+  // Header → backend sort-field. Omitted columns are never sortable (derived columns like "To
+  // best", capability columns like Session). Headers whose field isn't in the backend-advertised
+  // `sortableFields` list still render — `SortableHeader` falls back to a plain label.
+  const renderHeader = (label: string, field: string | null) => {
+    if (!field || !onSortChange) return <span>{label}</span>;
     return (
-      <button
-        type="button"
-        onClick={() => onSortChange!(nextSort)}
-        className={[
-          "flex items-center gap-1 text-left uppercase tracking-[0.08em]",
-          active ? "text-cyan" : "hover:text-text",
-        ].join(" ")}
-        title={
-          !active
-            ? `Sort by ${label} ascending`
-            : sort!.order === "ASC"
-              ? `Sort by ${label} descending`
-              : `Clear sort`
-        }
-      >
-        <span>{label}</span>
-        <span aria-hidden className="text-[8px] opacity-70">{arrow}</span>
-      </button>
+      <SortableHeader
+        label={label}
+        field={field}
+        sort={sort ?? null}
+        sortableFields={sortableFields}
+        onChange={onSortChange}
+      />
     );
   };
 
@@ -176,13 +139,13 @@ export function LapTable({
         {prefixColumn && <div>{prefixColumn.header ?? ""}</div>}
         <div>Session</div>
         <div title="Player lap">P</div>
-        {renderHeader("Track")}
-        {renderHeader("Date / Time")}
-        {renderHeader("Lap")}
-        {renderHeader("Car #")}
+        {renderHeader("Track", "track")}
+        {renderHeader("Date / Time", "recordedAt")}
+        {renderHeader("Lap", "lapNumber")}
+        {renderHeader("Car #", "carId")}
         <div>Car</div>
-        {renderHeader("Lap time")}
-        {renderHeader("Status")}
+        {renderHeader("Lap time", "lapTime")}
+        {renderHeader("Status", "valid")}
         <div>PB</div>
         <div>To best</div>
         {extraColumns.map((col, i) => (
