@@ -1,5 +1,6 @@
 package com.github.prule.laptimeinsights.adapter.out.persistence.lap
 
+import com.github.prule.laptimeinsights.application.domain.model.Lap
 import com.github.prule.laptimeinsights.tracker.utils.data.SortableFields
 import org.jetbrains.exposed.v1.core.dao.id.EntityID
 import org.jetbrains.exposed.v1.dao.LongEntity
@@ -9,15 +10,21 @@ class LapEntity(id: EntityID<Long>) : LongEntity(id) {
   companion object : LongEntityClass<LapEntity>(LapTable) {
     val sortableFields =
       SortableFields(
-        mapOf(
-          "lapNumber" to LapTable.lapNumber,
-          "lapTime" to LapTable.lapTime,
-          "valid" to LapTable.valid,
-          "carId" to LapTable.carId,
-          "track" to LapTable.track,
-          "recordedAt" to LapTable.recordedAt,
+          mapOf(
+            "lapNumber" to LapTable.lapNumber,
+            "lapTime" to LapTable.lapTime,
+            "valid" to LapTable.valid,
+            "carId" to LapTable.carId,
+            "track" to LapTable.track,
+            "recordedAt" to LapTable.recordedAt,
+          )
         )
-      )
+        .also {
+          require(it.mapping.keys == Lap.SORTABLE_FIELDS.toSet()) {
+            "LapEntity.sortableFields keys ${it.mapping.keys} must match " +
+              "Lap.SORTABLE_FIELDS ${Lap.SORTABLE_FIELDS}"
+          }
+        }
   }
 
   var uid by LapTable.uid

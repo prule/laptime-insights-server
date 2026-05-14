@@ -19,6 +19,8 @@ import io.ktor.http.HttpStatusCode
 import io.ktor.server.testing.testApplication
 import kotlin.time.Instant
 import kotlinx.serialization.json.Json
+import com.github.prule.laptimeinsights.application.domain.model.Lap
+import com.github.prule.laptimeinsights.application.domain.model.Session
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -143,6 +145,50 @@ class ResourceLinksTest {
     val links = linksOf(response.bodyAsText())
     assertThat(links).containsKeys("self", "sessions")
     assertThat(links["sessions"]).isEqualTo("/api/1/sessions")
+  }
+
+  @Test
+  fun `lap search response advertises sortable fields`() = testApplication {
+    application {
+      module(
+        configuration = ApplicationConfiguration(),
+        appModule = AppModule(),
+        jdbcUrl = "jdbc:h2:mem:test-sortable-lap;DB_CLOSE_DELAY=-1;",
+        enabledFeatures = Feature.entries.toSet(),
+      )
+    }
+
+    val response = client.get("/api/1/laps")
+
+    assertThat(response.status).isEqualTo(HttpStatusCode.OK)
+    val sortable =
+      Json.parseToJsonElement(response.bodyAsText())
+        .jsonObject["sortable"]
+        ?.jsonArray
+        ?.map { it.jsonPrimitive.content } ?: error("missing sortable")
+    assertThat(sortable).containsExactlyElementsOf(Lap.SORTABLE_FIELDS)
+  }
+
+  @Test
+  fun `session search response advertises sortable fields`() = testApplication {
+    application {
+      module(
+        configuration = ApplicationConfiguration(),
+        appModule = AppModule(),
+        jdbcUrl = "jdbc:h2:mem:test-sortable-session;DB_CLOSE_DELAY=-1;",
+        enabledFeatures = Feature.entries.toSet(),
+      )
+    }
+
+    val response = client.get("/api/1/sessions")
+
+    assertThat(response.status).isEqualTo(HttpStatusCode.OK)
+    val sortable =
+      Json.parseToJsonElement(response.bodyAsText())
+        .jsonObject["sortable"]
+        ?.jsonArray
+        ?.map { it.jsonPrimitive.content } ?: error("missing sortable")
+    assertThat(sortable).containsExactlyElementsOf(Session.SORTABLE_FIELDS)
   }
 
   @Test

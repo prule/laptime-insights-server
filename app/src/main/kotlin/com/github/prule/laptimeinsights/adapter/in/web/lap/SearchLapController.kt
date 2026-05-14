@@ -5,6 +5,7 @@ import com.github.prule.laptimeinsights.adapter.`in`.web.toSort
 import com.github.prule.laptimeinsights.application.domain.model.AllTimeBest
 import com.github.prule.laptimeinsights.application.domain.model.Car
 import com.github.prule.laptimeinsights.application.domain.model.CarId
+import com.github.prule.laptimeinsights.application.domain.model.Lap
 import com.github.prule.laptimeinsights.application.domain.model.LapSearchCriteria
 import com.github.prule.laptimeinsights.application.domain.model.PersonalBest
 import com.github.prule.laptimeinsights.application.domain.model.PlayerLap
@@ -51,6 +52,7 @@ class SearchLapController(application: Application, searchLapUseCase: SearchLapU
                 call.request.toSort(),
               )
               .map { LapResource.fromDomain(it, LapLinkFactory(application)) }
+              .withSortable(Lap.SORTABLE_FIELDS)
           )
         }
         .describe {

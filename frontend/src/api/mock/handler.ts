@@ -4,7 +4,15 @@
  * Returns `undefined` when no handler matches, which the caller turns into a
  * 404. Adding a new endpoint? Add a branch here that mirrors the Ktor route.
  */
-import { LAPS, OPTIONS, SESSIONS, TELEMETRY_BY_LAP_UID, paged } from "./data";
+import {
+  LAPS,
+  LAP_SORTABLE,
+  OPTIONS,
+  SESSIONS,
+  SESSION_SORTABLE,
+  TELEMETRY_BY_LAP_UID,
+  paged,
+} from "./data";
 import type {
   LapComparisonResource,
   LapResource,
@@ -161,7 +169,7 @@ export async function mockHandler(path: string): Promise<unknown> {
     if (from) items = items.filter((s) => (s.startedAt ?? "") >= from);
     if (to) items = items.filter((s) => (s.startedAt ?? "") <= to);
     items = items.sort(compareSessions(query.get("sort") ?? "startedAt:DESC"));
-    return delay<Page<SessionResource>>(paged(items, page, size));
+    return delay<Page<SessionResource>>(paged(items, page, size, SESSION_SORTABLE));
   }
 
   const sessionMatch = pathname.match(/^\/api\/1\/sessions\/([^/]+)$/);
@@ -290,7 +298,7 @@ export async function mockHandler(path: string): Promise<unknown> {
       items = Array.from(bestByTrack.values());
     }
     items = items.sort(compareLaps(query.get("sort")));
-    return delay<Page<LapResource>>(paged(items, page, size));
+    return delay<Page<LapResource>>(paged(items, page, size, LAP_SORTABLE));
   }
 
   const lapMatch = pathname.match(/^\/api\/1\/laps\/([^/]+)$/);

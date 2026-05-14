@@ -6,7 +6,7 @@ import { CarFilterBar } from "../components/ui/CarFilterBar";
 import { ErrorState, LoadingState, EmptyState } from "../components/ui/States";
 import { FilterSelect } from "../components/ui/FilterSelect";
 import { SectionHeader } from "../components/ui/SectionHeader";
-import { LapTable } from "../components/LapTable";
+import { LapTable, type SortState } from "../components/LapTable";
 import { getBool, getInt, getString, useUrlState } from "../hooks/useUrlState";
 import { useFeatureEnabled } from "../providers/FeaturesProvider";
 import { useTimeRange } from "../providers/TimeRangeProvider";
@@ -41,6 +41,17 @@ export function LapsScreen() {
   const page = getInt(params, "page", 1);
   const facetsActive = !!(facets.track || facets.car || facets.simulator);
 
+  // Sort lives in the URL as `sort=field:ORDER` (the same wire format the backend expects).
+  // Default = `lapTime:ASC` so the historical "fastest laps" framing of this screen is preserved
+  // when no sort is set.
+  const sort = parseSortParam(getString(params, "sort")) ?? { field: "lapTime", order: "ASC" };
+  const setSort = (next: SortState | null) => {
+    setMany({
+      sort: next ? `${next.field}:${next.order}` : undefined,
+      page: undefined,
+    });
+  };
+
   // Multi-select state for compare. We deliberately keep this in component
   // state, not the URL — selection is a transient pre-action, not a view.
   const [selectMode, setSelectMode] = useState(false);
@@ -54,7 +65,7 @@ export function LapsScreen() {
   const lapsQuery = useLaps({
     page,
     size: PAGE_SIZE,
-    sort: "lapTime:ASC",
+    sort: `${sort.field}:${sort.order}`,
     validLap: validOnly ? true : undefined,
     personalBest: pbOnly ? true : undefined,
     playerLap: playerOnly ? true : undefined,
@@ -210,6 +221,9 @@ export function LapsScreen() {
           <>
             <LapTable
               laps={items}
+              sortableFields={lapsQuery.data?.sortable}
+              sort={sort}
+              onSortChange={setSort}
               onRowClick={(lap) => {
                 if (selectMode) return toggleSelect(lap.uid);
                 // Navigate only when the Sessions UI is enabled — the session detail route
@@ -262,6 +276,13 @@ export function LapsScreen() {
       </Card>
     </div>
   );
+}
+
+function parseSortParam(raw: string | undefined): SortState | null {
+  if (!raw) return null;
+  const [field, order] = raw.split(":");
+  if (!field || (order !== "ASC" && order !== "DESC")) return null;
+  return { field, order };
 }
 
 function Toggle({

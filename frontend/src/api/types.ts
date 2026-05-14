@@ -99,6 +99,12 @@ export interface Page<T> {
   page: { page: number; size: number };
   total: number;
   items: T[];
+  /**
+   * Field names accepted by the `sort` query parameter for this collection. Surfaced by the
+   * backend so table UIs can enable column-header sorting without hard-coding the list. Optional
+   * because not every paged endpoint advertises sorting.
+   */
+  sortable?: string[];
 }
 
 export interface SessionFilters {

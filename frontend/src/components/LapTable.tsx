@@ -4,6 +4,25 @@ import type { LapResource } from "../api/types";
 import { useFeatureEnabled } from "../providers/FeaturesProvider";
 import { formatDate, formatLapTime, formatTime } from "../lib/format";
 
+export type SortOrder = "ASC" | "DESC";
+export interface SortState {
+  field: string;
+  order: SortOrder;
+}
+
+/**
+ * Maps each header label to the backend sort-field name it represents. Headers absent from this
+ * map are never sortable (e.g. derived columns like "To best" or capability columns like Session).
+ */
+const HEADER_TO_SORT_FIELD: Record<string, string> = {
+  Track: "track",
+  "Date / Time": "recordedAt",
+  Lap: "lapNumber",
+  "Car #": "carId",
+  "Lap time": "lapTime",
+  Status: "valid",
+};
+
 export interface LapTableColumn {
   header: ReactNode;
   width: string;
@@ -36,6 +55,20 @@ export interface LapTableProps {
   /** Visually muted — used for competitor laps on the session detail screen. */
   isRowDimmed?: (lap: LapResource) => boolean;
   disabledTitle?: string;
+  /**
+   * Field names the backend advertises as sortable for this collection (from `Page.sortable`).
+   * Headers whose mapped field appears here become clickable. Omit (or pass `[]`) to disable
+   * header-driven sorting entirely — keeps picker/embedded contexts unchanged.
+   */
+  sortableFields?: string[];
+  /** Currently applied sort, or null when unsorted. Drives the arrow indicator on the header. */
+  sort?: SortState | null;
+  /**
+   * Called when the user clicks a sortable header. Receives the next sort state, or `null` when
+   * the user toggled the active column off. Caller is responsible for re-fetching with the new
+   * sort and (typically) pushing it to URL state.
+   */
+  onSortChange?: (next: SortState | null) => void;
 }
 
 function formatDelta(lapMs: number, bestMs: number): string {
@@ -69,6 +102,9 @@ export function LapTable({
   isRowSelected,
   isRowDimmed,
   disabledTitle,
+  sortableFields,
+  sort,
+  onSortChange,
 }: LapTableProps) {
   // The session column is clickable only when the Sessions UI is on. The lap's `session` rel
   // exists regardless — that's a capability link — but navigating there would be pointless if
@@ -94,6 +130,43 @@ export function LapTable({
   ];
   const gridStyle = { gridTemplateColumns: allWidths.join(" ") };
 
+  const sortableSet = useMemo(() => new Set(sortableFields ?? []), [sortableFields]);
+
+  const renderHeader = (label: string) => {
+    const field = HEADER_TO_SORT_FIELD[label];
+    const isSortable = !!field && sortableSet.has(field) && !!onSortChange;
+    if (!isSortable) return <div>{label}</div>;
+
+    const active = sort?.field === field;
+    const nextSort: SortState | null = !active
+      ? { field: field!, order: "ASC" }
+      : sort!.order === "ASC"
+        ? { field: field!, order: "DESC" }
+        : null;
+
+    const arrow = active ? (sort!.order === "ASC" ? "▲" : "▼") : "↕";
+    return (
+      <button
+        type="button"
+        onClick={() => onSortChange!(nextSort)}
+        className={[
+          "flex items-center gap-1 text-left uppercase tracking-[0.08em]",
+          active ? "text-cyan" : "hover:text-text",
+        ].join(" ")}
+        title={
+          !active
+            ? `Sort by ${label} ascending`
+            : sort!.order === "ASC"
+              ? `Sort by ${label} descending`
+              : `Clear sort`
+        }
+      >
+        <span>{label}</span>
+        <span aria-hidden className="text-[8px] opacity-70">{arrow}</span>
+      </button>
+    );
+  };
+
   return (
     <div className="overflow-hidden rounded border border-border">
       <div
@@ -103,13 +176,13 @@ export function LapTable({
         {prefixColumn && <div>{prefixColumn.header ?? ""}</div>}
         <div>Session</div>
         <div title="Player lap">P</div>
-        <div>Track</div>
-        <div>Date / Time</div>
-        <div>Lap</div>
-        <div>Car #</div>
+        {renderHeader("Track")}
+        {renderHeader("Date / Time")}
+        {renderHeader("Lap")}
+        {renderHeader("Car #")}
         <div>Car</div>
-        <div>Lap time</div>
-        <div>Status</div>
+        {renderHeader("Lap time")}
+        {renderHeader("Status")}
         <div>PB</div>
         <div>To best</div>
         {extraColumns.map((col, i) => (

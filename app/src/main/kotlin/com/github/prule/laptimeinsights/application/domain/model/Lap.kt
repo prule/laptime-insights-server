@@ -55,4 +55,15 @@ data class Lap(
   val lapNumber: LapNumber,
   val valid: ValidLap,
   val personalBest: PersonalBest,
-)
+) {
+  companion object {
+    /**
+     * Field names a client may pass in the `sort` query parameter of `GET /api/1/laps`. The
+     * persistence adapter (`LapEntity.sortableFields`) maps each name to its Exposed column; the
+     * search controller surfaces this list on the page response so the UI knows which table
+     * columns to render as sortable.
+     */
+    val SORTABLE_FIELDS: List<String> =
+      listOf("lapNumber", "lapTime", "valid", "carId", "track", "recordedAt")
+  }
+}

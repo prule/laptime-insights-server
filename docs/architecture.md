@@ -106,6 +106,19 @@ independent.
 Stable link relations: `self`, `overview`, `sessions`, `sessionOptions`, `sessionsAggregate`,
 `laps`, `lapsAggregate`, `compare`, `live`.
 
+### Sortable column discovery
+
+Paged search responses (`GET /api/1/laps`, `GET /api/1/sessions`) carry a top-level
+`sortable: string[]` field listing the field names accepted by the `sort` query parameter for that
+collection. The UI uses this to enable/disable column headers and to build `sort=field:ASC|DESC`
+without hard-coding the list.
+
+The contract lives in the domain layer — `Lap.SORTABLE_FIELDS` /
+`Session.SORTABLE_FIELDS` — and each persistence adapter (`LapEntity` / `SessionEntity`) validates
+its Exposed column mapping covers exactly that set at class init. To add a new sortable column:
+append the field name to the domain list, then add the matching `name to Column` entry in the
+entity's `sortableFields` map.
+
 Stable feature ids: `overview`, `sessions`, `laps`, `compare`, `live`.
 
 **Frontend feature gating** is centralised in two places so adding a feature stays a one-line

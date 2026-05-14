@@ -3,6 +3,7 @@ package com.github.prule.laptimeinsights.adapter.`in`.web.session
 import com.github.prule.laptimeinsights.adapter.`in`.web.toPageRequest
 import com.github.prule.laptimeinsights.adapter.`in`.web.toSort
 import com.github.prule.laptimeinsights.application.domain.model.Car
+import com.github.prule.laptimeinsights.application.domain.model.Session
 import com.github.prule.laptimeinsights.application.domain.model.SessionId
 import com.github.prule.laptimeinsights.application.domain.model.SessionSearchCriteria
 import com.github.prule.laptimeinsights.application.domain.model.Simulator
@@ -46,6 +47,7 @@ class SearchSessionController(
                 call.request.toSort(),
               )
               .map { SessionResource.fromDomain(it, SessionLinkFactory(application)) }
+              .withSortable(Session.SORTABLE_FIELDS)
           )
         }
         .describe {
