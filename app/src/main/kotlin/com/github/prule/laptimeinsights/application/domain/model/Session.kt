@@ -78,6 +78,7 @@ data class Session(
      * the search controller surfaces this list on the page response so the UI knows which table
      * columns to render as sortable.
      */
-    val SORTABLE_FIELDS: List<String> = listOf("car")
+    val SORTABLE_FIELDS: List<String> =
+      listOf("startedAt", "track", "car", "sessionType", "simulator", "drivingTimeMs")
   }
 }

@@ -275,4 +275,11 @@ export const LAP_SORTABLE: string[] = [
 ];
 
 /** Mirror of `Session.SORTABLE_FIELDS` on the backend. */
-export const SESSION_SORTABLE: string[] = ["car"];
+export const SESSION_SORTABLE: string[] = [
+  "startedAt",
+  "track",
+  "car",
+  "sessionType",
+  "simulator",
+  "drivingTimeMs",
+];

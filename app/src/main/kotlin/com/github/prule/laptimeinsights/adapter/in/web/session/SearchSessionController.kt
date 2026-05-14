@@ -107,9 +107,9 @@ class SearchSessionController(
             query("sort") {
               description =
                 "Sort specification as a comma-separated list of `field:ORDER` pairs, where " +
-                  "`ORDER` is `ASC` or `DESC` (e.g. `car:ASC`). The set of accepted field names " +
-                  "is advertised in the response `sortable` array — unrecognised fields are " +
-                  "silently ignored. Omit for no explicit sort."
+                  "`ORDER` is `ASC` or `DESC` (e.g. `startedAt:DESC`). The set of accepted " +
+                  "field names is advertised in the response `sortable` array — unrecognised " +
+                  "fields are silently ignored. Omit for no explicit sort."
               required = false
             }
           }
