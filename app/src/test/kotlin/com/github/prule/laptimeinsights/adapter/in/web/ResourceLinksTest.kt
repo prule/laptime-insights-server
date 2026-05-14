@@ -4,8 +4,10 @@ import com.github.prule.laptimeinsights.AppModule
 import com.github.prule.laptimeinsights.ApplicationConfiguration
 import com.github.prule.laptimeinsights.Feature
 import com.github.prule.laptimeinsights.application.domain.model.Car
+import com.github.prule.laptimeinsights.application.domain.model.Lap
 import com.github.prule.laptimeinsights.application.domain.model.LapNumber
 import com.github.prule.laptimeinsights.application.domain.model.LapTimeMs
+import com.github.prule.laptimeinsights.application.domain.model.Session
 import com.github.prule.laptimeinsights.application.domain.model.SessionType
 import com.github.prule.laptimeinsights.application.domain.model.Simulator
 import com.github.prule.laptimeinsights.application.domain.model.Track
@@ -19,8 +21,6 @@ import io.ktor.http.HttpStatusCode
 import io.ktor.server.testing.testApplication
 import kotlin.time.Instant
 import kotlinx.serialization.json.Json
-import com.github.prule.laptimeinsights.application.domain.model.Lap
-import com.github.prule.laptimeinsights.application.domain.model.Session
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -162,10 +162,9 @@ class ResourceLinksTest {
 
     assertThat(response.status).isEqualTo(HttpStatusCode.OK)
     val sortable =
-      Json.parseToJsonElement(response.bodyAsText())
-        .jsonObject["sortable"]
-        ?.jsonArray
-        ?.map { it.jsonPrimitive.content } ?: error("missing sortable")
+      Json.parseToJsonElement(response.bodyAsText()).jsonObject["sortable"]?.jsonArray?.map {
+        it.jsonPrimitive.content
+      } ?: error("missing sortable")
     assertThat(sortable).containsExactlyElementsOf(Lap.SORTABLE_FIELDS)
   }
 
@@ -184,10 +183,9 @@ class ResourceLinksTest {
 
     assertThat(response.status).isEqualTo(HttpStatusCode.OK)
     val sortable =
-      Json.parseToJsonElement(response.bodyAsText())
-        .jsonObject["sortable"]
-        ?.jsonArray
-        ?.map { it.jsonPrimitive.content } ?: error("missing sortable")
+      Json.parseToJsonElement(response.bodyAsText()).jsonObject["sortable"]?.jsonArray?.map {
+        it.jsonPrimitive.content
+      } ?: error("missing sortable")
     assertThat(sortable).containsExactlyElementsOf(Session.SORTABLE_FIELDS)
   }
 
