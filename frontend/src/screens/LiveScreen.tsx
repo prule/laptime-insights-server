@@ -4,6 +4,7 @@ import { appendQuery } from "../api/client";
 import { Card } from "../components/ui/Card";
 import { LapTable } from "../components/LapTable";
 import { SectionHeader } from "../components/ui/SectionHeader";
+import { StatCard } from "../components/ui/StatCard";
 import { formatLapTime } from "../lib/format";
 import { useDataMode } from "../providers/DataModeProvider";
 import { useFeatures } from "../providers/FeaturesProvider";
@@ -156,12 +157,11 @@ function useLiveEvents(apiUrl: string, indexLinks: Links) {
 
         switch (msg.type) {
           case "ServerStarted":
-            // Server is fresh — clear all accumulated live state.
-            setSession(null);
+            // The server sends this on every WS connect, not only on a true restart, so
+            // do not blow away REST-loaded session/laps — those are DB-backed and were
+            // just fetched from this same server. Only reset the per-connection telemetry
+            // and accumulated track points so the next driving stint starts clean.
             setTelemetry(null);
-            setLaps([]);
-            lastSessionUidRef.current = null;
-            playerCarIdRef.current = null;
             trackPointsRef.current = [];
             setTrackPoints([]);
             break;
@@ -169,6 +169,7 @@ function useLiveEvents(apiUrl: string, indexLinks: Links) {
           case "SessionStarted":
           case "SessionUpdated": {
             const s = msg.data as SessionResource;
+            const prevPlayerCarId = playerCarIdRef.current;
             setSession(s);
             playerCarIdRef.current = s.playerCarId;
             // Reset laps and track shape when a new session begins.
@@ -178,6 +179,11 @@ function useLiveEvents(apiUrl: string, indexLinks: Links) {
               trackPointsRef.current = [];
               setTrackPoints([]);
               setTelemetry(null);
+              fetchSessionLaps(s, base);
+            } else if (prevPlayerCarId !== s.playerCarId && s.playerCarId !== null) {
+              // playerCarId arrived (EntryListCar after session creation) — refetch so the
+              // laps list is properly scoped to the player's car rather than every car.
+              fetchSessionLaps(s, base);
             }
             break;
           }
@@ -228,10 +234,6 @@ function useLiveEvents(apiUrl: string, indexLinks: Links) {
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-
-// Backend uses Long.MAX_VALUE (9_223_372_036_854_775_807) for "no lap yet".
-// JS can't represent that exactly, but any value > Number.MAX_SAFE_INTEGER signals "unset".
-const SENTINEL = Number.MAX_SAFE_INTEGER;
 
 function formatDelta(ms: number): string {
   if (ms === 0) return "±0.000";
@@ -396,6 +398,20 @@ export function LiveScreen() {
       (playerCarId === null || l.carId === playerCarId),
   );
 
+  // Derive session metrics from the laps list rather than relying on ACC's
+  // bestSessionLap field in the telemetry stream, which only fires when the SDK
+  // updates it and stays at its Long.MAX sentinel otherwise.
+  const stats = useMemo(() => {
+    const valid = playerLaps.filter((l) => l.valid);
+    const best = valid.reduce<number | null>(
+      (acc, l) => (acc === null || l.lapTime < acc ? l.lapTime : acc),
+      null,
+    );
+    const avg =
+      valid.length > 0 ? valid.reduce((s, l) => s + l.lapTime, 0) / valid.length : null;
+    return { lapCount: playerLaps.length, validCount: valid.length, best, avg };
+  }, [playerLaps]);
+
   if (!isLiveMode) {
     return (
       <div className="flex h-full items-center justify-center p-8">
@@ -439,8 +455,17 @@ export function LiveScreen() {
         </div>
       </div>
 
+      {/* Session metrics — derived from the laps list so they're meaningful even
+          when no telemetry is streaming. */}
+      <div className="mb-5 grid grid-cols-4 gap-3">
+        <StatCard label="Laps" value={stats.lapCount} accent="cyan" small />
+        <StatCard label="Valid" value={stats.validCount} accent="ok" small />
+        <StatCard label="Best Lap" value={formatLapTime(stats.best)} accent="warn" small />
+        <StatCard label="Avg Lap" value={formatLapTime(stats.avg)} accent="muted" small />
+      </div>
+
       {!t && (
-        <div className="mb-5 flex items-center justify-center rounded-md border border-border bg-surface-active p-8">
+        <div className="mb-5 flex items-center justify-center rounded-md border border-border bg-surface-active p-6">
           <span className="font-mono text-[12px] text-text-muted">
             {status === "connected" ? "Waiting for telemetry…" : "Connect the server to ACC to see live data."}
           </span>
@@ -456,8 +481,10 @@ export function LiveScreen() {
             <PositionDisplay position={t.racePosition} />
           </div>
 
-          {/* Lap times row */}
-          <div className="mb-5 grid grid-cols-3 gap-4">
+          {/* Live lap timing row — current lap from telemetry, delta derived
+              against the session-best from the laps list (telemetry's own
+              bestSessionLap field is unreliable on ACC). */}
+          <div className="mb-5 grid grid-cols-2 gap-4">
             <Card>
               <div className="font-mono text-[10px] uppercase tracking-[0.08em] text-text-muted mb-1">Current Lap</div>
               <div className={`font-mono text-2xl font-bold ${t.currentLapIsInvalid ? "text-accent" : "text-text"}`}>
@@ -465,15 +492,19 @@ export function LiveScreen() {
               </div>
             </Card>
             <Card>
-              <div className="font-mono text-[10px] uppercase tracking-[0.08em] text-text-muted mb-1">Best Lap</div>
-              <div className="font-mono text-2xl font-bold text-ok">
-                {t.bestLapTimeMs >= SENTINEL ? "—" : formatLapTime(t.bestLapTimeMs)}
-              </div>
-            </Card>
-            <Card>
-              <div className="font-mono text-[10px] uppercase tracking-[0.08em] text-text-muted mb-1">Delta</div>
-              <div className={`font-mono text-2xl font-bold ${t.delta > 0 ? "text-accent" : t.delta < 0 ? "text-ok" : "text-text-muted"}`}>
-                {t.bestLapTimeMs >= SENTINEL ? "—" : formatDelta(t.delta)}
+              <div className="font-mono text-[10px] uppercase tracking-[0.08em] text-text-muted mb-1">Delta vs Best</div>
+              <div
+                className={`font-mono text-2xl font-bold ${
+                  stats.best === null || t.currentLapTimeMs <= 0
+                    ? "text-text-muted"
+                    : t.currentLapTimeMs - stats.best > 0
+                      ? "text-accent"
+                      : "text-ok"
+                }`}
+              >
+                {stats.best === null || t.currentLapTimeMs <= 0
+                  ? "—"
+                  : formatDelta(t.currentLapTimeMs - stats.best)}
               </div>
             </Card>
           </div>

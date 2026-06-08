@@ -1,8 +1,6 @@
 package com.github.prule.laptimeinsights.adapter.`in`.web.session
 
-import com.github.prule.laptimeinsights.Feature
 import com.github.prule.laptimeinsights.adapter.`in`.web.LinkFactory
-import com.github.prule.laptimeinsights.adapter.`in`.web.enabledFeatures
 import com.github.prule.laptimeinsights.application.domain.model.Car
 import com.github.prule.laptimeinsights.application.domain.model.SessionOptions
 import com.github.prule.laptimeinsights.application.domain.model.Simulator
@@ -40,12 +38,9 @@ data class SessionOptionsResource(
 
 class SessionOptionsLinkFactory(private val application: Application) :
   LinkFactory<SessionOptions> {
-  override fun build(resource: SessionOptions): Map<String, String> {
-    val features = application.enabledFeatures()
-    val links = linkedMapOf<String, String>("self" to application.href(SessionRoutes.Options()))
-    if (Feature.SESSIONS in features) {
-      links["sessions"] = application.href(SessionRoutes())
-    }
-    return links
-  }
+  override fun build(resource: SessionOptions): Map<String, String> =
+    mapOf(
+      "self" to application.href(SessionRoutes.Options()),
+      "sessions" to application.href(SessionRoutes()),
+    )
 }

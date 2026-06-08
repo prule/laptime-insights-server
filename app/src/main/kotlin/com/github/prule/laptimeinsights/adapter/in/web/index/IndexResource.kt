@@ -9,39 +9,37 @@ import io.ktor.server.resources.href
 import kotlinx.serialization.Serializable
 
 /**
- * Entry-point resource returned by `GET /api/1`. The frontend reads `_links` to discover which
- * features the backend currently exposes — a feature whose env-var toggle is off (see [Feature])
- * simply has its link omitted.
+ * Entry-point resource returned by `GET /api/1`.
+ *
+ * Two orthogonal concerns travel here:
+ * - `_links` advertises **API capabilities** (the data plane). These rels are always emitted so
+ *   that an enabled UI feature can read sessions/laps data even when the sessions/laps *UI* is
+ *   hidden. Without that, disabling Sessions would break Overview, which consumes the sessions
+ *   feed.
+ * - `enabledFeatures` advertises **UI surfaces** that are turned on. The frontend's
+ *   `useFeatureEnabled(feature)` reads from this list to decide whether to render nav items,
+ *   routes, and cross-screen action buttons.
  */
-@Serializable data class IndexResource(val _links: Map<String, String>)
+@Serializable
+data class IndexResource(
+  val _links: Map<String, String>,
+  /** Stable feature ids that are currently enabled (mirrors [Feature.rel]). */
+  val enabledFeatures: List<String>,
+)
 
-class IndexLinkFactory(
-  private val application: Application,
-  private val enabledFeatures: Set<Feature>,
-) : LinkFactory<Unit> {
-  override fun build(resource: Unit): Map<String, String> {
-    val links = linkedMapOf<String, String>()
-    links["self"] = application.href(IndexRoutes())
-    // Overview is a frontend-only view backed by the sessions feed; it gets its own rel so the
-    // frontend can hide just the Overview nav without disabling the sessions API.
-    if (Feature.OVERVIEW in enabledFeatures) {
-      links[Feature.OVERVIEW.rel] = application.href(SessionRoutes())
-    }
-    if (Feature.SESSIONS in enabledFeatures) {
-      links[Feature.SESSIONS.rel] = application.href(SessionRoutes())
-      links["sessionOptions"] = application.href(SessionRoutes.Options())
-      links["sessionsAggregate"] = application.href(SessionRoutes.Aggregate())
-    }
-    if (Feature.LAPS in enabledFeatures) {
-      links[Feature.LAPS.rel] = application.href(LapRoutes())
-      links["lapsAggregate"] = application.href(LapRoutes.Aggregate())
-    }
-    if (Feature.COMPARE in enabledFeatures) {
-      links[Feature.COMPARE.rel] = application.href(LapRoutes.Compare())
-    }
-    if (Feature.LIVE in enabledFeatures) {
-      links[Feature.LIVE.rel] = "/api/1/events"
-    }
-    return links
-  }
+class IndexLinkFactory(private val application: Application) : LinkFactory<Unit> {
+  override fun build(resource: Unit): Map<String, String> =
+    linkedMapOf(
+      "self" to application.href(IndexRoutes()),
+      // Overview shares the sessions feed; expose it under its own rel so a frontend that wants
+      // an "all sessions" data entry point can find it via either name.
+      Feature.OVERVIEW.rel to application.href(SessionRoutes()),
+      Feature.SESSIONS.rel to application.href(SessionRoutes()),
+      "sessionOptions" to application.href(SessionRoutes.Options()),
+      "sessionsAggregate" to application.href(SessionRoutes.Aggregate()),
+      Feature.LAPS.rel to application.href(LapRoutes()),
+      "lapsAggregate" to application.href(LapRoutes.Aggregate()),
+      Feature.COMPARE.rel to application.href(LapRoutes.Compare()),
+      Feature.LIVE.rel to "/api/1/events",
+    )
 }
