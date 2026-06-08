@@ -1,7 +1,11 @@
 import { useMemo } from "react";
 import type { ReactNode } from "react";
 import type { LapResource } from "../api/types";
+import { useFeatureEnabled } from "../providers/FeaturesProvider";
 import { formatDate, formatLapTime, formatTime } from "../lib/format";
+import { SortableHeader, type SortState } from "./ui/SortableHeader";
+
+export type { SortOrder, SortState } from "./ui/SortableHeader";
 
 export interface LapTableColumn {
   header: ReactNode;
@@ -35,6 +39,20 @@ export interface LapTableProps {
   /** Visually muted — used for competitor laps on the session detail screen. */
   isRowDimmed?: (lap: LapResource) => boolean;
   disabledTitle?: string;
+  /**
+   * Field names the backend advertises as sortable for this collection (from `Page.sortable`).
+   * Headers whose mapped field appears here become clickable. Omit (or pass `[]`) to disable
+   * header-driven sorting entirely — keeps picker/embedded contexts unchanged.
+   */
+  sortableFields?: string[];
+  /** Currently applied sort, or null when unsorted. Drives the arrow indicator on the header. */
+  sort?: SortState | null;
+  /**
+   * Called when the user clicks a sortable header. Receives the next sort state, or `null` when
+   * the user toggled the active column off. Caller is responsible for re-fetching with the new
+   * sort and (typically) pushing it to URL state.
+   */
+  onSortChange?: (next: SortState | null) => void;
 }
 
 function formatDelta(lapMs: number, bestMs: number): string {
@@ -68,7 +86,14 @@ export function LapTable({
   isRowSelected,
   isRowDimmed,
   disabledTitle,
+  sortableFields,
+  sort,
+  onSortChange,
 }: LapTableProps) {
+  // The session column is clickable only when the Sessions UI is on. The lap's `session` rel
+  // exists regardless — that's a capability link — but navigating there would be pointless if
+  // the route is hidden.
+  const sessionsEnabled = useFeatureEnabled("sessions");
   // Compute session best (minimum valid lapTime) per session from the provided
   // laps. For single-session views this equals the session best; for cross-
   // session views it reflects the best among whichever laps are in view.
@@ -89,6 +114,22 @@ export function LapTable({
   ];
   const gridStyle = { gridTemplateColumns: allWidths.join(" ") };
 
+  // Header → backend sort-field. Omitted columns are never sortable (derived columns like "To
+  // best", capability columns like Session). Headers whose field isn't in the backend-advertised
+  // `sortableFields` list still render — `SortableHeader` falls back to a plain label.
+  const renderHeader = (label: string, field: string | null) => {
+    if (!field || !onSortChange) return <span>{label}</span>;
+    return (
+      <SortableHeader
+        label={label}
+        field={field}
+        sort={sort ?? null}
+        sortableFields={sortableFields}
+        onChange={onSortChange}
+      />
+    );
+  };
+
   return (
     <div className="overflow-hidden rounded border border-border">
       <div
@@ -98,13 +139,13 @@ export function LapTable({
         {prefixColumn && <div>{prefixColumn.header ?? ""}</div>}
         <div>Session</div>
         <div title="Player lap">P</div>
-        <div>Track</div>
-        <div>Date / Time</div>
-        <div>Lap</div>
-        <div>Car #</div>
+        {renderHeader("Track", "track")}
+        {renderHeader("Date / Time", "recordedAt")}
+        {renderHeader("Lap", "lapNumber")}
+        {renderHeader("Car #", "carId")}
         <div>Car</div>
-        <div>Lap time</div>
-        <div>Status</div>
+        {renderHeader("Lap time", "lapTime")}
+        {renderHeader("Status", "valid")}
         <div>PB</div>
         <div>To best</div>
         {extraColumns.map((col, i) => (
@@ -133,9 +174,10 @@ export function LapTable({
           <>
             {prefixColumn && <div>{prefixColumn.cell(lap)}</div>}
             <div className="truncate" title={lap.sessionUid}>
-              {/* Per-record HATEOAS gate: render as a link only when the backend exposed the
-                  `session` rel for this lap (i.e. the `sessions` feature is enabled). */}
-              {onSessionClick && lap._links.session ? (
+              {/* UI gate: render as a link only when the Sessions UI feature is enabled. The
+                  `lap._links.session` rel is always present (it's a capability), so we read the
+                  UI toggle instead. */}
+              {onSessionClick && sessionsEnabled ? (
                 <button
                   type="button"
                   onClick={(e) => { e.stopPropagation(); onSessionClick(lap.sessionUid); }}

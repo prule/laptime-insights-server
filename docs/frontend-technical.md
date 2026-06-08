@@ -81,7 +81,9 @@ The per-row compare buttons navigate to `/compare?track=…&lap1=…&lap2=…` s
 
 ### LapsScreen (`/laps`)
 
-URL params: `track`, `car`, `simulator`, `invalid` (bool, inverted to `validOnly`), `pb` (bool), `player` (bool — restricts to laps recorded by the player's car via `playerLap=true`), `page` (int, default 1). Page size is 50.
+URL params: `track`, `car`, `simulator`, `invalid` (bool, inverted to `validOnly`), `pb` (bool), `player` (bool — restricts to laps recorded by the player's car via `playerLap=true`), `page` (int, default 1), `sort` (string, `field:ASC|DESC`, default `lapTime:ASC`). Page size is 50.
+
+Column headers are sortable via the `sortable: string[]` field returned by the backend on `Page<LapResource>` — `LapTable` only renders a clickable header for fields that appear in that list, so adding/removing sortable columns on the server doesn't need a frontend change. Clicking a header cycles ASC → DESC → cleared (reverting to the default). State is mirrored to the `sort` URL param.
 
 Multi-select mode is local component state — selection is transient, not URL-serialised. Selecting a second lap when two are already chosen drops the oldest pick so the most recent two win. Navigates to `/compare` with `lap1` and `lap2` set, plus `track` if a track filter is active.
 
