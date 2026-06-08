@@ -249,11 +249,37 @@ export const OPTIONS: SessionOptionsResource = {
   },
 };
 
-export function paged<T>(items: T[], page: number, size: number): Page<T> {
+export function paged<T>(
+  items: T[],
+  page: number,
+  size: number,
+  sortable?: string[],
+): Page<T> {
   const start = (page - 1) * size;
   return {
     page: { page, size },
     total: items.length,
     items: items.slice(start, start + size),
+    ...(sortable ? { sortable } : {}),
   };
 }
+
+/** Mirror of `Lap.SORTABLE_FIELDS` on the backend. */
+export const LAP_SORTABLE: string[] = [
+  "lapNumber",
+  "lapTime",
+  "valid",
+  "carId",
+  "track",
+  "recordedAt",
+];
+
+/** Mirror of `Session.SORTABLE_FIELDS` on the backend. */
+export const SESSION_SORTABLE: string[] = [
+  "startedAt",
+  "track",
+  "car",
+  "sessionType",
+  "simulator",
+  "drivingTimeMs",
+];

@@ -108,8 +108,12 @@ session.
 - **Current lap** — formatted lap time; renders `0:00.000` when 0 or negative.
   Red accent if the current lap is invalid.
 - **Best lap** — formatted lap time; renders `—` when the telemetry sentinel
-  (`Long.MAX_VALUE`, treated as `>= Number.MAX_SAFE_INTEGER` on the client) is
-  in effect.
+  is in effect. Two sentinels can appear: the backend's own `Long.MAX_VALUE`,
+  and ACC's broadcast-SDK `Int.MAX_VALUE` (2_147_483_647 ms ≈ 35791:23.647)
+  returned inside a non-null `LapInfo`. The backend normalizes the latter to
+  the former in `ClientInitializer`, and the client also treats any value
+  `>= Int.MAX_VALUE` as unset, so a stale or unpatched server cannot leak the
+  35791:23.647 artifact into the HUD.
 - **Delta** — `±0.000` for zero, `+x.xxx` red for positive, `-x.xxx` green for
   negative. Renders `—` while the best-lap sentinel is set.
 

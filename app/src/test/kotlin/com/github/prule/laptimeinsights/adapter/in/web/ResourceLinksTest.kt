@@ -4,8 +4,10 @@ import com.github.prule.laptimeinsights.AppModule
 import com.github.prule.laptimeinsights.ApplicationConfiguration
 import com.github.prule.laptimeinsights.Feature
 import com.github.prule.laptimeinsights.application.domain.model.Car
+import com.github.prule.laptimeinsights.application.domain.model.Lap
 import com.github.prule.laptimeinsights.application.domain.model.LapNumber
 import com.github.prule.laptimeinsights.application.domain.model.LapTimeMs
+import com.github.prule.laptimeinsights.application.domain.model.Session
 import com.github.prule.laptimeinsights.application.domain.model.SessionType
 import com.github.prule.laptimeinsights.application.domain.model.Simulator
 import com.github.prule.laptimeinsights.application.domain.model.Track
@@ -146,41 +148,58 @@ class ResourceLinksTest {
   }
 
   @Test
-  fun `SessionResource omits laps rel when laps feature is off`() = testApplication {
-    val appModule = AppModule()
+  fun `lap search response advertises sortable fields`() = testApplication {
     application {
       module(
         configuration = ApplicationConfiguration(),
-        appModule = appModule,
-        jdbcUrl = "jdbc:h2:mem:test-links-session-no-laps;DB_CLOSE_DELAY=-1;",
-        enabledFeatures = Feature.entries.toSet() - Feature.LAPS,
+        appModule = AppModule(),
+        jdbcUrl = "jdbc:h2:mem:test-sortable-lap;DB_CLOSE_DELAY=-1;",
+        enabledFeatures = Feature.entries.toSet(),
       )
     }
 
-    startApplication()
-    val session = transaction {
-      appModule.session.createSessionUseCase.createSession(
-        CreateSessionCommand(
-          simulator = Simulator.ACC,
-          sessionType = SessionType("Practice"),
-          track = Track("Monza"),
-          car = Car("Ferrari"),
-        )
-      )
-    }
+    val response = client.get("/api/1/laps")
 
-    val links = linksOf(client.get("/api/1/sessions/${session.uid.value}").bodyAsText())
-    assertThat(links).containsKey("self").doesNotContainKey("laps")
+    assertThat(response.status).isEqualTo(HttpStatusCode.OK)
+    val sortable =
+      Json.parseToJsonElement(response.bodyAsText()).jsonObject["sortable"]?.jsonArray?.map {
+        it.jsonPrimitive.content
+      } ?: error("missing sortable")
+    assertThat(sortable).containsExactlyElementsOf(Lap.SORTABLE_FIELDS)
   }
 
   @Test
-  fun `LapResource omits session rel when sessions feature is off`() = testApplication {
+  fun `session search response advertises sortable fields`() = testApplication {
+    application {
+      module(
+        configuration = ApplicationConfiguration(),
+        appModule = AppModule(),
+        jdbcUrl = "jdbc:h2:mem:test-sortable-session;DB_CLOSE_DELAY=-1;",
+        enabledFeatures = Feature.entries.toSet(),
+      )
+    }
+
+    val response = client.get("/api/1/sessions")
+
+    assertThat(response.status).isEqualTo(HttpStatusCode.OK)
+    val sortable =
+      Json.parseToJsonElement(response.bodyAsText()).jsonObject["sortable"]?.jsonArray?.map {
+        it.jsonPrimitive.content
+      } ?: error("missing sortable")
+    assertThat(sortable).containsExactlyElementsOf(Session.SORTABLE_FIELDS)
+  }
+
+  @Test
+  fun `cross-feature rels stay present when a UI feature is disabled`() = testApplication {
+    // Capability links are independent of UI feature toggles — disabling the Sessions UI must
+    // not strip `lap._links.session`, otherwise screens like Overview that depend on the lap →
+    // session traversal silently break.
     val appModule = AppModule()
     application {
       module(
         configuration = ApplicationConfiguration(),
         appModule = appModule,
-        jdbcUrl = "jdbc:h2:mem:test-links-lap-no-session;DB_CLOSE_DELAY=-1;",
+        jdbcUrl = "jdbc:h2:mem:test-links-feature-off;DB_CLOSE_DELAY=-1;",
         enabledFeatures = Feature.entries.toSet() - Feature.SESSIONS,
       )
     }
@@ -210,8 +229,11 @@ class ResourceLinksTest {
       )
     }
 
-    val links =
+    val sessionLinks = linksOf(client.get("/api/1/sessions/${session.uid.value}").bodyAsText())
+    assertThat(sessionLinks).containsKeys("self", "laps")
+
+    val lapLinks =
       firstItemLinks(client.get("/api/1/laps?sessionUid=${session.uid.value}").bodyAsText())
-    assertThat(links).containsKeys("self", "telemetry").doesNotContainKey("session")
+    assertThat(lapLinks).containsKeys("self", "session", "telemetry")
   }
 }
