@@ -3,6 +3,7 @@ package com.github.prule.laptimeinsights.adapter.`in`.web.session
 import com.github.prule.laptimeinsights.adapter.`in`.web.toPageRequest
 import com.github.prule.laptimeinsights.adapter.`in`.web.toSort
 import com.github.prule.laptimeinsights.application.domain.model.Car
+import com.github.prule.laptimeinsights.application.domain.model.Session
 import com.github.prule.laptimeinsights.application.domain.model.SessionId
 import com.github.prule.laptimeinsights.application.domain.model.SessionSearchCriteria
 import com.github.prule.laptimeinsights.application.domain.model.Simulator
@@ -46,6 +47,7 @@ class SearchSessionController(
                 call.request.toSort(),
               )
               .map { SessionResource.fromDomain(it, SessionLinkFactory(application)) }
+              .withSortable(Session.SORTABLE_FIELDS)
           )
         }
         .describe {
@@ -105,8 +107,9 @@ class SearchSessionController(
             query("sort") {
               description =
                 "Sort specification as a comma-separated list of `field:ORDER` pairs, where " +
-                  "`ORDER` is `ASC` or `DESC` (e.g. `startedAt:DESC,id:ASC`). Omit for no " +
-                  "explicit sort."
+                  "`ORDER` is `ASC` or `DESC` (e.g. `startedAt:DESC`). The set of accepted " +
+                  "field names is advertised in the response `sortable` array — unrecognised " +
+                  "fields are silently ignored. Omit for no explicit sort."
               required = false
             }
           }
@@ -114,8 +117,10 @@ class SearchSessionController(
           responses {
             HttpStatusCode.OK {
               description =
-                "A page of sessions matching the supplied criteria. Each item is a " +
-                  "`SessionResource` with HATEOAS `_links`."
+                "A page of sessions matching the supplied criteria. The response carries the " +
+                  "standard page envelope (`page`, `total`, `items`) plus `sortable: string[]` " +
+                  "listing the field names the `sort` parameter accepts for this collection. Each " +
+                  "item is a `SessionResource` with HATEOAS `_links`."
             }
             HttpStatusCode.BadRequest {
               description =
