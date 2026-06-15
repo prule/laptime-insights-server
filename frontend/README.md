@@ -7,7 +7,7 @@ sessions and laps from the Ktor backend, with a one-click toggle between
 
 ## Stack
 
-- **Vite** — dev server + build (`npm run dev` / `npm run build`)
+- **Vite** — dev server + build (`pnpm dev` / `pnpm build`)
 - **TypeScript** — strict mode, path alias `@/* → src/*`
 - **Tailwind CSS** — design tokens defined in `tailwind.config.ts` and used directly via utility classes
 - **TanStack Query** — request caching, retry, dedupe; queryKeys include the data mode so flipping modes invalidates cleanly
@@ -61,8 +61,8 @@ also exposes `fetchLink(ctx, links, rel)` for following arbitrary relations.
 ```bash
 # Mock-only — no backend required.
 cd frontend
-npm install
-npm run dev               # http://localhost:5173
+pnpm install
+pnpm dev                  # http://localhost:5173
 
 # Live — requires backend running on :8000.
 JDBC_URL=jdbc:h2:./data/laptime DB_SEED=true ./gradlew :app:run
@@ -72,8 +72,8 @@ JDBC_URL=jdbc:h2:./data/laptime DB_SEED=true ./gradlew :app:run
 ## Type-check / build
 
 ```bash
-npm run typecheck
-npm run build
+pnpm typecheck
+pnpm build
 ```
 
 ## Lap comparison

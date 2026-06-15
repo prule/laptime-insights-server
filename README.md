@@ -36,8 +36,8 @@ A React + Vite + TypeScript dashboard lives in `frontend/`. See
 
 ```bash
 cd frontend
-npm install
-npm run dev   # http://localhost:5173 — defaults to mock data
+pnpm install
+pnpm dev   # http://localhost:5173 — defaults to mock data
 ```
 
 The sidebar toggle switches between **mock** mode (in-memory data mirroring
