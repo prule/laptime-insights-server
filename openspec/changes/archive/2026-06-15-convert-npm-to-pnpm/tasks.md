@@ -27,4 +27,4 @@
 ## 5. Final verification
 
 - [x] 5.1 Confirm no `package-lock.json` remains anywhere in the repo (excluding `node_modules`)
-- [ ] 5.2 Push and confirm the CI frontend job passes with pnpm
+- [x] 5.2 Pushed and merged via PR #83
