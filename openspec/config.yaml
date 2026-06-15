@@ -1,20 +1,68 @@
 schema: spec-driven
 
-# Project context (optional)
-# This is shown to AI when creating artifacts.
-# Add your tech stack, conventions, style guides, domain knowledge, etc.
-# Example:
-#   context: |
-#     Tech stack: TypeScript, React, Node.js
-#     We use conventional commits
-#     Domain: e-commerce platform
+# Project context shown to AI when creating artifacts.
+context: |
+  Project: Laptime Insights — a web dashboard for Assetto Corsa Competizione (ACC)
+  driving performance. Backend REST/HATEOAS API plus a React frontend that consumes it.
 
-# Per-artifact rules (optional)
-# Add custom rules for specific artifacts.
-# Example:
-#   rules:
-#     proposal:
-#       - Keep proposals under 500 words
-#       - Always include a "Non-goals" section
-#     tasks:
-#       - Break tasks into chunks of max 2 hours
+  Repository layout:
+    - app/        Kotlin/Ktor/Exposed REST/HATEOAS API (clean / hexagonal architecture)
+    - frontend/   React SPA consuming the REST/HATEOAS API
+    - docs/       Architecture, design, specs (architecture.md, clean-architecture.md,
+                  frontend-technical.md, real-time-updates.md, user-guide.md,
+                  technical-debt.md, blog/, specs/)
+    - openspec/   Spec-driven change workflow (this directory)
+
+  Backend stack:
+    - Kotlin 2.4.0, JDK 21, Gradle (version catalogs in gradle/libs.versions.toml;
+      buildSrc convention plugin buildsrc.convention.kotlin-jvm)
+    - Ktor 3.5.0 (ktor-version-catalog), kotlinx.serialization JSON, kotlinx.datetime,
+      kotlinx.coroutines
+    - Exposed ORM; H2 in-memory for tests (JDBC_URL=jdbc:h2:mem:test;DB_CLOSE_DELAY=-1;)
+    - REST.assured (kotlin-extensions) for API tests
+    - Hexagonal/clean architecture under com.github.prule.laptimeinsights:
+        application/domain/{model,service}  — domain core (car, lap, session)
+        application/port/{in,out}           — ports
+        adapter/in/web                      — Ktor web adapter (Resource classes -> JSON)
+        adapter/out/{persistence,event}     — Exposed persistence + events
+      Dependencies point inward; adapters depend on ports, never the reverse.
+    - Run live: JDBC_URL=jdbc:h2:./data/laptime DB_SEED=true ./gradlew :app:run  (port 8000)
+
+  Frontend stack (frontend/):
+    - pnpm 11.5.2 is the package manager (pinned via packageManager field; NOT npm).
+      Install: pnpm install. Scripts: pnpm dev | build | test | typecheck | lint | preview.
+    - React 19, Vite 8, TypeScript 6 (strict, path alias @/* -> src/*)
+    - Tailwind CSS 4, TanStack Query 5, React Router 7, Vitest 4
+    - Dev server on :5173; Vite proxies /api/... -> http://localhost:8000
+    - Data modes: MOCK (in-memory handler mirroring backend seeder) | LIVE (real HTTP).
+      Mode is part of every TanStack Query key so switching never serves stale data.
+
+  HATEOAS convention (important):
+    - _links = capabilities, always present (e.g. _links.self drives navigation).
+    - enabledFeatures = UI toggles. Do NOT conflate _links with enabledFeatures.
+    - Frontend follows _links rather than hardcoding URLs, so backend URL scheme can
+      change without frontend code changes.
+
+  CI: GitHub Actions (.github/workflows/build-and-test.yml)
+    - backend job: JDK 21 (temurin), ./gradlew build && ./gradlew test
+    - frontend job: pnpm/action-setup@v4 + setup-node (cache: pnpm),
+      pnpm install --frozen-lockfile, pnpm test, pnpm build
+
+  Conventions:
+    - Be concise.
+    - Keep documentation, tests, and sample code updated with every change.
+    - Use clean architecture; ask for clarification when needed.
+    - Log cleanup opportunities in docs/technical-debt.md; mark items DONE there when fixed.
+    - Commit trailer: Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>
+
+# Per-artifact rules
+rules:
+  proposal:
+    - State the WHY before the WHAT; mark breaking changes with **BREAKING**.
+    - Identify affected capabilities; reuse existing spec names from openspec/specs/.
+  design:
+    - Only include when a change is cross-cutting, adds a dependency, or has migration risk.
+    - Record alternatives considered and a rollback path.
+  tasks:
+    - Order by dependency; each task verifiable and small enough for one session.
+    - Include doc and test updates as explicit tasks (per project conventions).
