@@ -4,30 +4,30 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>Laptime Insights — ACC lap analysis dashboard</title>
+    <title>Laptime Insights — self-hosted ACC lap analysis dashboard</title>
     <meta
       name="description"
-      content="Laptime Insights turns your Assetto Corsa Competizione sessions into clear performance insights — track your practice history, find your fastest laps, and compare telemetry to see exactly where every tenth goes."
+      content="Laptime Insights is a self-hosted dashboard you download and run on your own network, alongside your Assetto Corsa Competizione server. Track your practice history, find your fastest laps, and compare telemetry to see exactly where every tenth goes."
     />
     <link rel="canonical" href="https://laptimeinsights.com/" />
 
     <!-- Open Graph -->
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="Laptime Insights" />
-    <meta property="og:title" content="Laptime Insights — ACC lap analysis dashboard" />
+    <meta property="og:title" content="Laptime Insights — self-hosted ACC lap analysis dashboard" />
     <meta
       property="og:description"
-      content="See where every tenth goes. Track ACC practice history, fastest laps, and side-by-side telemetry comparison."
+      content="Self-hosted: download and run it on your own network next to your ACC server. See where every tenth goes — practice history, fastest laps, and side-by-side telemetry comparison."
     />
     <meta property="og:url" content="https://laptimeinsights.com/" />
     <meta property="og:image" content="https://laptimeinsights.com/assets/og-image.svg" />
 
     <!-- Twitter -->
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="Laptime Insights — ACC lap analysis dashboard" />
+    <meta name="twitter:title" content="Laptime Insights — self-hosted ACC lap analysis dashboard" />
     <meta
       name="twitter:description"
-      content="See where every tenth goes. Track ACC practice history, fastest laps, and side-by-side telemetry comparison."
+      content="Self-hosted: download and run it on your own network next to your ACC server. See where every tenth goes — practice history, fastest laps, and side-by-side telemetry comparison."
     />
     <meta name="twitter:image" content="https://laptimeinsights.com/assets/og-image.svg" />
 
@@ -51,11 +51,12 @@
         <span>Laptime Insights</span>
       </a>
       <nav class="flex items-center gap-6 text-sm text-text-muted">
+        <a href="#how-it-works" class="hover:text-text">How it works</a>
         <a href="#features" class="hover:text-text">Features</a>
         <a
-          href="https://app.laptimeinsights.com"
+          href="https://github.com/prule/laptime-insights-server/releases"
           class="rounded-md bg-accent px-4 py-2 font-medium text-white hover:opacity-90"
-          >Open the app</a
+          >Download</a
         >
       </nav>
     </header>
@@ -75,22 +76,26 @@
               <span class="text-cyan">tenth</span> goes.
             </h1>
             <p class="mt-5 max-w-md text-lg text-text-muted">
-              Laptime Insights turns your ACC sessions into a clear picture of
+              A dashboard you download and run on your own network, alongside
+              your ACC server. It turns your sessions into a clear picture of
               your pace — practice history, fastest laps per track, and
               side-by-side telemetry comparison.
             </p>
             <div class="mt-8 flex flex-wrap items-center gap-4">
               <a
-                href="https://app.laptimeinsights.com"
+                href="https://github.com/prule/laptime-insights-server/releases"
                 class="rounded-md bg-accent px-6 py-3 font-semibold text-white hover:opacity-90"
-                >Open the dashboard</a
+                >Download Laptime Insights</a
               >
               <a
-                href="#features"
+                href="#how-it-works"
                 class="rounded-md border border-border px-6 py-3 font-medium text-text hover:border-border-hover"
-                >See features</a
+                >How it works</a
               >
             </div>
+            <p class="mt-4 text-sm text-text-muted">
+              Free &amp; self-hosted · your telemetry never leaves your network.
+            </p>
           </div>
           <div class="rounded-xl border border-border bg-surface p-3 shadow-2xl">
             <img
@@ -100,6 +105,48 @@
               width="960"
               height="600"
             />
+          </div>
+        </div>
+      </section>
+
+      <!-- How it works -->
+      <section
+        id="how-it-works"
+        class="border-y border-border bg-surface/40 py-16"
+      >
+        <div class="mx-auto max-w-6xl px-6">
+          <h2 class="text-center text-3xl font-bold">Runs on your network</h2>
+          <p class="mx-auto mt-3 max-w-2xl text-center text-text-muted">
+            Laptime Insights is self-hosted. You download it and run it on a PC
+            on the same network as your Assetto Corsa Competizione server — no
+            cloud account, and your telemetry never leaves your network.
+          </p>
+
+          <div class="mt-12 grid gap-6 md:grid-cols-3">
+            <article class="rounded-xl border border-border bg-surface p-6">
+              <div class="font-mono text-2xl font-bold text-accent">1</div>
+              <h3 class="mt-3 text-lg font-semibold">Download &amp; run</h3>
+              <p class="mt-2 text-sm text-text-muted">
+                Grab the latest release and start it on any PC on your home
+                network — the same network your ACC server runs on.
+              </p>
+            </article>
+            <article class="rounded-xl border border-border bg-surface p-6">
+              <div class="font-mono text-2xl font-bold text-accent">2</div>
+              <h3 class="mt-3 text-lg font-semibold">It listens to ACC</h3>
+              <p class="mt-2 text-sm text-text-muted">
+                It connects to your ACC server's telemetry feed and records every
+                session and lap into a local database on your machine.
+              </p>
+            </article>
+            <article class="rounded-xl border border-border bg-surface p-6">
+              <div class="font-mono text-2xl font-bold text-accent">3</div>
+              <h3 class="mt-3 text-lg font-semibold">Open the dashboard</h3>
+              <p class="mt-2 text-sm text-text-muted">
+                Open the dashboard in your browser, from your PC or any device on
+                the same network, and dig into your performance.
+              </p>
+            </article>
           </div>
         </div>
       </section>
@@ -167,9 +214,9 @@
 
         <div class="mt-14 text-center">
           <a
-            href="https://app.laptimeinsights.com"
+            href="https://github.com/prule/laptime-insights-server/releases"
             class="rounded-md bg-accent px-8 py-3 font-semibold text-white hover:opacity-90"
-            >Start analysing your laps</a
+            >Download and start analysing your laps</a
           >
         </div>
       </section>
@@ -180,9 +227,11 @@
       <div
         class="mx-auto flex max-w-6xl flex-col items-center justify-between gap-3 px-6 py-8 text-sm text-text-muted sm:flex-row"
       >
-        <span>© <span id="year">2026</span> Laptime Insights</span>
-        <a href="https://app.laptimeinsights.com" class="hover:text-text"
-          >app.laptimeinsights.com</a
+        <span>© <span id="year">2026</span> Laptime Insights · self-hosted</span>
+        <a
+          href="https://github.com/prule/laptime-insights-server"
+          class="hover:text-text"
+          >github.com/prule/laptime-insights-server</a
         >
       </div>
     </footer>

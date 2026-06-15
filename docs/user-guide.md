@@ -1,6 +1,6 @@
 # LapTime Insights — User Guide
 
-LapTime Insights is a local dashboard that connects to your Assetto Corsa Competizione (ACC) server and gives you a clear picture of your practice history and lap performance. This guide covers every screen in the dashboard and how to get the most out of it.
+LapTime Insights is a **self-hosted** dashboard: you download it and run it on your own network, on the same network as your Assetto Corsa Competizione (ACC) server. It connects to that server, records your sessions and laps locally, and gives you a clear picture of your practice history and lap performance — your telemetry never leaves your network. You open the dashboard in a browser from your PC or any device on the same network. This guide covers every screen in the dashboard and how to get the most out of it.
 
 ---
 

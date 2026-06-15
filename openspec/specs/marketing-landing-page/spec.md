@@ -34,13 +34,31 @@ Compare, streaks, and global time-range analytics), and at least one product scr
 #### Scenario: Hero with call-to-action
 
 - **WHEN** a visitor loads the landing page
-- **THEN** a headline, supporting subtext, and a primary CTA button linking to the app are visible above the fold
+- **THEN** a headline, supporting subtext, and a primary CTA button to download the application are visible above the fold
 
 #### Scenario: Feature highlights present
 
 - **WHEN** a visitor scrolls the page
 - **THEN** feature sections describe core capabilities (Overview, Sessions, Laps, Compare, streaks, time-range filtering)
 - **AND** at least one screenshot of the dashboard is shown
+
+### Requirement: Communicates the self-hosted deployment model
+
+The landing page SHALL make clear that Laptime Insights is a self-hosted application the user
+downloads and runs on their own network, on the same network as their Assetto Corsa Competizione
+(ACC) server. Calls-to-action SHALL point to a download location (not a hosted app), and the page
+MUST NOT imply a cloud-hosted/SaaS product.
+
+#### Scenario: Deployment model is explained
+
+- **WHEN** a visitor reads the landing page
+- **THEN** it states that the app is downloaded and run locally on the same network as the ACC server
+- **AND** it does not present the product as a hosted/cloud service
+
+#### Scenario: Calls-to-action point to a download
+
+- **WHEN** a visitor activates a primary call-to-action
+- **THEN** it leads to a download/releases location for the application, not a hosted app URL
 
 ### Requirement: Responsive layout
 

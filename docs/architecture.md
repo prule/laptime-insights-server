@@ -8,6 +8,9 @@ Ktor, Exposed, React).
 
 LapTimeInsights consists of a **Kotlin/Ktor** server acting as a local hub and a **React/TypeScript** dashboard.
 
+* **Deployment model:** LapTimeInsights is **self-hosted**. The user downloads it and runs it locally on their own
+  network, on the **same network as their ACC server**. There is no cloud/SaaS component; all data stays on the user's
+  network. The dashboard is accessed via a browser on that PC or another device on the same LAN.
 * **Backend:** Handles telemetry ingestion via `acc-client`, persists data using **Exposed**, and serves a
   **REST/HATEOAS** API.
 * **Frontend:** A reactive dashboard built with **React** + **TanStack Query** for data fetching, consuming the HATEOAS
