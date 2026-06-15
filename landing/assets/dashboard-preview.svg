@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 600" role="img" aria-label="Laptime Insights dashboard preview">
+  <!-- PLACEHOLDER product screenshot. Replace with a real dashboard PNG. See landing/README.md. -->
+  <rect width="960" height="600" rx="12" fill="#080a0f" stroke="rgb(255 255 255 / 0.06)"/>
+  <!-- sidebar -->
+  <rect x="0" y="0" width="180" height="600" rx="12" fill="#0a0d14"/>
+  <circle cx="28" cy="34" r="8" fill="#e8212a"/>
+  <rect x="46" y="28" width="96" height="12" rx="6" fill="#e8eaf0" opacity="0.85"/>
+  <rect x="24" y="80" width="132" height="14" rx="7" fill="#141c28"/>
+  <rect x="24" y="112" width="132" height="14" rx="7" fill="#141c28"/>
+  <rect x="24" y="144" width="132" height="14" rx="7" fill="#141c28"/>
+  <rect x="24" y="176" width="132" height="14" rx="7" fill="#141c28"/>
+  <!-- stat cards -->
+  <g fill="#0d1117" stroke="rgb(255 255 255 / 0.06)">
+    <rect x="204" y="28" width="170" height="86" rx="10"/>
+    <rect x="396" y="28" width="170" height="86" rx="10"/>
+    <rect x="588" y="28" width="170" height="86" rx="10"/>
+    <rect x="780" y="28" width="156" height="86" rx="10"/>
+  </g>
+  <g fill="#e8eaf0" font-family="DM Mono, monospace" font-size="26" font-weight="700">
+    <text x="220" y="84">128</text>
+    <text x="412" y="84">3,540</text>
+    <text x="604" y="84">42h</text>
+    <text x="796" y="84">12</text>
+  </g>
+  <g fill="#6b7280" font-family="DM Sans, sans-serif" font-size="12">
+    <text x="220" y="104">Sessions</text>
+    <text x="412" y="104">Laps</text>
+    <text x="604" y="104">Driving time</text>
+    <text x="796" y="104">Streak</text>
+  </g>
+  <!-- bar chart -->
+  <rect x="204" y="138" width="554" height="240" rx="10" fill="#0d1117" stroke="rgb(255 255 255 / 0.06)"/>
+  <g fill="#00d4ff" opacity="0.85">
+    <rect x="232" y="300" width="34" height="58" rx="3"/>
+    <rect x="288" y="262" width="34" height="96" rx="3"/>
+    <rect x="344" y="224" width="34" height="134" rx="3"/>
+    <rect x="400" y="284" width="34" height="74" rx="3"/>
+    <rect x="456" y="200" width="34" height="158" rx="3"/>
+    <rect x="512" y="246" width="34" height="112" rx="3"/>
+    <rect x="568" y="216" width="34" height="142" rx="3"/>
+    <rect x="624" y="276" width="34" height="82" rx="3"/>
+    <rect x="680" y="232" width="34" height="126" rx="3"/>
+  </g>
+  <!-- compare panel -->
+  <rect x="780" y="138" width="156" height="240" rx="10" fill="#0d1117" stroke="rgb(255 255 255 / 0.06)"/>
+  <polyline points="796,330 820,300 844,312 868,266 892,288 916,244" fill="none" stroke="#00d4ff" stroke-width="3"/>
+  <polyline points="796,344 820,318 844,300 868,288 892,260 916,272" fill="none" stroke="#e8212a" stroke-width="3"/>
+  <!-- recent list -->
+  <g fill="#0d1117" stroke="rgb(255 255 255 / 0.06)">
+    <rect x="204" y="402" width="732" height="40" rx="8"/>
+    <rect x="204" y="450" width="732" height="40" rx="8"/>
+    <rect x="204" y="498" width="732" height="40" rx="8"/>
+  </g>
+  <g fill="#6b7280" font-family="DM Sans, sans-serif" font-size="13">
+    <text x="224" y="427">Monza · Ferrari 296 · Practice</text>
+    <text x="224" y="475">Spa · Porsche 992 · Qualifying</text>
+    <text x="224" y="523">Imola · BMW M4 · Race</text>
+  </g>
+  <g fill="#22c55e" font-family="DM Mono, monospace" font-size="13" text-anchor="end">
+    <text x="916" y="427">1:47.214</text>
+    <text x="916" y="475">2:16.882</text>
+    <text x="916" y="523">1:32.901</text>
+  </g>
+</svg>

@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630">
+  <!-- PLACEHOLDER social share image. Replace with a real 1200x630 PNG export. -->
+  <rect width="1200" height="630" fill="#080a0f"/>
+  <rect width="1200" height="630" fill="url(#g)"/>
+  <defs>
+    <radialGradient id="g" cx="20%" cy="0%" r="90%">
+      <stop offset="0%" stop-color="#0d1117"/>
+      <stop offset="100%" stop-color="#080a0f"/>
+    </radialGradient>
+  </defs>
+  <path d="M120 470 L300 230 L420 380 L520 270 L700 470" fill="none" stroke="#00d4ff" stroke-width="10" stroke-linecap="round" stroke-linejoin="round" opacity="0.5"/>
+  <text x="100" y="280" font-family="DM Sans, sans-serif" font-size="86" font-weight="700" fill="#e8eaf0">Laptime Insights</text>
+  <text x="104" y="350" font-family="DM Sans, sans-serif" font-size="38" fill="#6b7280">See where every tenth goes. ACC lap analysis.</text>
+  <rect x="104" y="400" width="14" height="40" fill="#e8212a"/>
+</svg>

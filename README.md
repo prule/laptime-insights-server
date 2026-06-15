@@ -45,6 +45,18 @@ the backend seeder) and **live** mode (real HTTP calls, proxied to the Ktor
 backend on port 8000 by Vite). Mock data shape matches the backend exactly,
 including HATEOAS `_links`, so screens behave identically across modes.
 
+### Landing page
+
+A standalone marketing site for laptimeinsights.com lives in `landing/` — plain
+HTML + Tailwind, deployed to Cloudflare Pages, fully isolated from `app/` and
+`frontend/`. See [landing/README.md](./landing/README.md).
+
+```bash
+cd landing
+pnpm install
+pnpm build   # outputs static site to landing/dist
+```
+
 ### Environment variables
 
 | Variable | Required | Description |

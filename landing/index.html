@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Laptime Insights — ACC lap analysis dashboard</title>
+    <meta
+      name="description"
+      content="Laptime Insights turns your Assetto Corsa Competizione sessions into clear performance insights — track your practice history, find your fastest laps, and compare telemetry to see exactly where every tenth goes."
+    />
+    <link rel="canonical" href="https://laptimeinsights.com/" />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Laptime Insights" />
+    <meta property="og:title" content="Laptime Insights — ACC lap analysis dashboard" />
+    <meta
+      property="og:description"
+      content="See where every tenth goes. Track ACC practice history, fastest laps, and side-by-side telemetry comparison."
+    />
+    <meta property="og:url" content="https://laptimeinsights.com/" />
+    <meta property="og:image" content="https://laptimeinsights.com/assets/og-image.svg" />
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Laptime Insights — ACC lap analysis dashboard" />
+    <meta
+      name="twitter:description"
+      content="See where every tenth goes. Track ACC practice history, fastest laps, and side-by-side telemetry comparison."
+    />
+    <meta name="twitter:image" content="https://laptimeinsights.com/assets/og-image.svg" />
+
+    <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg" />
+    <link
+      rel="preconnect"
+      href="https://fonts.googleapis.com"
+    />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body class="min-h-screen bg-bg text-text antialiased">
+    <!-- Nav -->
+    <header class="mx-auto flex max-w-6xl items-center justify-between px-6 py-5">
+      <a href="#top" class="flex items-center gap-2 font-semibold">
+        <img src="/assets/favicon.svg" alt="" width="28" height="28" />
+        <span>Laptime Insights</span>
+      </a>
+      <nav class="flex items-center gap-6 text-sm text-text-muted">
+        <a href="#features" class="hover:text-text">Features</a>
+        <a
+          href="https://app.laptimeinsights.com"
+          class="rounded-md bg-accent px-4 py-2 font-medium text-white hover:opacity-90"
+          >Open the app</a
+        >
+      </nav>
+    </header>
+
+    <!-- Hero -->
+    <main id="top">
+      <section class="mx-auto max-w-6xl px-6 pb-16 pt-10 md:pt-20">
+        <div class="grid items-center gap-12 md:grid-cols-2">
+          <div>
+            <p
+              class="mb-4 inline-block rounded-full border border-border px-3 py-1 text-xs font-medium uppercase tracking-wide text-cyan"
+            >
+              For Assetto Corsa Competizione
+            </p>
+            <h1 class="text-4xl font-bold leading-tight md:text-5xl">
+              See where every
+              <span class="text-cyan">tenth</span> goes.
+            </h1>
+            <p class="mt-5 max-w-md text-lg text-text-muted">
+              Laptime Insights turns your ACC sessions into a clear picture of
+              your pace — practice history, fastest laps per track, and
+              side-by-side telemetry comparison.
+            </p>
+            <div class="mt-8 flex flex-wrap items-center gap-4">
+              <a
+                href="https://app.laptimeinsights.com"
+                class="rounded-md bg-accent px-6 py-3 font-semibold text-white hover:opacity-90"
+                >Open the dashboard</a
+              >
+              <a
+                href="#features"
+                class="rounded-md border border-border px-6 py-3 font-medium text-text hover:border-border-hover"
+                >See features</a
+              >
+            </div>
+          </div>
+          <div class="rounded-xl border border-border bg-surface p-3 shadow-2xl">
+            <img
+              src="/assets/dashboard-preview.svg"
+              alt="Laptime Insights dashboard showing session stats, activity charts, and recent sessions"
+              class="w-full rounded-lg"
+              width="960"
+              height="600"
+            />
+          </div>
+        </div>
+      </section>
+
+      <!-- Features -->
+      <section id="features" class="mx-auto max-w-6xl px-6 py-16">
+        <h2 class="text-center text-3xl font-bold">Everything in one dashboard</h2>
+        <p class="mx-auto mt-3 max-w-xl text-center text-text-muted">
+          Four screens that take you from "how much have I driven" down to "which
+          corner cost me the lap".
+        </p>
+
+        <div class="mt-12 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          <!-- Overview -->
+          <article class="rounded-xl border border-border bg-surface p-6">
+            <h3 class="text-lg font-semibold text-cyan">Overview</h3>
+            <p class="mt-2 text-sm text-text-muted">
+              Sessions, laps, and driving time at a glance, plus activity charts,
+              a tracks-practiced bubble chart, and your all-time best lap per
+              track.
+            </p>
+          </article>
+          <!-- Sessions -->
+          <article class="rounded-xl border border-border bg-surface p-6">
+            <h3 class="text-lg font-semibold text-cyan">Sessions</h3>
+            <p class="mt-2 text-sm text-text-muted">
+              Every session, filterable by track, car, and simulator. Filters
+              live in the URL so any view is bookmarkable and shareable.
+            </p>
+          </article>
+          <!-- Laps -->
+          <article class="rounded-xl border border-border bg-surface p-6">
+            <h3 class="text-lg font-semibold text-cyan">Laps</h3>
+            <p class="mt-2 text-sm text-text-muted">
+              A searchable, paginated list of every lap. Filter to valid laps or
+              personal bests and jump straight to the parent session.
+            </p>
+          </article>
+          <!-- Compare -->
+          <article class="rounded-xl border border-border bg-surface p-6">
+            <h3 class="text-lg font-semibold text-cyan">Compare</h3>
+            <p class="mt-2 text-sm text-text-muted">
+              Overlay two laps' speed traces, a 2-D track map, a speed-delta
+              chart, and gear mismatches — linked crosshairs show exactly where
+              time is gained or lost.
+            </p>
+          </article>
+          <!-- Streaks -->
+          <article class="rounded-xl border border-border bg-surface p-6">
+            <h3 class="text-lg font-semibold text-cyan">Streaks</h3>
+            <p class="mt-2 text-sm text-text-muted">
+              A consecutive-days streak keeps you honest about your practice
+              cadence — and tells you the moment it breaks.
+            </p>
+          </article>
+          <!-- Time range -->
+          <article class="rounded-xl border border-border bg-surface p-6">
+            <h3 class="text-lg font-semibold text-cyan">Time-range analytics</h3>
+            <p class="mt-2 text-sm text-text-muted">
+              One global filter (1M / 3M / 6M / 1Y / All) re-scopes every stat,
+              chart, and list — and your choice survives a reload.
+            </p>
+          </article>
+        </div>
+
+        <div class="mt-14 text-center">
+          <a
+            href="https://app.laptimeinsights.com"
+            class="rounded-md bg-accent px-8 py-3 font-semibold text-white hover:opacity-90"
+            >Start analysing your laps</a
+          >
+        </div>
+      </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="border-t border-border">
+      <div
+        class="mx-auto flex max-w-6xl flex-col items-center justify-between gap-3 px-6 py-8 text-sm text-text-muted sm:flex-row"
+      >
+        <span>© <span id="year">2026</span> Laptime Insights</span>
+        <a href="https://app.laptimeinsights.com" class="hover:text-text"
+          >app.laptimeinsights.com</a
+        >
+      </div>
+    </footer>
+
+    <script>
+      document.getElementById("year").textContent =
+        new Date().getFullYear();
+    </script>
+  </body>
+</html>
