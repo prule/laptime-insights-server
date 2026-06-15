@@ -11,5 +11,5 @@
 ## Landing page (landing/)
 
 - Landing page screenshot (`landing/assets/dashboard-preview.svg`) and social share image (`landing/assets/og-image.svg`) are placeholder SVGs. Replace with real PNG exports of the dashboard, and re-capture the screenshot whenever the dashboard UI changes meaningfully so the landing page stays accurate.
-- Cloudflare Pages project still needs to be created/connected in the Cloudflare dashboard (root dir `landing`, build `pnpm install && pnpm build`, output `dist`), plus DNS: apex `laptimeinsights.com` → Pages, app on `app.laptimeinsights.com`. This is a one-time manual infra step — see `landing/README.md`.
+- Cloudflare Pages project still needs to be created/connected in the Cloudflare dashboard (root dir `landing`, build `pnpm install && pnpm build`, output `dist`), plus DNS: apex `laptimeinsights.com` → Pages. (The app is self-hosted — there is no hosted app subdomain; CTAs link to GitHub releases.) This is a one-time manual infra step — see `landing/README.md`.
 - If the landing site grows beyond a single page, migrate from hand-written HTML to Astro or Vite to avoid duplicated markup (out of scope for the initial change).

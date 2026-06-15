@@ -3,7 +3,11 @@
 https://laptimeinsights.com
 
 This repository is the server component for the LapTimeInsights dashboard. It is a work in progress, currently under
-development. This software would be installed locally on the users network to communicate with the ACC server.
+development.
+
+> **Deployment model:** LapTimeInsights is **self-hosted**. The user **downloads it and runs it locally on their own
+> network — on the same network as their ACC server**. It is not a cloud/SaaS product, and telemetry never leaves the
+> user's network. The dashboard is then opened in a browser from that PC or any device on the same network.
 
 The server uses [acc-client](https://github.com/prule/acc-client) to listen to telemetry from Assetto Corsa
 Competizione (ACC) and records information in a database. The server implements a REST API so the frontend can render

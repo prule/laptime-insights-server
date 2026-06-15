@@ -50,12 +50,14 @@ Pages gives a free per-PR preview URL on every pull request.
 ### Domain / DNS plan
 
 - **Apex `laptimeinsights.com`** → this Pages project (the landing page).
-- **App** → served on the **`app.laptimeinsights.com`** subdomain. All CTAs on
-  the landing page point to `https://app.laptimeinsights.com`.
+- The app itself is **self-hosted** — users download and run it on their own
+  network (same network as their ACC server). There is **no hosted app URL**.
+  All CTAs on the landing page point to the GitHub releases/download page
+  (`https://github.com/prule/laptime-insights-server/releases`).
 
 DNS records and the custom-domain binding are configured in the Cloudflare
-dashboard (not in code). If the app's hostname changes, update the CTA links in
-`index.html`.
+dashboard (not in code). If the download location changes, update the CTA links
+in `index.html`.
 
 ## Assets — placeholders to replace
 
