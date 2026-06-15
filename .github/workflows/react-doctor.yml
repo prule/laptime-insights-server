@@ -31,7 +31,7 @@ jobs:
   react-doctor:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - uses: millionco/react-doctor@v2
         # The React app lives in the frontend/ subdirectory, so point the scan there.
