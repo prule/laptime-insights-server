@@ -1,0 +1,31 @@
+@import "tailwindcss";
+
+/* Theme mirrors the dashboard (frontend/src/styles.css) so the landing page
+   feels continuous with the product. */
+@theme {
+  --color-bg: #080a0f;
+  --color-surface: #0d1117;
+  --color-surface-hover: #111827;
+  --color-border: rgb(255 255 255 / 0.06);
+  --color-border-hover: rgb(255 255 255 / 0.12);
+  --color-text: #e8eaf0;
+  --color-text-muted: #6b7280;
+  --color-accent: #e8212a;
+  --color-cyan: #00d4ff;
+  --color-ok: #22c55e;
+
+  --font-sans: "DM Sans", system-ui, sans-serif;
+  --font-mono: "DM Mono", "Courier New", monospace;
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+  body {
+    background-color: var(--color-bg);
+    color: var(--color-text);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+}

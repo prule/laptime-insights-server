@@ -1,0 +1,5 @@
+# @parcel/watcher ships a native build script and is only needed for the
+# `dev` (--watch) flow, not for the production build. Decline it so installs
+# don't fail on the ignored-build-scripts gate.
+allowBuilds:
+  '@parcel/watcher': false
