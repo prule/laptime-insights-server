@@ -180,7 +180,7 @@ When adding a new backend endpoint:
 
 ```bash
 # Mock only — no backend required
-cd frontend && npm install && npm run dev   # http://localhost:5173
+cd frontend && pnpm install && pnpm dev   # http://localhost:5173
 
 # Live — backend must be running on :8000
 JDBC_URL=jdbc:h2:./data/laptime DB_SEED=true ./gradlew :app:run
@@ -193,8 +193,8 @@ Vite proxies `/api/...` → `http://localhost:8000` in dev. For a different host
 
 ```bash
 cd frontend
-npm run typecheck
-npm run build
+pnpm typecheck
+pnpm build
 ```
 
 ## Adding a new screen
