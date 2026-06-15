@@ -59,6 +59,41 @@ DNS records and the custom-domain binding are configured in the Cloudflare
 dashboard (not in code). If the download location changes, update the CTA links
 in `index.html`.
 
+## Register interest (waiting list)
+
+The `#register-interest` section captures emails into a **Google Sheet** waiting
+list. The page is static (no backend): on submit, JS sends a `no-cors` POST
+straight to a **Google Form**, and the form's linked Sheet is the list.
+
+The form URL and field id are placeholder constants at the top of the inline
+`<script>` in `index.html` — until they're set, the form shows a friendly
+"not available yet" message and logs a console warning.
+
+### One-time setup
+
+1. Create a **Google Form** with a single short-answer question for the email
+   (mark it required). In the form's settings, link it to a **Google Sheet**
+   ("Responses" tab → Link to Sheets) — this Sheet is the waiting list.
+2. Get the **`formResponse` URL**: open the live form, copy its URL, and replace
+   the trailing `/viewform` with `/formResponse`. It looks like
+   `https://docs.google.com/forms/d/e/FORM_ID/formResponse`.
+3. Get the **email field id**: in the live form, the email `<input>` has a
+   `name` like `entry.1234567890`. Find it via the form's "Get pre-filled link"
+   (fill in a value, copy link, read the `entry.<id>` from the URL) or by
+   inspecting the input in browser dev tools.
+4. In `index.html`, set the two constants:
+
+   ```js
+   const FORM_ACTION = "https://docs.google.com/forms/d/e/FORM_ID/formResponse";
+   const EMAIL_ENTRY = "entry.1234567890";
+   ```
+
+5. Rebuild (`pnpm build`) and deploy.
+
+> **Note:** the `no-cors` POST returns an opaque response, so the page treats a
+> completed request as success — confirm submissions actually land by checking
+> the linked Sheet. There is no spam protection yet (see `docs/technical-debt.md`).
+
 ## Assets — placeholders to replace
 
 The following are **placeholder SVGs** and should be swapped for real exports:

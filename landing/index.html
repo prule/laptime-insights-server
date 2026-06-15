@@ -220,6 +220,52 @@
           >
         </div>
       </section>
+
+      <!-- Register interest -->
+      <section
+        id="register-interest"
+        class="border-t border-border bg-surface/40 py-16"
+      >
+        <div class="mx-auto max-w-xl px-6 text-center">
+          <h2 class="text-3xl font-bold">Join the waiting list</h2>
+          <p class="mt-3 text-text-muted">
+            Want to know when there's something new to download? Drop your email
+            and we'll let you know — no spam, just the occasional update.
+          </p>
+
+          <form
+            id="register-interest-form"
+            class="mx-auto mt-8 flex w-full max-w-md flex-col gap-3 sm:flex-row"
+            novalidate
+          >
+            <label for="register-interest-email" class="sr-only"
+              >Email address</label
+            >
+            <input
+              id="register-interest-email"
+              name="email"
+              type="email"
+              required
+              autocomplete="email"
+              placeholder="you@example.com"
+              class="min-w-0 flex-1 rounded-md border border-border bg-surface px-4 py-3 text-text placeholder:text-text-muted focus:border-border-hover focus:outline-none"
+            />
+            <button
+              type="submit"
+              class="rounded-md bg-accent px-6 py-3 font-semibold text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              Register interest
+            </button>
+          </form>
+
+          <p
+            id="register-interest-status"
+            class="mt-4 min-h-[1.25rem] text-sm"
+            role="status"
+            aria-live="polite"
+          ></p>
+        </div>
+      </section>
     </main>
 
     <!-- Footer -->
@@ -239,6 +285,96 @@
     <script>
       document.getElementById("year").textContent =
         new Date().getFullYear();
+    </script>
+
+    <!-- Register interest: posts the email into a Google Form whose linked
+         Google Sheet is the waiting list. Static site, no backend. -->
+    <script>
+      // ── Configuration ──────────────────────────────────────────────
+      // Replace these two placeholders once the Google Form + linked Sheet
+      // exist. See landing/README.md → "Register interest" for how to find them.
+      //   FORM_ACTION: the form's /formResponse URL
+      //   EMAIL_ENTRY: the email question's field name, e.g. "entry.1234567890"
+
+      const FORM_ACTION = "https://docs.google.com/forms/d/e/1FAIpQLScmcqhuTkTRA1eaJGPXNMsbGWGBl_Nliu7z6Z2FspbWA_B-YA/formResponse";
+      const EMAIL_ENTRY = "entry.71166361";
+      // ───────────────────────────────────────────────────────────────
+
+      (function () {
+        const form = document.getElementById("register-interest-form");
+        if (!form) return;
+        const input = document.getElementById("register-interest-email");
+        const status = document.getElementById("register-interest-status");
+        const button = form.querySelector("button[type=submit]");
+        const isConfigured =
+          FORM_ACTION.indexOf("REPLACE") === -1 &&
+          EMAIL_ENTRY.indexOf("REPLACE") === -1;
+
+        // Basic syntactic email check (browser native is the first gate).
+        const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+        function setStatus(message, kind) {
+          status.textContent = message;
+          status.className =
+            "mt-4 min-h-[1.25rem] text-sm " +
+            (kind === "error"
+              ? "text-red-400"
+              : kind === "success"
+                ? "text-cyan"
+                : "text-text-muted");
+        }
+
+        form.addEventListener("submit", async function (event) {
+          event.preventDefault();
+          const email = input.value.trim();
+
+          if (!email) {
+            setStatus("Please enter your email address.", "error");
+            input.focus();
+            return;
+          }
+          if (!EMAIL_RE.test(email)) {
+            setStatus("That doesn't look like a valid email address.", "error");
+            input.focus();
+            return;
+          }
+
+          if (!isConfigured) {
+            console.warn(
+              "[register-interest] Google Form not configured — set FORM_ACTION and EMAIL_ENTRY in index.html.",
+            );
+            setStatus(
+              "Sign-up isn't available just yet — please check back soon.",
+              "error",
+            );
+            return;
+          }
+
+          button.disabled = true;
+          setStatus("Adding you to the list…", "pending");
+
+          try {
+            const body = new FormData();
+            body.append(EMAIL_ENTRY, email);
+            // no-cors: Google returns an opaque response, so a resolved
+            // promise (no network error) is treated as success.
+            await fetch(FORM_ACTION, {
+              method: "POST",
+              mode: "no-cors",
+              body: body,
+            });
+            form.reset();
+            setStatus("You're on the list — thanks!", "success");
+          } catch (err) {
+            button.disabled = false;
+            // Email value is preserved (form not reset) so they can retry.
+            setStatus(
+              "Something went wrong. Please try again in a moment.",
+              "error",
+            );
+          }
+        });
+      })();
     </script>
   </body>
 </html>
