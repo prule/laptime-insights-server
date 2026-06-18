@@ -35,17 +35,49 @@ Output: **`landing/dist`** containing `index.html`, `styles.css`, `robots.txt`,
 
 ## Deploy — Cloudflare Pages
 
-Git-connected project. In the Cloudflare dashboard → Pages → Create project →
-connect this repo, then set:
+Two options. **Direct upload (no Git connection)** is the default below; the
+Git-connected option follows.
 
-| Setting               | Value                       |
-| --------------------- | --------------------------- |
-| Production branch     | `main`                      |
-| Root directory        | `landing`                   |
-| Build command         | `pnpm install && pnpm build`|
-| Build output directory| `dist`                      |
+### Direct upload with Wrangler (no Git)
 
-Pages gives a free per-PR preview URL on every pull request.
+One-time setup:
+
+```bash
+cd landing
+npx wrangler login                                            # browser OAuth
+npx wrangler pages project create laptime-insights --production-branch=main
+```
+
+Deploy (build + upload):
+
+```bash
+cd landing
+pnpm run deploy            # production (--branch=main)
+pnpm run deploy:preview    # preview URL (--branch=preview)
+```
+
+Re-run `pnpm run deploy` anytime to ship — no CI, no repo connection.
+
+**Headless / CI auth** (instead of `wrangler login`) — create an API token in
+the Cloudflare dashboard (My Profile → API Tokens; scope **Account › Cloudflare
+Pages › Edit**), then:
+
+```bash
+CLOUDFLARE_API_TOKEN=... CLOUDFLARE_ACCOUNT_ID=... pnpm run deploy
+```
+
+### Git-connected (alternative)
+
+In the Cloudflare dashboard → Pages → Create project → connect this repo, then set:
+
+| Setting                | Value                        |
+| ---------------------- | ---------------------------- |
+| Production branch      | `main`                       |
+| Root directory         | `landing`                    |
+| Build command          | `pnpm install && pnpm build` |
+| Build output directory | `dist`                       |
+
+Pages then gives a free per-PR preview URL on every pull request.
 
 ### Domain / DNS plan
 

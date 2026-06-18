@@ -11,10 +11,13 @@
     "copy": "node ./scripts/copy-static.mjs",
     "build": "pnpm run clean && pnpm run build:css && pnpm run copy",
     "dev": "tailwindcss -i ./src/styles.css -o ./dist/styles.css --watch",
-    "preview": "pnpm run build && npx --yes serve dist"
+    "preview": "pnpm run build && npx --yes serve dist",
+    "deploy": "pnpm run build && wrangler pages deploy dist --project-name=laptime-insights --branch=main",
+    "deploy:preview": "pnpm run build && wrangler pages deploy dist --project-name=laptime-insights --branch=preview"
   },
   "devDependencies": {
     "@tailwindcss/cli": "^4.0.0",
-    "tailwindcss": "^4.0.0"
+    "tailwindcss": "^4.0.0",
+    "wrangler": "^4.0.0"
   }
 }

@@ -1,5 +1,10 @@
-# @parcel/watcher ships a native build script and is only needed for the
-# `dev` (--watch) flow, not for the production build. Decline it so installs
-# don't fail on the ignored-build-scripts gate.
+# Acknowledge native build scripts so installs don't fail on the
+# ignored-build-scripts gate.
+#   @parcel/watcher: only needed for `dev` (--watch); declined.
+#   esbuild / workerd / sharp: pulled in by wrangler (deploy); allowed so the
+#   Cloudflare Pages CLI works.
 allowBuilds:
   '@parcel/watcher': false
+  esbuild: true
+  workerd: true
+  sharp: true
