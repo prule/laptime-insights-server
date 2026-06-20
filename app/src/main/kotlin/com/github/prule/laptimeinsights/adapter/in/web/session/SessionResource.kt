@@ -17,6 +17,8 @@ import kotlinx.serialization.Serializable
 data class SessionResource(
   val uid: Uid,
   val startedAt: Instant?,
+  /** When the session finished, or null while it is still live / for legacy rows. */
+  val endedAt: Instant?,
   val simulator: Simulator,
   val track: Track?,
   val car: Car?,
@@ -33,6 +35,7 @@ data class SessionResource(
       SessionResource(
         uid = session.uid,
         startedAt = session.startedAt(),
+        endedAt = session.endedAt(),
         simulator = session.simulator,
         track = session.track,
         car = session.car,

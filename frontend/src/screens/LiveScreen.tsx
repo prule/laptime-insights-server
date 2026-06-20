@@ -30,6 +30,7 @@ interface PlayerCarUpdateData {
 type WsMessage =
   | { type: "ServerStarted" }
   | { type: "SessionCreated" | "SessionStarted" | "SessionUpdated"; data: SessionResource }
+  | { type: "SessionEnded"; data: SessionResource }
   | { type: "LapCreated"; data: LapResource }
   | { type: "PlayerCarUpdated"; data: PlayerCarUpdateData };
 
@@ -185,6 +186,13 @@ function useLiveEvents(apiUrl: string, indexLinks: Links) {
               // laps list is properly scoped to the player's car rather than every car.
               fetchSessionLaps(s, base);
             }
+            break;
+          }
+          case "SessionEnded": {
+            // The session finished (new ACC session or terminal phase). Update the resource so
+            // `endedAt` is reflected; keep the laps in place — they belong to this finished session.
+            const s = msg.data as SessionResource;
+            if (s.uid === lastSessionUidRef.current) setSession(s);
             break;
           }
           case "LapCreated": {

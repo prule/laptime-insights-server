@@ -5,6 +5,7 @@ import com.github.prule.laptimeinsights.adapter.`in`.web.lap.LapResource
 import com.github.prule.laptimeinsights.application.domain.model.LapCreated
 import com.github.prule.laptimeinsights.application.domain.model.PlayerCarUpdated
 import com.github.prule.laptimeinsights.application.domain.model.SessionCreated
+import com.github.prule.laptimeinsights.application.domain.model.SessionEnded
 import com.github.prule.laptimeinsights.application.domain.model.SessionStarted
 import com.github.prule.laptimeinsights.application.domain.model.SessionUpdated
 import com.github.prule.laptimeinsights.application.port.out.EventPort
@@ -23,6 +24,8 @@ import io.ktor.server.websocket.webSocket
  * - [SessionCreated] → [WebSocketMessage.SessionCreated] carrying a [SessionResource].
  * - [SessionStarted] → [WebSocketMessage.SessionStarted] carrying a [SessionResource].
  * - [SessionUpdated] → [WebSocketMessage.SessionUpdated] carrying a [SessionResource].
+ * - [SessionEnded] → [WebSocketMessage.SessionEnded] carrying a [SessionResource] with `endedAt`
+ *   set.
  * - [LapCreated] → [WebSocketMessage.LapCreated] carrying a [LapResource].
  * - [PlayerCarUpdated] → [WebSocketMessage.PlayerCarUpdated] carrying a [PlayerCarUpdateData] (~10
  *   Hz).
@@ -58,6 +61,10 @@ class SessionEventController(application: Application, eventPort: EventPort) {
                 )
               is SessionUpdated ->
                 WebSocketMessage.SessionUpdated(
+                  SessionResource.fromDomain(event.session, sessionLinks)
+                )
+              is SessionEnded ->
+                WebSocketMessage.SessionEnded(
                   SessionResource.fromDomain(event.session, sessionLinks)
                 )
               is LapCreated ->

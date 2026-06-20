@@ -20,6 +20,7 @@ import com.github.prule.laptimeinsights.application.domain.service.lap.FindLapTe
 import com.github.prule.laptimeinsights.application.domain.service.lap.SearchLapService
 import com.github.prule.laptimeinsights.application.domain.service.session.AggregateSessionsService
 import com.github.prule.laptimeinsights.application.domain.service.session.CreateSessionService
+import com.github.prule.laptimeinsights.application.domain.service.session.EndSessionService
 import com.github.prule.laptimeinsights.application.domain.service.session.FindSessionService
 import com.github.prule.laptimeinsights.application.domain.service.session.SearchSessionOptionsService
 import com.github.prule.laptimeinsights.application.domain.service.session.SearchSessionService
@@ -72,6 +73,7 @@ class AppModule {
     val sessionPort = SessionPersistenceAdapter(SessionRepository(mapper), mapper)
 
     val startSessionUseCase = StartSessionService(sessionPort, sessionPort, eventPort)
+    val endSessionUseCase = EndSessionService(sessionPort, sessionPort, eventPort)
     val findSessionUseCase = FindSessionService(sessionPort)
     val createSessionUseCase = CreateSessionService(sessionPort, eventPort)
     val searchSessionUseCase = SearchSessionService(sessionPort)

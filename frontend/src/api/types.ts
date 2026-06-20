@@ -16,6 +16,8 @@ export type Links = Record<string, string>;
 export interface SessionResource {
   uid: Uid;
   startedAt: Iso8601 | null;
+  /** When the session finished, or null while it is still live / for legacy rows. */
+  endedAt: Iso8601 | null;
   simulator: SimulatorName;
   track: string | null;
   car: string | null;

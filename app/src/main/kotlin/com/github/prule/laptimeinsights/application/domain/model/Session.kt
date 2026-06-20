@@ -20,11 +20,13 @@ enum class Simulator {
 /**
  * A single recorded session for a simulator + track + car.
  *
- * Session lifetime is bounded by [startedAt] only — sessions have no explicit "finished" timestamp.
- * Activity is instead derived from the laps recorded against the session: [drivingTime] is the
- * cumulative lap time for the *player's* car (identified by [playerCarId]) and grows as new laps
- * are recorded. Competitor lap times are recorded but do not contribute to [drivingTime] — it
- * reflects how long the player was actually on track.
+ * Session lifetime is bounded by [startedAt] and an optional [endedAt]. [endedAt] is set when the
+ * live ingestion layer detects the session has finished (a new ACC session identity or a terminal
+ * session phase — see `SessionTracker`); it is null for sessions still in progress and for legacy
+ * rows recorded before end detection existed. Activity within a session is derived from the laps
+ * recorded against it: [drivingTime] is the cumulative lap time for the *player's* car (identified
+ * by [playerCarId]) and grows as new laps are recorded. Competitor lap times are recorded but do
+ * not contribute to [drivingTime] — it reflects how long the player was actually on track.
  */
 data class Session(
   val id: SessionId,
@@ -42,8 +44,12 @@ data class Session(
    * should treat it as authoritative rather than re-summing laps.
    */
   private var drivingTime: LapTimeMs = LapTimeMs(0),
+  /** When the session finished, or null while it is still in progress / for legacy rows. */
+  private var endedAt: Instant? = null,
 ) {
   fun startedAt() = startedAt
+
+  fun endedAt() = endedAt
 
   fun drivingTime() = drivingTime
 
@@ -53,6 +59,21 @@ data class Session(
     } else {
       throw IllegalStateException("Session cannot be started")
     }
+  }
+
+  /**
+   * Marks the session as finished at [time]. Idempotent: the first end wins, so a repeated finalize
+   * (e.g. a terminal phase arriving after an identity change already ended the session) leaves the
+   * originally recorded [endedAt] untouched.
+   */
+  fun end(time: Instant) {
+    if (!isEnded()) {
+      endedAt = time
+    }
+  }
+
+  fun isEnded(): Boolean {
+    return endedAt != null
   }
 
   /**

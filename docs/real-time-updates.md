@@ -39,6 +39,7 @@ The following domain events are forwarded to WebSocket clients:
 | `SessionCreated`   | `SessionCreated`  | `SessionResource`  |
 | `SessionStarted`   | `SessionStarted`  | `SessionResource`  |
 | `SessionUpdated`   | `SessionUpdated`  | `SessionResource`  |
+| `SessionEnded`     | `SessionEnded`    | `SessionResource`  |
 | `LapCreated`       | `LapCreated`      | `LapResource`      |
 
 `SessionCreated` is emitted immediately after persistence, when `startedAt` is still `null`.
@@ -46,11 +47,21 @@ The following domain events are forwarded to WebSocket clients:
 populated. Clients should treat the latter as the signal that the session is "live", not the
 former.
 
-Sessions have no explicit "finished" event — activity is reflected in the `drivingTimeMs`
-aggregate on the session, which grows as each player lap is recorded and is delivered with
-every `SessionUpdated` (and via REST). Clients that previously waited for `SessionFinished`
-should instead observe that no further `LapCreated` / `PlayerCarUpdated` events arrive for
-the active session.
+`SessionEnded` is emitted when the live ingestion layer detects the session has finished and
+the `SessionResource`'s `endedAt` is populated. The boundary is decided by `SessionTracker` from
+the ACC `RealtimeUpdate` stream:
+
+- **identity change** — when `sessionIndex` (or `sessionType`) changes, the active session is
+  finalized and a new one started. This is the primary signal, so two back-to-back races on one
+  broadcasting connection are stored as two sessions, not merged into one.
+- **terminal phase** — when phase reaches `SESSION_OVER`, `POST_SESSION`, or `RESULT_UI`, the
+  active session is finalized with an end time and no session is active until the next
+  `PRE_SESSION` / `SESSION` update starts a new one.
+
+Clients should treat `SessionEnded` (or a populated `endedAt`) as the signal that a session is no
+longer live. `drivingTimeMs` still reflects cumulative on-track time and is delivered with every
+`SessionUpdated` (and via REST). Legacy sessions recorded before end detection existed have a
+null `endedAt`.
 
 To broadcast a new domain event, add a subclass to `WebSocketMessage` (in
 `adapter/in/web/session/`) and a matching branch to the `when` in `SessionEventController`.
@@ -126,6 +137,7 @@ socket.onmessage = (event) => {
         case 'SessionCreated':
         case 'SessionStarted':
         case 'SessionUpdated':
+        case 'SessionEnded':
             handleSessionEvent(message.type, message.data);
             break;
         case 'LapCreated':
