@@ -16,6 +16,7 @@ class SessionMapper {
       id = SessionId(entity.id.value),
       uid = Uid(entity.uid),
       startedAt = entity.startedAt,
+      endedAt = entity.endedAt,
       simulator = Simulator.valueOf(entity.simulator),
       track = Track(entity.track ?: "Unknown"),
       car = Car(entity.car ?: "Unknown"),
@@ -28,6 +29,7 @@ class SessionMapper {
     entity.apply {
       uid = session.uid.value
       startedAt = session.startedAt()
+      endedAt = session.endedAt()
       simulator = session.simulator.name
       session.track?.let { track = it.value }
       session.car?.let { car = it.value }

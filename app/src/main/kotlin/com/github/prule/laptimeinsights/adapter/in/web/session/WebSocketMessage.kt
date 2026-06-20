@@ -41,6 +41,15 @@ sealed interface WebSocketMessage {
   @SerialName("SessionUpdated")
   data class SessionUpdated(val data: SessionResource) : WebSocketMessage
 
+  /**
+   * Sent when a session is finalized — a new ACC session identity was detected or a terminal
+   * session phase was reached (see `SessionTracker`). The carried [SessionResource] has a populated
+   * `endedAt`. Clients should treat this as the signal the session is no longer "live".
+   */
+  @Serializable
+  @SerialName("SessionEnded")
+  data class SessionEnded(val data: SessionResource) : WebSocketMessage
+
   @Serializable
   @SerialName("LapCreated")
   data class LapCreated(val data: LapResource) : WebSocketMessage

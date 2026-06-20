@@ -46,6 +46,35 @@ class SessionTest {
   }
 
   @Test
+  fun `session can be ended`() {
+    val session = newSession(startedAt = Clock.System.now())
+    val endTime = Clock.System.now().plus(300.seconds)
+
+    session.end(endTime)
+
+    assertThat(session.isEnded()).isTrue()
+    assertThat(session.endedAt()).isEqualTo(endTime)
+  }
+
+  @Test
+  fun `ending an already-ended session preserves the original end time`() {
+    val session = newSession(startedAt = Clock.System.now())
+    val endTime = Clock.System.now().plus(300.seconds)
+    session.end(endTime)
+
+    session.end(endTime.plus(60.seconds))
+
+    // First end wins — a later finalize does not overwrite the recorded end.
+    assertThat(session.endedAt()).isEqualTo(endTime)
+  }
+
+  @Test
+  fun `a fresh session is not ended`() {
+    assertThat(newSession().isEnded()).isFalse()
+    assertThat(newSession().endedAt()).isNull()
+  }
+
+  @Test
   fun `drivingTime defaults to zero on a fresh session`() {
     assertThat(newSession().drivingTime()).isEqualTo(LapTimeMs(0))
   }

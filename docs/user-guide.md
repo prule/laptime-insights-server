@@ -62,6 +62,8 @@ A list of your four most recent sessions is shown at the bottom. Click **View al
 
 The Sessions screen lists all your recorded sessions with filtering by track, car, and simulator.
 
+Each session corresponds to a single session in ACC. When you finish a session and start another — for example two races back-to-back — they are recorded as separate sessions automatically, even if the dashboard stays connected the whole time. A session is closed when ACC moves to a new session or reaches the end-of-session screen, so a new race never gets appended to the previous one.
+
 ### Filters
 
 Three drop-down selects let you narrow the list:

@@ -71,9 +71,12 @@ function buildSessions(): SessionResource[] {
     // Approximate the player's drivingTime as lapCount × baseLap. The real backend folds each
     // recorded lap time individually, but for mock data this is close enough for layout.
     const drivingTimeMs = p.lapCount * p.baseLapMs;
+    // Mock sessions are all finished, so endedAt = startedAt + drivingTime.
+    const endedAt = new Date(new Date(startedAt).getTime() + drivingTimeMs).toISOString();
     return {
       uid: sessionUid,
       startedAt,
+      endedAt,
       simulator: p.simulator,
       track: p.track,
       car: p.car,

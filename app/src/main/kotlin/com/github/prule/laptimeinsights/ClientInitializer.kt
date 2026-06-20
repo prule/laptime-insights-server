@@ -22,6 +22,7 @@ import com.github.prule.laptimeinsights.application.port.`in`.car.FindCarCommand
 import com.github.prule.laptimeinsights.application.port.`in`.car.RecordRealtimeCarUpdateCommand
 import com.github.prule.laptimeinsights.application.port.`in`.lap.CreateLapCommand
 import com.github.prule.laptimeinsights.application.port.`in`.session.CreateSessionCommand
+import com.github.prule.laptimeinsights.application.port.`in`.session.EndSessionCommand
 import com.github.prule.laptimeinsights.application.port.`in`.session.StartSessionCommand
 import com.github.prule.laptimeinsights.application.port.`in`.session.UpdateSessionCommand
 import kotlin.reflect.KClass
@@ -35,11 +36,7 @@ class ClientInitializer(private val appModule: AppModule) {
   private var sessionState: SessionState? = null
   private var track: Track? = null
   private var car: Car? = null
-  private var sessionStartPhases =
-    listOf(
-      AccBroadcastingInbound.SessionPhase.SESSION,
-      AccBroadcastingInbound.SessionPhase.PRE_SESSION,
-    )
+  private val sessionTracker = SessionTracker()
 
   suspend fun initializeClient(configuration: ApplicationClientConfiguration) {
 
@@ -59,6 +56,33 @@ class ClientInitializer(private val appModule: AppModule) {
       )
   }
 
+  /**
+   * Opens a new session for the current [track]/[car]. A fresh [SessionState] is installed so lap
+   * counts and per-car validity restart per session and never leak from a previous one.
+   */
+  private fun startNewSession(sessionType: String) {
+    sessionState = SessionState()
+    session =
+      appModule.session.createSessionUseCase.createSession(
+        CreateSessionCommand(Simulator.ACC, SessionType(sessionType), track, car)
+      )
+    appModule.session.startSessionUseCase.startSession(
+      StartSessionCommand(session!!.uid, Clock.System.now())
+    )
+    logger.info("Session started")
+  }
+
+  /** Finalizes the active session (recording its end time) and clears per-session state. */
+  private fun endCurrentSession() {
+    val current = session ?: return
+    appModule.session.endSessionUseCase.endSession(
+      EndSessionCommand(current.uid, Clock.System.now())
+    )
+    logger.info("Session ended")
+    session = null
+    sessionState = null
+  }
+
   private fun buildRealTimeUpdate():
     FilteredMessageListener<AccBroadcastingInbound.RealtimeUpdate> {
     return FilteredMessageListener(
@@ -74,23 +98,17 @@ class ClientInitializer(private val appModule: AppModule) {
               messageSender: MessageSender,
             ) {
 
-              /* First "session event" means session has started */
-              if (session == null && sessionStartPhases.contains(message.phase())) {
-                sessionState = SessionState()
-                session =
-                  appModule.session.createSessionUseCase.createSession(
-                    CreateSessionCommand(
-                      Simulator.ACC,
-                      SessionType(message.sessionType()?.name ?: "Unknown"),
-                      track,
-                      car,
-                    )
-                  )
-
-                appModule.session.startSessionUseCase.startSession(
-                  StartSessionCommand(session!!.uid, Clock.System.now())
-                )
-                logger.info("Session started")
+              // Segment the stream into discrete sessions: identity changes and terminal phases
+              // open/close sessions so consecutive races aren't merged. See SessionTracker.
+              val sessionType = message.sessionType()?.name ?: "Unknown"
+              when (sessionTracker.observe(message.sessionIndex(), sessionType, message.phase())) {
+                is SessionBoundary.Start -> startNewSession(sessionType)
+                is SessionBoundary.EndThenStart -> {
+                  endCurrentSession()
+                  startNewSession(sessionType)
+                }
+                SessionBoundary.End -> endCurrentSession()
+                SessionBoundary.Continue -> {}
               }
 
               if (session != null && session!!.playerCarId?.value != message.focusedCarIndex()) {

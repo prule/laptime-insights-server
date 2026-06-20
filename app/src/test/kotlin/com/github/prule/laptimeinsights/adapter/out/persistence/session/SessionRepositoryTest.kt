@@ -40,6 +40,25 @@ class SessionRepositoryTest : RepositoryTest(listOf(SessionTable)) {
   }
 
   @Test
+  fun `should persist and read ended_at`() {
+    val session = createTestSession(startedAt = Clock.System.now())
+
+    transaction {
+      val entity = repository.create(session)
+      val createdSession = mapper.toDomain(entity)
+      assertThat(createdSession.endedAt()).isNull()
+
+      val endTime = Clock.System.now()
+      val endedSession = createdSession.copy().apply { end(endTime) }
+      repository.update(endedSession)
+
+      val foundEntity = repository.findOneOrNull(entity.id.value)
+      assertThat(foundEntity?.endedAt).isEqualTo(endTime)
+      assertThat(mapper.toDomain(foundEntity!!).endedAt()).isEqualTo(endTime)
+    }
+  }
+
+  @Test
   fun `should search for sessions by criteria`() {
     val session1 = createTestSession(car = Car("Ferrari"))
     val session2 = createTestSession(car = Car("Porsche"))
