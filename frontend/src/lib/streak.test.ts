@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { computeStreak, describeStreakFreshness } from "./streak";
+import { computeStreak, describeStreakFreshness, streakFromDayKeys } from "./streak";
 
 /** Helper: produce an ISO instant at local noon for the given y/m/d (1-based month). */
 function isoLocalNoon(year: number, month: number, day: number): string {
@@ -43,6 +43,30 @@ describe("computeStreak", () => {
     ];
     // Backwards from 04-06: 04-06, 04-05 are consecutive → streak = 2.
     expect(computeStreak(ts).days).toBe(2);
+  });
+});
+
+describe("streakFromDayKeys", () => {
+  it("returns 0 / null for no active days", () => {
+    expect(streakFromDayKeys([])).toEqual({ days: 0, lastDate: null });
+  });
+
+  it("counts consecutive active-day keys backwards from the most recent", () => {
+    const { days, lastDate } = streakFromDayKeys(["2026-04-06", "2026-04-07", "2026-04-08"]);
+    expect(days).toBe(3);
+    expect(lastDate?.toDateString()).toBe(new Date(2026, 3, 8).toDateString());
+  });
+
+  it("stops at the first gap and tolerates unsorted / duplicate keys", () => {
+    const { days } = streakFromDayKeys([
+      "2026-04-06",
+      "2026-04-02",
+      "2026-04-05",
+      "2026-04-06", // duplicate
+      "2026-04-03",
+      // gap on 04-04
+    ]);
+    expect(days).toBe(2); // 04-06, 04-05
   });
 });
 

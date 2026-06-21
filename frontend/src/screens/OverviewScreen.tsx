@@ -20,16 +20,19 @@ import { AllTimeBestTable } from "../components/AllTimeBestTable";
 import { formatDrivingTime, formatNumber } from "../lib/format";
 import { alignAggregate, latestBucketDate } from "../lib/buckets";
 import { combineQueryState } from "../lib/query";
-import { computeStreak, describeStreakFreshness } from "../lib/streak";
+import { streakFromDayKeys, describeStreakFreshness } from "../lib/streak";
 
 export function OverviewScreen() {
   const navigate = useNavigate();
   const sessionsEnabled = useFeatureEnabled("sessions");
   const { fromIso, bucketPlan, range } = useTimeRange();
   const from = fromIso ?? undefined;
-  // Recent sessions list + streak both want raw session rows. Stat-card totals and the activity
-  // charts use the aggregate endpoints below.
-  const sessionsQuery = useSessions({ size: 100, sort: "startedAt:DESC", from });
+  // Recent sessions list — only the newest few rows are rendered (see `recentSessions` below);
+  // `.total` is independent of page size, so a small page still drives the Total Sessions card.
+  const sessionsQuery = useSessions({ size: 4, sort: "startedAt:DESC", from });
+  // All-time active-day keys for the streak. Count-only, one row per active day, and deliberately
+  // unbound by the range filter — the streak is a global property of the activity timeline.
+  const activeDaysQuery = useSessionAggregate({ groupBy: "day" });
   // Server-aggregated per-bucket session count + summed driving time. Single request drives both
   // the "Sessions per …" and "Driving time per …" charts and the Driving Time stat card.
   const sessionAggQuery = useSessionAggregate({ groupBy: bucketPlan.unit, from });
@@ -68,6 +71,7 @@ export function OverviewScreen() {
   const { isLoading, error } = combineQueryState([
     sessionsQuery,
     sessionAggQuery,
+    activeDaysQuery,
     lapsCountQuery,
     lapsByBucketQuery,
     lapsByTrackQuery,
@@ -102,15 +106,14 @@ export function OverviewScreen() {
   }, [sessionsQuery.data, sessionAggQuery.data, lapsCountQuery.data]);
 
   // Streak is a global property of the activity timeline, intentionally not bound to the time
-  // range filter — a streak truncated by the range would be misleading.
+  // range filter — a streak truncated by the range would be misleading. Driven by the all-time
+  // daily aggregate so it's correct regardless of how many sessions exist.
   const streak = useMemo(() => {
-    const timestamps = (sessionsQuery.data?.items ?? [])
-      .map((s) => s.startedAt)
-      .filter((t): t is string => !!t);
-    const { days, lastDate } = computeStreak(timestamps);
+    const dayKeys = (activeDaysQuery.data?.buckets ?? []).map((b) => b.key);
+    const { days, lastDate } = streakFromDayKeys(dayKeys);
     const { live, lastLabel } = describeStreakFreshness(lastDate);
     return { days, live, lastLabel };
-  }, [sessionsQuery.data]);
+  }, [activeDaysQuery.data]);
 
   const sessionBuckets = useMemo(
     () => alignAggregate(sessionAggQuery.data?.buckets, bucketPlan, anchorMs, (b) => b.count),
