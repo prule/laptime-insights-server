@@ -85,10 +85,9 @@ export function LiveEventsProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (!enabled || !liveLink) {
-      setStatus("disconnected");
-      return;
-    }
+    // When there's no live link to connect to we hold no socket; status stays/returns to
+    // "disconnected" via the cleanup below rather than a synchronous setState in the effect body.
+    if (!enabled || !liveLink) return;
     const wsUrl = liveSocketUrl(apiUrl, liveLink);
     let ws: WebSocket;
     let closed = false;
@@ -119,6 +118,7 @@ export function LiveEventsProvider({ children }: { children: ReactNode }) {
     return () => {
       closed = true;
       ws?.close();
+      setStatus("disconnected");
     };
   }, [enabled, apiUrl, liveLink]);
 
