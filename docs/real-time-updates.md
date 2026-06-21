@@ -51,12 +51,18 @@ former.
 the `SessionResource`'s `endedAt` is populated. The boundary is decided by `SessionTracker` from
 the ACC `RealtimeUpdate` stream:
 
+- **session open** — when no session is active, **any non-terminal** `RealtimeUpdate` opens one
+  (not only `PRE_SESSION` / `SESSION`). Practice and qualifying are free sessions that the client
+  often joins mid-stream, or whose first observed frame carries a non-start phase; gating on a
+  start phase silently dropped their laps, so only race laps appeared. A terminal phase received
+  while no session is active never opens one — we don't create a session just to watch a finished
+  session's result screen.
 - **identity change** — when `sessionIndex` (or `sessionType`) changes, the active session is
   finalized and a new one started. This is the primary signal, so two back-to-back races on one
   broadcasting connection are stored as two sessions, not merged into one.
 - **terminal phase** — when phase reaches `SESSION_OVER`, `POST_SESSION`, or `RESULT_UI`, the
-  active session is finalized with an end time and no session is active until the next
-  `PRE_SESSION` / `SESSION` update starts a new one.
+  active session is finalized with an end time and no session is active until the next non-terminal
+  update starts a new one.
 
 Clients should treat `SessionEnded` (or a populated `endedAt`) as the signal that a session is no
 longer live. `drivingTimeMs` still reflects cumulative on-track time and is delivered with every

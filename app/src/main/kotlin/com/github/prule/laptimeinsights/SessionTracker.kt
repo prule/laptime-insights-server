@@ -54,17 +54,23 @@ class SessionTracker {
     val current = active
 
     if (current == null) {
-      // No session yet — only a start phase opens one; ignore everything else (incl. terminal).
-      return if (phase.isStartPhase()) {
+      // No session yet — any non-terminal update opens one. A bare start phase
+      // (PRE_SESSION/SESSION) is no longer required: practice and qualifying are often joined
+      // mid-stream, or their first observed frame carries a non-start phase, so gating on a start
+      // phase silently dropped their laps. Terminal phases still never open a session — we don't
+      // create one just to observe a finished session's result screen.
+      return if (phase.isTerminalPhase()) {
+        SessionBoundary.Continue
+      } else {
         active = observed
         SessionBoundary.Start(observed)
-      } else {
-        SessionBoundary.Continue
       }
     }
 
-    // A session is active.
-    if (observed != current && phase.isStartPhase()) {
+    // A session is active. An identity change on any non-terminal phase rolls over to the new
+    // session; an identity change that arrives on a terminal phase falls through to End below and
+    // the new identity opens lazily on its next non-terminal frame.
+    if (observed != current && !phase.isTerminalPhase()) {
       active = observed
       return SessionBoundary.EndThenStart(observed)
     }
@@ -76,9 +82,6 @@ class SessionTracker {
 
     return SessionBoundary.Continue
   }
-
-  private fun SessionPhase.isStartPhase() =
-    this == SessionPhase.PRE_SESSION || this == SessionPhase.SESSION
 
   private fun SessionPhase.isTerminalPhase() =
     this == SessionPhase.SESSION_OVER ||

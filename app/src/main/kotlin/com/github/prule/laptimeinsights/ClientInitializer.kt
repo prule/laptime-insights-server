@@ -101,7 +101,18 @@ class ClientInitializer(private val appModule: AppModule) {
               // Segment the stream into discrete sessions: identity changes and terminal phases
               // open/close sessions so consecutive races aren't merged. See SessionTracker.
               val sessionType = message.sessionType()?.name ?: "Unknown"
-              when (sessionTracker.observe(message.sessionIndex(), sessionType, message.phase())) {
+              val boundary =
+                sessionTracker.observe(message.sessionIndex(), sessionType, message.phase())
+              // Log every boundary decision so captured weekends can confirm the phase sequences
+              // practice/qualifying actually present at join time.
+              logger.debug(
+                "Session boundary: index={} type={} phase={} -> {}",
+                message.sessionIndex(),
+                sessionType,
+                message.phase(),
+                boundary,
+              )
+              when (boundary) {
                 is SessionBoundary.Start -> startNewSession(sessionType)
                 is SessionBoundary.EndThenStart -> {
                   endCurrentSession()
