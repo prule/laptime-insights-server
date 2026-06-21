@@ -24,12 +24,24 @@ class SessionTrackerTest {
   }
 
   @Test
-  fun `non-session phase before any session does not start`() {
-    assertThat(tracker.observe(0, "RACE", SessionPhase.STARTING))
+  fun `any non-terminal phase before any session starts one`() {
+    // Practice/qualifying are often joined mid-stream at a non-start phase; opening on any
+    // non-terminal phase ensures their laps aren't dropped for lack of an active session.
+    val decision = tracker.observe(0, "PRACTICE", SessionPhase.STARTING)
+
+    assertThat(decision).isEqualTo(SessionBoundary.Start(SessionIdentity(0, "PRACTICE")))
+    assertThat(tracker.activeIdentity()).isEqualTo(SessionIdentity(0, "PRACTICE"))
+  }
+
+  @Test
+  fun `joining a qualifying session mid-stream opens it and attributes following frames`() {
+    // First frame seen is FORMATION_LAP (a non-start, non-terminal phase) — still opens.
+    assertThat(tracker.observe(1, "QUALIFYING", SessionPhase.FORMATION_LAP))
+      .isEqualTo(SessionBoundary.Start(SessionIdentity(1, "QUALIFYING")))
+    // Subsequent frames of the same identity keep recording against it (where laps attach).
+    assertThat(tracker.observe(1, "QUALIFYING", SessionPhase.SESSION))
       .isEqualTo(SessionBoundary.Continue)
-    assertThat(tracker.observe(0, "RACE", SessionPhase.FORMATION_LAP))
-      .isEqualTo(SessionBoundary.Continue)
-    assertThat(tracker.activeIdentity()).isNull()
+    assertThat(tracker.activeIdentity()).isEqualTo(SessionIdentity(1, "QUALIFYING"))
   }
 
   @Test
