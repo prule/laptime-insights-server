@@ -24,8 +24,20 @@ export function computeStreak(timestamps: string[]): {
   days: number;
   lastDate: Date | null;
 } {
-  if (timestamps.length === 0) return { days: 0, lastDate: null };
-  const keys = Array.from(new Set(timestamps.map((t) => dayKey(new Date(t).getTime())))).sort();
+  return streakFromDayKeys(timestamps.map((t) => dayKey(new Date(t).getTime())));
+}
+
+/**
+ * Streak length from a set of active-day keys (`YYYY-MM-DD`), e.g. the keys of the server's
+ * all-time daily session aggregate. Duplicates are collapsed, so callers can pass aggregate
+ * buckets directly. Same return contract as {@link computeStreak}.
+ */
+export function streakFromDayKeys(dayKeys: string[]): {
+  days: number;
+  lastDate: Date | null;
+} {
+  if (dayKeys.length === 0) return { days: 0, lastDate: null };
+  const keys = Array.from(new Set(dayKeys)).sort();
   const desc = keys.slice().reverse();
   const lastDate = parseDayKey(desc[0]!);
   let streak = 1;
