@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   useLapAggregate,
@@ -78,11 +78,15 @@ export function OverviewScreen() {
   // week/month". For `all`, anchor on the latest bucket actually present in the data so a long
   // pause since the last session doesn't render trailing empty buckets up to today. Falls back to
   // today when there's no data yet.
+  // Stable "now" captured once at mount via a lazy initializer — keeps the memo pure (no impure
+  // Date.now() during render) while preserving the existing behaviour of anchoring finite ranges
+  // on the current time.
+  const [mountedAtMs] = useState(() => Date.now());
   const anchorMs = useMemo(() => {
-    if (range !== "all") return Date.now();
+    if (range !== "all") return mountedAtMs;
     const latest = latestBucketDate(sessionAggQuery.data?.buckets, bucketPlan.unit);
-    return (latest ?? new Date()).getTime();
-  }, [range, sessionAggQuery.data, bucketPlan.unit]);
+    return latest?.getTime() ?? mountedAtMs;
+  }, [range, sessionAggQuery.data, bucketPlan.unit, mountedAtMs]);
 
   const stats = useMemo(() => {
     // Server-aggregated sum across buckets — accurate regardless of session-page size.

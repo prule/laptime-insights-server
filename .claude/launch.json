@@ -2,6 +2,13 @@
   "version": "0.0.1",
   "configurations": [
     {
+      "name": "frontend",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--dir", "frontend", "dev", "--port", "5180", "--strictPort"],
+      "port": 5180,
+      "autoPort": false
+    },
+    {
       "name": "landing",
       "runtimeExecutable": "npx",
       "runtimeArgs": ["--yes", "serve", "landing/dist", "-l", "4173"],

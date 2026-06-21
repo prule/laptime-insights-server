@@ -18,11 +18,12 @@ export default tseslint.config(
       "react-refresh": reactRefresh,
     },
     rules: {
-      // Classic, stable Rules of Hooks. The v7 `recommended` preset also bundles
-      // experimental rules (purity, set-state-in-effect) that would require app
-      // refactors out of scope for this tooling fix — adopt those separately.
       "react-hooks/rules-of-hooks": "error",
       "react-hooks/exhaustive-deps": "warn",
+      // v7 correctness rules: no impure calls during render, no synchronous
+      // setState in an effect body.
+      "react-hooks/purity": "error",
+      "react-hooks/set-state-in-effect": "error",
       // `_`-prefixed args/vars are intentionally unused (matches existing code).
       "@typescript-eslint/no-unused-vars": [
         "error",
