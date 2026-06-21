@@ -8,38 +8,19 @@ import { StatCard } from "../components/ui/StatCard";
 import { formatLapTime } from "../lib/format";
 import { useDataMode } from "../providers/DataModeProvider";
 import { useFeatures } from "../providers/FeaturesProvider";
+import {
+  useLiveEventStream,
+  type ConnectionStatus,
+  type PlayerCarUpdateData,
+  type WsMessage,
+} from "../providers/LiveEventsProvider";
 import type { LapResource, Links, Page, SessionResource } from "../api/types";
-
-// ─── WebSocket message types (mirror WebSocketMessage.kt) ────────────────────
-
-interface PlayerCarUpdateData {
-  sessionUid: string;
-  gear: number;
-  kmh: number;
-  splinePosition: number;
-  worldPosX: number;
-  worldPosY: number;
-  racePosition: number;
-  currentLapTimeMs: number;
-  currentLapIsInvalid: boolean;
-  delta: number;
-  bestLapTimeMs: number;
-  lastLapTimeMs: number;
-}
-
-type WsMessage =
-  | { type: "ServerStarted" }
-  | { type: "SessionCreated" | "SessionStarted" | "SessionUpdated"; data: SessionResource }
-  | { type: "SessionEnded"; data: SessionResource }
-  | { type: "LapCreated"; data: LapResource }
-  | { type: "PlayerCarUpdated"; data: PlayerCarUpdateData };
 
 // ─── Hook ─────────────────────────────────────────────────────────────────────
 
-type ConnectionStatus = "connecting" | "connected" | "disconnected" | "error";
-
 function useLiveEvents(apiUrl: string, indexLinks: Links) {
-  const [status, setStatus] = useState<ConnectionStatus>("connecting");
+  // Consume the single app-level socket rather than opening a second one.
+  const { status, subscribe } = useLiveEventStream();
   const [session, setSession] = useState<SessionResource | null>(null);
   const [telemetry, setTelemetry] = useState<PlayerCarUpdateData | null>(null);
   const [laps, setLaps] = useState<LapResource[]>([]);
@@ -109,9 +90,6 @@ function useLiveEvents(apiUrl: string, indexLinks: Links) {
     const sessionsLink = indexLinks.sessions;
     if (!liveLink) return;
     const base = apiUrl || window.location.origin;
-    const wsUrl = base.replace(/^http/, "ws") + liveLink;
-    let ws: WebSocket;
-    let closed = false;
 
     // On mount, look up the most recent session and load its current state and lap list so the
     // page is populated even before any WS event fires. Without this, a freshly loaded page
@@ -134,28 +112,8 @@ function useLiveEvents(apiUrl: string, indexLinks: Links) {
         .catch(() => {/* ignore — WS will populate state once events arrive */});
     }
 
-    function connect() {
-      setStatus("connecting");
-      ws = new WebSocket(wsUrl);
-
-      ws.onopen = () => setStatus("connected");
-      ws.onerror = () => setStatus("error");
-      ws.onclose = () => {
-        if (!closed) {
-          setStatus("disconnected");
-          // Reconnect after 3 s.
-          setTimeout(connect, 3000);
-        }
-      };
-
-      ws.onmessage = (evt: MessageEvent) => {
-        let msg: WsMessage;
-        try {
-          msg = JSON.parse(evt.data as string) as WsMessage;
-        } catch {
-          return;
-        }
-
+    // Subscribe to the shared socket; the provider owns the connection + reconnect.
+    const unsubscribe = subscribe((msg: WsMessage) => {
         switch (msg.type) {
           case "ServerStarted":
             // The server sends this on every WS connect, not only on a true restart, so
@@ -228,15 +186,10 @@ function useLiveEvents(apiUrl: string, indexLinks: Links) {
             break;
           }
         }
-      };
-    }
+    });
 
-    connect();
-    return () => {
-      closed = true;
-      ws?.close();
-    };
-  }, [apiUrl, indexLinks.live, indexLinks.sessions]);
+    return unsubscribe;
+  }, [apiUrl, indexLinks.live, indexLinks.sessions, subscribe]);
 
   return { status, session, telemetry, laps, trackPoints };
 }

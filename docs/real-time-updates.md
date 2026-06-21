@@ -173,6 +173,32 @@ socket.onclose = () => {
 };
 ```
 
+## Dashboard-wide cache sync
+
+The WebSocket is opened **once** at the app level by `LiveEventsProvider`
+(`frontend/src/providers/LiveEventsProvider.tsx`), mounted inside the TanStack Query
+provider. It fans every frame out to subscribers and runs `useLiveCacheSync`, which
+translates domain events into TanStack Query cache invalidations so *every* mounted
+screen (Overview, Sessions, Laps, Session detail) refetches and re-renders without a
+manual refresh — not just `LiveScreen`.
+
+Event → invalidated query-key prefixes (see `frontend/src/lib/liveSync.ts`):
+
+| Event(s)                                                      | Invalidated prefixes                                                          |
+| ------------------------------------------------------------ | ---------------------------------------------------------------------------- |
+| `LapCreated`                                                  | `laps`, `laps-aggregate`, `session-laps`, `session-best-lap`, `track-best-lap` |
+| `SessionCreated` / `SessionStarted` / `SessionUpdated` / `SessionEnded` | `sessions`, `sessions-aggregate`, `session`                        |
+| `PlayerCarUpdated`, `ServerStarted`                          | *(none — telemetry/connection noise, would storm the cache)*                 |
+
+Prefix matching is partial: invalidating `["laps"]` marks every laps query stale
+regardless of its filter/paging suffix. TanStack refetches only *mounted* queries; the
+rest refetch on next mount.
+
+The provider is inert (no socket) unless LIVE data mode is active **and** the index
+advertises a `live` rel — MOCK mode and feature-off backends are unaffected. `LiveScreen`
+subscribes to this shared connection via `useLiveEventStream()` rather than opening its
+own socket, so a client holds at most one WebSocket.
+
 ## Mid-session catch-up
 
 Connecting clients receive only events that fire *after* the WebSocket opens.
