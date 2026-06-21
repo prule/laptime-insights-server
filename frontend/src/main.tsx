@@ -5,6 +5,7 @@ import { BrowserRouter } from "react-router-dom";
 import { App } from "./App";
 import { DataModeProvider } from "./providers/DataModeProvider";
 import { FeaturesProvider } from "./providers/FeaturesProvider";
+import { LiveEventsProvider } from "./providers/LiveEventsProvider";
 import { TimeRangeProvider } from "./providers/TimeRangeProvider";
 import "./styles.css";
 
@@ -23,11 +24,13 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
     <QueryClientProvider client={queryClient}>
       <DataModeProvider>
         <FeaturesProvider>
-          <TimeRangeProvider>
-            <BrowserRouter>
-              <App />
-            </BrowserRouter>
-          </TimeRangeProvider>
+          <LiveEventsProvider>
+            <TimeRangeProvider>
+              <BrowserRouter>
+                <App />
+              </BrowserRouter>
+            </TimeRangeProvider>
+          </LiveEventsProvider>
         </FeaturesProvider>
       </DataModeProvider>
     </QueryClientProvider>

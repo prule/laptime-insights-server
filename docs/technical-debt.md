@@ -7,6 +7,8 @@
 - `QueryExtension.firstOrNull` resolves sort fields with `sortableFields.mapping[it.field]!!` while `paginate` uses `mapNotNull`. The two paths handle unknown fields inconsistently — `firstOrNull` will NPE where `paginate` silently drops. Align them (probably on the `mapNotNull` behaviour).
 - `GET /api/1/sessions` `to` parameter is documented in OpenAPI as **exclusive** but `SessionSearchCriteria.toQuery()` applies it with `lessEq` (inclusive). Pick one and align the docs and the SQL. Same likely applies to `from` — confirm the intent.
 - Unknown `sort` field names in `GET /api/1/sessions` are silently dropped rather than returning `400`. Documented behaviour is intentional (forward-compat), but it should be revisited — at minimum log at debug level so misuse is discoverable.
+- `frontend` `pnpm lint` fails with `eslint: command not found` — eslint is referenced by the script but not in `devDependencies`. Either add eslint + a config, or drop the script. CI's frontend job does not run lint, so this is currently silent.
+- Frontend has no DOM/React-component tests (`vitest.config.ts` is `environment: "node"`, `*.test.ts` only). `LiveEventsProvider` connection gating and `useLiveCacheSync` wiring are covered indirectly via the pure `liveSync.ts` helpers; add jsdom + Testing Library to cover the provider/hook render path directly.
 
 ## Landing page (landing/)
 
