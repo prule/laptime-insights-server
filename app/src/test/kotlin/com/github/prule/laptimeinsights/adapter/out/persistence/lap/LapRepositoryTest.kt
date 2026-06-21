@@ -22,8 +22,10 @@ import com.github.prule.laptimeinsights.application.domain.model.Simulator
 import com.github.prule.laptimeinsights.application.domain.model.Track
 import com.github.prule.laptimeinsights.application.domain.model.Uid
 import com.github.prule.laptimeinsights.application.domain.model.ValidLap
+import com.github.prule.laptimeinsights.tracker.utils.data.Order
 import com.github.prule.laptimeinsights.tracker.utils.data.PageRequest
 import com.github.prule.laptimeinsights.tracker.utils.data.Sort
+import com.github.prule.laptimeinsights.tracker.utils.data.SortBy
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.days
 import kotlin.time.Instant
@@ -264,6 +266,56 @@ class LapRepositoryTest : RepositoryTest(listOf(LapTable, SessionTable)) {
         )
       assertThat(between.total).isEqualTo(1L)
       assertThat(between.items[0].recordedAt).isEqualTo(fiveDaysAgo)
+    }
+  }
+
+  @Test
+  fun `from is inclusive and to is exclusive at the boundaries`() {
+    val from = Instant.parse("2026-04-10T00:00:00Z")
+    val to = Instant.parse("2026-04-20T00:00:00Z")
+    val inside = Instant.parse("2026-04-15T00:00:00Z")
+
+    transaction {
+      repository.create(createTestLap(recordedAt = from)) // exactly at lower bound -> included
+      repository.create(createTestLap(recordedAt = inside)) // strictly inside -> included
+      repository.create(createTestLap(recordedAt = to)) // exactly at upper bound -> excluded
+
+      val result =
+        repository.search(LapSearchCriteria(from = from, to = to), PageRequest(1, 25), Sort.noSort())
+
+      assertThat(result.total).isEqualTo(2L)
+      assertThat(result.items.map { it.recordedAt }).containsExactlyInAnyOrder(from, inside)
+    }
+  }
+
+  @Test
+  fun `search ignores an unknown sort field instead of failing`() {
+    transaction {
+      repository.create(createTestLap())
+
+      val result =
+        repository.search(
+          LapSearchCriteria(),
+          PageRequest(1, 25),
+          Sort(listOf(SortBy("notARealField", Order.ASC))),
+        )
+
+      assertThat(result.items).hasSize(1)
+    }
+  }
+
+  @Test
+  fun `searchForOne ignores an unknown sort field instead of throwing`() {
+    transaction {
+      repository.create(createTestLap())
+
+      val found =
+        repository.searchForOne(
+          LapSearchCriteria(),
+          Sort(listOf(SortBy("notARealField", Order.ASC))),
+        )
+
+      assertThat(found).isNotNull
     }
   }
 

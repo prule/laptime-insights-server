@@ -114,6 +114,29 @@ class SessionRepositoryTest : RepositoryTest(listOf(SessionTable)) {
     }
   }
 
+  @Test
+  fun `search treats from as inclusive and to as exclusive at the boundaries`() {
+    val from = Instant.parse("2026-04-10T00:00:00Z")
+    val to = Instant.parse("2026-04-20T00:00:00Z")
+    val inside = Instant.parse("2026-04-15T00:00:00Z")
+
+    transaction {
+      repository.create(createTestSession(startedAt = from)) // lower bound -> included
+      repository.create(createTestSession(startedAt = inside)) // strictly inside -> included
+      repository.create(createTestSession(startedAt = to)) // upper bound -> excluded
+
+      val result =
+        repository.search(
+          SessionSearchCriteria(from = from, to = to),
+          com.github.prule.laptimeinsights.tracker.utils.data.PageRequest(1, 25),
+          com.github.prule.laptimeinsights.tracker.utils.data.Sort.noSort(),
+        )
+
+      assertThat(result.total).isEqualTo(2L)
+      assertThat(result.items.map { it.startedAt }).containsExactlyInAnyOrder(from, inside)
+    }
+  }
+
   private fun createTestSession(
     car: Car = Car("Ferrari"),
     track: Track = Track("Monza"),

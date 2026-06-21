@@ -145,7 +145,7 @@ class SearchLapController(application: Application, searchLapUseCase: SearchLapU
             }
             query("to") {
               description =
-                "Inclusive upper bound for the lap's `recordedAt`, as an ISO-8601 instant " +
+                "Exclusive upper bound for the lap's `recordedAt`, as an ISO-8601 instant " +
                   "(e.g. `2026-04-13T00:00:00Z`)."
               required = false
             }
