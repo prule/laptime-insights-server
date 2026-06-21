@@ -281,7 +281,11 @@ class LapRepositoryTest : RepositoryTest(listOf(LapTable, SessionTable)) {
       repository.create(createTestLap(recordedAt = to)) // exactly at upper bound -> excluded
 
       val result =
-        repository.search(LapSearchCriteria(from = from, to = to), PageRequest(1, 25), Sort.noSort())
+        repository.search(
+          LapSearchCriteria(from = from, to = to),
+          PageRequest(1, 25),
+          Sort.noSort(),
+        )
 
       assertThat(result.total).isEqualTo(2L)
       assertThat(result.items.map { it.recordedAt }).containsExactlyInAnyOrder(from, inside)
