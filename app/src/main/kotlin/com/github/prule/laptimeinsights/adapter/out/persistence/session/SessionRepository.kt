@@ -24,7 +24,7 @@ import org.jetbrains.exposed.v1.core.count
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.greaterEq
 import org.jetbrains.exposed.v1.core.isNotNull
-import org.jetbrains.exposed.v1.core.lessEq
+import org.jetbrains.exposed.v1.core.less
 import org.jetbrains.exposed.v1.core.max
 import org.jetbrains.exposed.v1.core.min
 import org.jetbrains.exposed.v1.core.sum
@@ -146,8 +146,9 @@ fun SessionSearchCriteria.toQuery(): Query {
   track?.let { query.andWhere { SessionTable.track eq it.value } }
   simulator?.let { query.andWhere { SessionTable.simulator eq it.name } }
 
+  // Filter on SESSION.startedAt — half-open interval [from, to): inclusive lower / exclusive upper.
   from?.let { query.andWhere { SessionTable.startedAt greaterEq it } }
-  to?.let { query.andWhere { SessionTable.startedAt lessEq it } }
+  to?.let { query.andWhere { SessionTable.startedAt less it } }
 
   return query
 }

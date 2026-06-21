@@ -26,7 +26,7 @@ import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.greaterEq
 import org.jetbrains.exposed.v1.core.inSubQuery
 import org.jetbrains.exposed.v1.core.isNotNull
-import org.jetbrains.exposed.v1.core.lessEq
+import org.jetbrains.exposed.v1.core.less
 import org.jetbrains.exposed.v1.core.longLiteral
 import org.jetbrains.exposed.v1.jdbc.Query
 import org.jetbrains.exposed.v1.jdbc.andWhere
@@ -176,10 +176,10 @@ fun LapSearchCriteria.toQuery(): Query {
   track?.let { query.andWhere { SessionTable.track eq it.value } }
   simulator?.let { query.andWhere { SessionTable.simulator eq it.name } }
 
-  // Filter on LAP.recordedAt — inclusive lower / inclusive upper bound, mirrors
-  // SessionRepository semantics for from/to.
+  // Filter on LAP.recordedAt — half-open interval [from, to): inclusive lower / exclusive upper,
+  // mirrors SessionRepository semantics for from/to.
   from?.let { query.andWhere { LapTable.recordedAt greaterEq it } }
-  to?.let { query.andWhere { LapTable.recordedAt lessEq it } }
+  to?.let { query.andWhere { LapTable.recordedAt less it } }
 
   return query
 }
