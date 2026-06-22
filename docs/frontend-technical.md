@@ -176,6 +176,57 @@ When adding a new backend endpoint:
 
 `SessionResource` and `LapResource` include `_links: Record<string, string>`. `SessionRow` navigates via `session._links.self` rather than constructing `/sessions/{uid}` itself. `client.ts` exposes `fetchLink(ctx, links, rel)` for following arbitrary link relations. If the backend changes its URL scheme, the frontend follows without code changes.
 
+## Feedback form
+
+A **Feedback** launcher sits in the Topbar (beside the time-range selector) on every
+screen. It opens a modal capturing a **type** (bug / suggestion / general feedback), a
+required **message**, and an optional **email**, and auto-attaches the **app version**
+(`__APP_VERSION__`, injected from `package.json` via Vite `define`) and the **current
+screen** (`useLocation().pathname`).
+
+Submission goes straight to a **Google Form** via a `no-cors` POST to its `formResponse`
+endpoint — the same technique the landing page's register-interest form uses. There is no
+backend involvement; the form's linked Google Sheet is the inbox. A `no-cors` response is
+opaque, so a fetch that resolves without throwing is treated as success. In MOCK data mode
+no request is sent — submission is simulated so the UI works offline.
+
+Code: `src/components/feedback/FeedbackButton.tsx` (launcher + modal),
+`src/api/feedback.ts` (payload, validation, submit), `src/config/feedback.ts` (config),
+`src/lib/version.ts` (`APP_VERSION`).
+
+**Configuration** is presence-gated, not a HATEOAS/`enabledFeatures` toggle: the launcher
+renders only when a form is configured.
+
+| Env var | Required | Maps to |
+|---------|----------|---------|
+| `VITE_FEEDBACK_FORM_URL` | yes | Google Form `…/formResponse` action |
+| `VITE_FEEDBACK_ENTRY_TYPE` | yes | `entry.<id>` for the type question |
+| `VITE_FEEDBACK_ENTRY_MESSAGE` | yes | `entry.<id>` for the message question |
+| `VITE_FEEDBACK_ENTRY_EMAIL` | no | `entry.<id>` for the email question |
+| `VITE_FEEDBACK_ENTRY_VERSION` | no | `entry.<id>` for the app version |
+| `VITE_FEEDBACK_ENTRY_SCREEN` | no | `entry.<id>` for the current screen |
+
+Optional entry ids that are omitted simply drop that field from the submission.
+
+### Build-time, not runtime — and which file to use
+
+`VITE_*` vars are **inlined into the JS bundle when `pnpm build` runs**; nothing reads them
+at runtime, so a downloader of the self-hosted product cannot set them. Whoever produces the
+distributed build determines the baked-in form. Two files matter:
+
+- **`frontend/.env.production`** — committed on purpose, loaded automatically by
+  `vite build`. Put the maintainer's real form URL + entry ids here so the launcher reaches
+  *your* Google Form in **every** production build (CI, release job, or a build from source).
+  A `/formResponse` URL is a public endpoint, not a secret. Leave blank to ship the launcher
+  hidden. (Both `.env.example` and `.env.production` have explicit `!**/...` exceptions in the
+  root `.gitignore`, since `.env*` is otherwise ignored.)
+- **`frontend/.env.local`** — git-ignored per-developer override, loaded in `pnpm dev` and
+  local builds. Use it to point at a test form without touching the committed config.
+
+If you'd rather keep the URL out of git entirely, set the same vars as CI/release secrets in
+the build step instead of committing `.env.production` — but then builds from source won't
+enable feedback.
+
 ## Running
 
 ```bash

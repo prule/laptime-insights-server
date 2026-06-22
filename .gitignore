@@ -1,4 +1,6 @@
 .env*
+!**/.env.example
+!**/.env.production
 .gradle
 build/
 !gradle/wrapper/gradle-wrapper.jar

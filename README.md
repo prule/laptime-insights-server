@@ -73,6 +73,11 @@ pnpm build   # outputs static site to landing/dist
 | `FEATURE_COMPARE` | no | Feature override. Same semantics. Controls the `compare` link. |
 | `FEATURE_LIVE` | no | Feature override. Same semantics. Controls the `live` WebSocket link. |
 
+These are **backend** (runtime) variables. The frontend has separate **build-time**
+`VITE_FEEDBACK_*` variables that wire the in-dashboard feedback form to a Google Form; because
+Vite inlines them at build time, they must be set on whichever build you distribute. See
+[frontend/README.md → Feedback form](./frontend/README.md#feedback-form).
+
 ### REST API
 
 The REST API is self-documenting via Ktor's OpenAPI plugin. When the server is running locally:
