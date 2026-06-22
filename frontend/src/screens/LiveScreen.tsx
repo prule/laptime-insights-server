@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { appendQuery } from "../api/client";
 import { Card } from "../components/ui/Card";
@@ -38,33 +38,11 @@ function useLiveEvents(apiUrl: string, indexLinks: Links) {
   }, [session]);
 
   /**
-   * Fetch session details via REST when we connect mid-session (no lifecycle WS event fires).
-   * Composes the URL from the index `sessions` rel; when that rel is absent the sessions
-   * feature is off and we skip the call.
-   */
-  function fetchSession(uid: string, base: string) {
-    if (!indexLinks.sessions) return;
-    const apiBase = base.replace(/^ws/, "http");
-    fetch(`${apiBase}${indexLinks.sessions}/${uid}`)
-      .then((r) => (r.ok ? r.json() : null))
-      .then((data: SessionResource | null) => {
-        if (data) {
-          setSession(data);
-          playerCarIdRef.current = data.playerCarId;
-          // Once we have the session resource, follow its `laps` rel rather than rebuilding
-          // the URL ourselves.
-          fetchSessionLaps(data, base);
-        }
-      })
-      .catch(() => {/* ignore — we'll show what we can */});
-  }
-
-  /**
    * Fetch the full list of laps for `session` (restricted to its `playerCarId` when known)
    * and replace local lap state. Follows `session._links.laps` so the URL — and the
    * laps-feature gate — stays server-driven.
    */
-  function fetchSessionLaps(session: SessionResource, base: string) {
+  const fetchSessionLaps = useCallback((session: SessionResource, base: string) => {
     const lapsLink = session._links.laps;
     if (!lapsLink) return;
     const apiBase = base.replace(/^ws/, "http");
@@ -83,7 +61,97 @@ function useLiveEvents(apiUrl: string, indexLinks: Links) {
         setLaps(data.items);
       })
       .catch(() => {/* ignore — we still have the optimistic WS-driven state */});
-  }
+  }, []);
+
+  /**
+   * Fetch session details via REST when we connect mid-session (no lifecycle WS event fires).
+   * Composes the URL from the index `sessions` rel; when that rel is absent the sessions
+   * feature is off and we skip the call.
+   */
+  const fetchSession = useCallback(
+    (uid: string, base: string, sessionsLink: string | undefined) => {
+      if (!sessionsLink) return;
+      const apiBase = base.replace(/^ws/, "http");
+      fetch(`${apiBase}${sessionsLink}/${uid}`)
+        .then((r) => (r.ok ? r.json() : null))
+        .then((data: SessionResource | null) => {
+          if (data) {
+            setSession(data);
+            playerCarIdRef.current = data.playerCarId;
+            fetchSessionLaps(data, base);
+          }
+        })
+        .catch(() => {/* ignore — we'll show what we can */});
+    },
+    [fetchSessionLaps],
+  );
+
+  // Latest-ref pattern: keep the WS message handler out of the subscribe effect so the
+  // effect doesn't re-subscribe on every render and doesn't carry a giant deps list. The
+  // handler closure is refreshed every render so it always sees current props.
+  const handlerRef = useRef<(msg: WsMessage, base: string, sessionsLink: string | undefined) => void>(null!);
+  handlerRef.current = (msg, base, sessionsLink) => {
+    switch (msg.type) {
+      case "ServerStarted":
+        // The server sends this on every WS connect, not only on a true restart, so
+        // do not blow away REST-loaded session/laps — those are DB-backed and were
+        // just fetched from this same server. Only reset the per-connection telemetry
+        // and accumulated track points so the next driving stint starts clean.
+        setTelemetry(null);
+        trackPointsRef.current = [];
+        setTrackPoints([]);
+        break;
+      case "SessionCreated":
+      case "SessionStarted":
+      case "SessionUpdated": {
+        const s = msg.data as SessionResource;
+        const prevPlayerCarId = playerCarIdRef.current;
+        setSession(s);
+        playerCarIdRef.current = s.playerCarId;
+        if (lastSessionUidRef.current !== s.uid) {
+          lastSessionUidRef.current = s.uid;
+          setLaps([]);
+          trackPointsRef.current = [];
+          setTrackPoints([]);
+          setTelemetry(null);
+          fetchSessionLaps(s, base);
+        } else if (prevPlayerCarId !== s.playerCarId && s.playerCarId !== null) {
+          // playerCarId arrived (EntryListCar after session creation) — refetch so the
+          // laps list is properly scoped to the player's car rather than every car.
+          fetchSessionLaps(s, base);
+        }
+        break;
+      }
+      case "SessionEnded": {
+        const s = msg.data as SessionResource;
+        if (s.uid === lastSessionUidRef.current) setSession(s);
+        break;
+      }
+      case "LapCreated": {
+        const lap = msg.data as LapResource;
+        if (lap.sessionUid !== lastSessionUidRef.current) break;
+        if (playerCarIdRef.current !== null && lap.carId !== playerCarIdRef.current) break;
+        setLaps((prev) => (prev.some((l) => l.uid === lap.uid) ? prev : [lap, ...prev]));
+        const currentSession = sessionRef.current;
+        if (currentSession) fetchSessionLaps(currentSession, base);
+        break;
+      }
+      case "PlayerCarUpdated": {
+        const t = msg.data as PlayerCarUpdateData;
+        setTelemetry(t);
+        if (lastSessionUidRef.current !== t.sessionUid) {
+          lastSessionUidRef.current = t.sessionUid;
+          fetchSession(t.sessionUid, base, sessionsLink);
+        }
+        const pts = trackPointsRef.current;
+        if (pts.length < 2000) {
+          pts.push({ x: t.worldPosX, y: t.worldPosY });
+          if (pts.length % 5 === 0) setTrackPoints([...pts]);
+        }
+        break;
+      }
+    }
+  };
 
   useEffect(() => {
     const liveLink = indexLinks.live;
@@ -94,7 +162,6 @@ function useLiveEvents(apiUrl: string, indexLinks: Links) {
     // On mount, look up the most recent session and load its current state and lap list so the
     // page is populated even before any WS event fires. Without this, a freshly loaded page
     // during a lull in telemetry would stay empty until the next PlayerCarUpdated/LapCreated.
-    // (Sessions no longer carry a finished flag — the most recent one is treated as live.)
     if (sessionsLink) {
       const apiBase = base.replace(/^ws/, "http");
       const url =
@@ -112,84 +179,8 @@ function useLiveEvents(apiUrl: string, indexLinks: Links) {
         .catch(() => {/* ignore — WS will populate state once events arrive */});
     }
 
-    // Subscribe to the shared socket; the provider owns the connection + reconnect.
-    const unsubscribe = subscribe((msg: WsMessage) => {
-        switch (msg.type) {
-          case "ServerStarted":
-            // The server sends this on every WS connect, not only on a true restart, so
-            // do not blow away REST-loaded session/laps — those are DB-backed and were
-            // just fetched from this same server. Only reset the per-connection telemetry
-            // and accumulated track points so the next driving stint starts clean.
-            setTelemetry(null);
-            trackPointsRef.current = [];
-            setTrackPoints([]);
-            break;
-          case "SessionCreated":
-          case "SessionStarted":
-          case "SessionUpdated": {
-            const s = msg.data as SessionResource;
-            const prevPlayerCarId = playerCarIdRef.current;
-            setSession(s);
-            playerCarIdRef.current = s.playerCarId;
-            // Reset laps and track shape when a new session begins.
-            if (lastSessionUidRef.current !== s.uid) {
-              lastSessionUidRef.current = s.uid;
-              setLaps([]);
-              trackPointsRef.current = [];
-              setTrackPoints([]);
-              setTelemetry(null);
-              fetchSessionLaps(s, base);
-            } else if (prevPlayerCarId !== s.playerCarId && s.playerCarId !== null) {
-              // playerCarId arrived (EntryListCar after session creation) — refetch so the
-              // laps list is properly scoped to the player's car rather than every car.
-              fetchSessionLaps(s, base);
-            }
-            break;
-          }
-          case "SessionEnded": {
-            // The session finished (new ACC session or terminal phase). Update the resource so
-            // `endedAt` is reflected; keep the laps in place — they belong to this finished session.
-            const s = msg.data as SessionResource;
-            if (s.uid === lastSessionUidRef.current) setSession(s);
-            break;
-          }
-          case "LapCreated": {
-            const lap = msg.data as LapResource;
-            // Ignore laps from other cars or other sessions — the live page only tracks the player.
-            if (lap.sessionUid !== lastSessionUidRef.current) break;
-            if (playerCarIdRef.current !== null && lap.carId !== playerCarIdRef.current) break;
-            // Optimistically prepend so the UI reflects the new lap immediately,
-            // even if the follow-up REST fetch is slow.
-            setLaps((prev) => (prev.some((l) => l.uid === lap.uid) ? prev : [lap, ...prev]));
-            // Then refetch the authoritative full list. We need the current session resource
-            // (for its `_links.laps`) to do that — `sessionRef.current` carries it.
-            const currentSession = sessionRef.current;
-            if (currentSession) fetchSessionLaps(currentSession, base);
-            break;
-          }
-          case "PlayerCarUpdated": {
-            const t = msg.data as PlayerCarUpdateData;
-            setTelemetry(t);
-            // If we connected mid-session we won't have received a SessionCreated/Started event.
-            // Fetch the session once via REST so the header shows track + session type.
-            if (lastSessionUidRef.current !== t.sessionUid) {
-              lastSessionUidRef.current = t.sessionUid;
-              fetchSession(t.sessionUid, base);
-            }
-            // Accumulate track points for the outline (cap at 2000 to avoid memory growth).
-            // Sync state every 5 points so the outline grows quickly on first lap.
-            const pts = trackPointsRef.current;
-            if (pts.length < 2000) {
-              pts.push({ x: t.worldPosX, y: t.worldPosY });
-              if (pts.length % 5 === 0) setTrackPoints([...pts]);
-            }
-            break;
-          }
-        }
-    });
-
-    return unsubscribe;
-  }, [apiUrl, indexLinks.live, indexLinks.sessions, subscribe]);
+    return subscribe((msg) => handlerRef.current(msg, base, sessionsLink));
+  }, [apiUrl, indexLinks.live, indexLinks.sessions, subscribe, fetchSessionLaps]);
 
   return { status, session, telemetry, laps, trackPoints };
 }

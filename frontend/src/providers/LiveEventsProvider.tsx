@@ -75,7 +75,9 @@ export function LiveEventsProvider({ children }: { children: ReactNode }) {
   const enabled = shouldConnect(mode, liveLink);
 
   const [status, setStatus] = useState<ConnectionStatus>("disconnected");
-  const listenersRef = useRef<Set<WsListener>>(new Set());
+  // Lazy init so the Set is allocated once, not on every render.
+  const listenersRef = useRef<Set<WsListener>>(null!);
+  listenersRef.current ??= new Set();
 
   const subscribe = useCallback((listener: WsListener) => {
     listenersRef.current.add(listener);
