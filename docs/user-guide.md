@@ -18,6 +18,11 @@ At the top of every screen is the **time range selector** — a row of pill butt
 | 1Y | Last year |
 | All | All recorded data |
 
+Also in the top bar is a **Feedback** button. Use it to report a bug or send a suggestion
+without leaving the dashboard: pick a type, write your message, and optionally leave an
+email if you'd like a reply. Your app version and current screen are attached automatically
+to help with diagnosis. (Available only when the operator has configured a feedback form.)
+
 ---
 
 ## Overview screen

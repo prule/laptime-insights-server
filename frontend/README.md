@@ -76,6 +76,51 @@ pnpm typecheck
 pnpm build
 ```
 
+## Feedback form
+
+A **Feedback** launcher in the Topbar lets users file a bug / suggestion / general
+feedback. It submits straight to a **Google Form** (`no-cors` POST to `…/formResponse`) —
+no backend — and the form's linked Google Sheet is the inbox. See
+[../docs/frontend-technical.md](../docs/frontend-technical.md#feedback-form) for the
+architecture; this section is the **operator setup**.
+
+> ⚠️ **Build-time config.** `VITE_*` vars are inlined by `vite build`, **not** read at
+> runtime. A downloader of the self-hosted product cannot configure this — whoever runs the
+> build bakes in the form. To make feedback reach you, set the vars before the build that you
+> distribute. The launcher is hidden when `VITE_FEEDBACK_FORM_URL` is empty.
+
+**Setup:**
+
+1. Create a Google Form with at least a **type** question (e.g. multiple choice:
+   Bug / Suggestion / General feedback) and a **message** question (paragraph). Optionally add
+   short-answer questions for email, app version, and screen.
+2. Get the field ids: open the form's **pre-filled link** (⋮ → *Get pre-filled link*), fill
+   dummy answers, copy the link, and read the `entry.<id>` for each question. The form action
+   is the same URL with `/viewform` replaced by `/formResponse`.
+3. Put the values in **`.env.production`** (committed — loaded automatically by `pnpm build`):
+
+   ```bash
+   VITE_FEEDBACK_FORM_URL=https://docs.google.com/forms/d/e/<form-id>/formResponse
+   VITE_FEEDBACK_ENTRY_TYPE=entry.<id>
+   VITE_FEEDBACK_ENTRY_MESSAGE=entry.<id>
+   VITE_FEEDBACK_ENTRY_EMAIL=entry.<id>     # optional
+   VITE_FEEDBACK_ENTRY_VERSION=entry.<id>   # optional
+   VITE_FEEDBACK_ENTRY_SCREEN=entry.<id>    # optional
+   ```
+
+   A `/formResponse` URL is a public endpoint, not a secret, so committing it is fine. For
+   local testing against a throwaway form, use `.env.local` (git-ignored) instead. See
+   `.env.example` for the full annotated list.
+4. `pnpm build` and ship `dist/`. In **MOCK** data mode no request is sent (simulated
+   success), so the form is safe to click through locally.
+
+Notes:
+- Optional `entry.*` ids that are omitted simply drop that field from the submission.
+- A `no-cors` response is opaque, so a request that doesn't throw is treated as success — the
+  Google Sheet is the source of truth, not the in-app confirmation.
+- The attached **app version** is `frontend/package.json`'s `version` (injected as
+  `__APP_VERSION__`), so bump it per release to keep feedback diagnosable.
+
 ## Lap comparison
 
 The `/compare` screen overlays two laps' telemetry traces against
