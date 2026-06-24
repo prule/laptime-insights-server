@@ -60,19 +60,22 @@ val frontendDir = project.rootProject.file("frontend")
 val frontendBuildDir = file("$frontendDir/dist")
 val staticResourcesDir = file("src/main/resources/static")
 
-tasks.register("npmInstall", Exec::class) {
+// pnpm is the frontend package manager; the executable is `pnpm.cmd` on Windows.
+val pnpm = if (org.gradle.internal.os.OperatingSystem.current().isWindows) "pnpm.cmd" else "pnpm"
+
+tasks.register("pnpmInstall", Exec::class) {
   workingDir = frontendDir
-  commandLine("npm", "install")
+  commandLine(pnpm, "install", "--frozen-lockfile")
 }
 
-tasks.register("npmBuild", Exec::class) {
-  dependsOn("npmInstall")
+tasks.register("pnpmBuild", Exec::class) {
+  dependsOn("pnpmInstall")
   workingDir = frontendDir
-  commandLine("npm", "run", "build")
+  commandLine(pnpm, "run", "build")
 }
 
 tasks.register("copyFrontend", Copy::class) {
-  dependsOn("npmBuild")
+  dependsOn("pnpmBuild")
   from(frontendBuildDir)
   into(staticResourcesDir)
 }
