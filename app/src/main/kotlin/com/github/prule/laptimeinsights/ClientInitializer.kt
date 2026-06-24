@@ -255,15 +255,23 @@ class ClientInitializer(private val appModule: AppModule) {
   private fun buildEntryListCar(): MessageListener<AccBroadcastingInbound> {
     return ConditionalFilter(
       condition = { message ->
-        message.msgType() == AccBroadcastingInbound.InboundMsgType.ENTRY_LIST_CAR &&
-          context.focusedCarIndex != null
+        message.msgType() == AccBroadcastingInbound.InboundMsgType.ENTRY_LIST_CAR
       },
       clazz = AccBroadcastingInbound.EntryListCar::class,
       block = { message, _ ->
+        val carId = CarId(message.carId())
         val resolvedCar =
           appModule.car.findCarUseCase.findCarByModel(FindCarCommand(message.carModelType()))
-        sessionState?.registerCar(CarId(message.carId()), resolvedCar)
+        // Register the model whenever it arrives — never gated on the focused car being known —
+        // so registrations that precede the focused-car identification are not dropped.
+        sessionState?.registerCar(carId, resolvedCar)
         logger.info("Car registered: carId=${message.carId()} car=$resolvedCar")
+
+        // Back-fill any laps that completed for this car before its model was known.
+        session?.let {
+          val filled = appModule.lap.recordCarOnLapsUseCase.fillMissingCar(it.uid, carId, resolvedCar)
+          if (filled > 0) logger.info("Back-filled car on $filled lap(s): carId=${message.carId()}")
+        }
 
         if (message.carId() == context.focusedCarIndex) {
           car = resolvedCar
