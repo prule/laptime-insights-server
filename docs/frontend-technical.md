@@ -235,9 +235,13 @@ enable feedback.
 
 ## Running
 
+**Toolchain:** Node 24 (pinned via `.nvmrc` → `24.17.0`) and pnpm. `package.json`
+declares `engines.node >= 24` and runs a `preinstall` guard, so `pnpm install` fails
+fast on an older Node — run `nvm use` first.
+
 ```bash
 # Mock only — no backend required
-cd frontend && pnpm install && pnpm dev   # http://localhost:5173
+cd frontend && nvm use && pnpm install && pnpm dev   # http://localhost:5173
 
 # Live — backend must be running on :8000
 JDBC_URL=jdbc:h2:./data/laptime DB_SEED=true ./gradlew :app:run

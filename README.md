@@ -36,10 +36,17 @@ And much more hopefully!
 ### Frontend
 
 A React + Vite + TypeScript dashboard lives in `frontend/`. See
-[frontend/README.md](./frontend/README.md) for full documentation. Quick start:
+[frontend/README.md](./frontend/README.md) for full documentation.
+
+**Toolchain:** Node 24 (`.nvmrc` pins `24.17.0`) and pnpm. Both JS workspaces
+(`frontend/` and `landing/`) declare these in `engines` and run a `preinstall`
+guard, so `pnpm install` fails fast on an older Node. Run `nvm use` first.
+
+Quick start:
 
 ```bash
 cd frontend
+nvm use      # selects Node 24 from .nvmrc
 pnpm install
 pnpm dev   # http://localhost:5173 — defaults to mock data
 ```
