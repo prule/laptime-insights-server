@@ -11,18 +11,37 @@ import { Card } from "../components/ui/Card";
 import { CarFilterBar } from "../components/ui/CarFilterBar";
 import { LapTable } from "../components/LapTable";
 import { SectionHeader } from "../components/ui/SectionHeader";
+import {
+  formatSortParam,
+  parseSortParam,
+  type SortState,
+} from "../components/ui/SortableHeader";
 import { Sparkline } from "../components/ui/Sparkline";
 import { StatCard } from "../components/ui/StatCard";
 import { ErrorState, LoadingState, EmptyState } from "../components/ui/States";
+import { getString, useUrlState } from "../hooks/useUrlState";
 import { formatDate, formatDrivingTime, formatLapTime, formatTime } from "../lib/format";
 import { useFeatureEnabled } from "../providers/FeaturesProvider";
 
 export function SessionDetailScreen() {
   const { uid } = useParams();
   const navigate = useNavigate();
+  const [params, , setMany] = useUrlState();
   const sessionQuery = useSession(uid);
   const session = sessionQuery.data;
-  const lapsQuery = useSessionLaps(session);
+
+  // Sort lives in the URL (`sort=field:ORDER`) so the ordering deep-links and survives reload,
+  // matching the Laps and Sessions tables. Default `lapNumber:ASC` preserves today's order. The
+  // backend applies the sort — we just follow the session's HATEOAS `laps` link with the param.
+  const sort: SortState = parseSortParam(getString(params, "sort")) ?? {
+    field: "lapNumber",
+    order: "ASC",
+  };
+  const setSort = (next: SortState | null) => {
+    setMany({ sort: formatSortParam(next) });
+  };
+
+  const lapsQuery = useSessionLaps(session, { sort: formatSortParam(sort) });
   const sessionBestQuery = useSessionBestLap(session);
   const trackBestQuery = useTrackBestLap(session?.track ?? null);
   const sessionsEnabled = useFeatureEnabled("sessions");
@@ -47,6 +66,18 @@ export function SessionDetailScreen() {
     const laps = lapsQuery.data?.items ?? [];
     return selectedCarId !== null ? laps.filter((l) => l.carId === selectedCarId) : laps;
   }, [lapsQuery.data, selectedCarId]);
+
+  // The trend Sparkline is a timeline, not a ranking — keep it in lap-number order regardless of
+  // the table's current sort. Sort a copy so the table's backend-sorted order is untouched.
+  const trendValues = useMemo(
+    () =>
+      visibleLaps
+        .filter((l) => l.valid)
+        .slice()
+        .sort((a, b) => a.lapNumber - b.lapNumber)
+        .map((l) => l.lapTime),
+    [visibleLaps],
+  );
 
   // Stats reflect the currently filtered car (or player car when showing all).
   const stats = useMemo(() => {
@@ -123,10 +154,7 @@ export function SessionDetailScreen() {
           sub={
             allLaps.length > 0 ? (
               <span className="text-text-dim">
-                <Sparkline
-                  values={visibleLaps.filter((l) => l.valid).map((l) => l.lapTime)}
-                  color="#00d4ff"
-                />
+                <Sparkline values={trendValues} color="#00d4ff" />
               </span>
             ) : undefined
           }
@@ -157,6 +185,9 @@ export function SessionDetailScreen() {
         {visibleLaps.length > 0 && (
           <LapTable
             laps={visibleLaps}
+            sortableFields={lapsQuery.data?.sortable}
+            sort={sort}
+            onSortChange={setSort}
             onSessionClick={(uid) => navigate(`/sessions/${uid}`)}
             isRowDimmed={(lap) => playerCarId !== null && lap.carId !== playerCarId}
             extraColumns={
