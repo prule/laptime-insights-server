@@ -11,6 +11,7 @@ import com.github.prule.laptimeinsights.adapter.out.persistence.session.SessionM
 import com.github.prule.laptimeinsights.adapter.out.persistence.session.SessionPersistenceAdapter
 import com.github.prule.laptimeinsights.adapter.out.persistence.session.SessionRepository
 import com.github.prule.laptimeinsights.application.domain.service.car.FindCarService
+import com.github.prule.laptimeinsights.application.domain.service.car.LinkLapTelemetryService
 import com.github.prule.laptimeinsights.application.domain.service.car.RecordRealtimeCarUpdateService
 import com.github.prule.laptimeinsights.application.domain.service.lap.AggregateLapsService
 import com.github.prule.laptimeinsights.application.domain.service.lap.CompareLapsService
@@ -43,8 +44,10 @@ class AppModule {
       RealtimeCarUpdatePersistenceAdapter(RealtimeCarUpdateRepository())
     val realtimeCarUpdatePort = realtimeCarUpdatePersistenceAdapter
     val findRealtimeCarUpdateByLapPort = realtimeCarUpdatePersistenceAdapter
+    val linkLapTelemetryPort = realtimeCarUpdatePersistenceAdapter
     val recordRealtimeCarUpdateUseCase =
       RecordRealtimeCarUpdateService(realtimeCarUpdatePort, eventPort)
+    val linkLapTelemetryUseCase = LinkLapTelemetryService(linkLapTelemetryPort)
   }
 
   inner class Lap(val session: Session, val car: Car) {

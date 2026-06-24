@@ -76,8 +76,8 @@ export function SessionDetailScreen() {
   const sessionBest = sessionBestQuery.data ?? null;
   const trackBest = trackBestQuery.data ?? null;
 
-  const compareUrl = (lap1: string, lap2: string) =>
-    `/compare?track=${encodeURIComponent(session.track ?? "")}&lap1=${lap1}&lap2=${lap2}`;
+  const compareUrl = (anchor: string, challenger: string) =>
+    `/compare?track=${encodeURIComponent(session.track ?? "")}&anchor=${anchor}&challenger=${challenger}`;
 
   return (
     <div className="h-full overflow-y-auto px-8 py-7">
@@ -204,7 +204,7 @@ export function SessionDetailScreen() {
                               enabled={true}
                               onClick={() =>
                                 navigate(
-                                  `/compare?track=${encodeURIComponent(session.track ?? "")}&lap1=${lap.uid}`,
+                                  `/compare?track=${encodeURIComponent(session.track ?? "")}&anchor=${lap.uid}`,
                                 )
                               }
                             />

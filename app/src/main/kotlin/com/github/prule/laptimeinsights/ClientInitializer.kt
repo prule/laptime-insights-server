@@ -222,16 +222,27 @@ class ClientInitializer(private val appModule: AppModule) {
             val carId = CarId(message.carId())
             val lapNumber = sessionState!!.incrementLapCount(carId)
             // PB is derived inside CreateLapService — we just report what telemetry observed.
-            appModule.lap.createLapUseCase.createLap(
-              CreateLapCommand(
-                session!!.uid,
-                Clock.System.now(),
-                carId,
-                sessionState!!.getCarModel(carId),
-                LapTimeMs.fromString(message.msg().data()),
-                lapNumber,
-                ValidLap(sessionState!!.isValidLap(carId, lapNumber)),
+            val createdLap =
+              appModule.lap.createLapUseCase.createLap(
+                CreateLapCommand(
+                  session!!.uid,
+                  Clock.System.now(),
+                  carId,
+                  sessionState!!.getCarModel(carId),
+                  LapTimeMs.fromString(message.msg().data()),
+                  lapNumber,
+                  ValidLap(sessionState!!.isValidLap(carId, lapNumber)),
+                )
               )
+
+            // Back-fill the lap reference onto the telemetry frames captured during this lap; they
+            // were recorded with a null lapUid before the Lap row existed.
+            appModule.car.linkLapTelemetryUseCase.linkCompletedLap(
+              sessionUid = session!!.uid,
+              carIndex = carId,
+              lapNumber = lapNumber.value,
+              lapId = createdLap.id,
+              lapUid = createdLap.uid,
             )
 
             logger.info("Lap completed ${JsonFormatter.toJsonString(message as Any)}")

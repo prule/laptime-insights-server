@@ -161,23 +161,32 @@ The Compare screen overlays telemetry from two laps so you can see exactly where
 
 ### Picking laps
 
-Two **lap pickers** sit at the top of the page. Each picker is a button that opens a searchable modal:
+You only ever compare laps **on the same track**, so the track is the shared axis at the top of the page — pick it once and both laps come from it. On a fresh visit the screen seeds itself from your **latest session**: that session's track becomes the axis and your fastest lap there becomes the **anchor** (your reference lap). If you set no laps of your own in that session, the anchor falls back to the session's best lap, so the screen always lands on something.
 
-- Filter the modal list by track, car, PB-only, and valid-only.
-- Paginate through results.
-- Click a row to select that lap.
+The two slots are an **anchor** and a **challenger**:
 
-When you jump to Compare from a Session Detail row (via **vs best** or **vs PB**) both pickers are already filled in — you don't need to pick manually. The optional `track` hint from the source session pre-filters the pickers if you decide to swap one of the laps.
+- **Anchor** — your reference lap, shown top-left and marked *auto* when it's the seeded default. Click it to change it to any other lap on the track.
+- **Challenger** — picked from a **ranked leaderboard** of laps on the track, fastest first. Each row shows its rank (`#`), lap time, a dot marking whether the lap is yours, and which session it came from. Click a row to compare it against the anchor.
 
-The comparison is fully shareable: the URL contains `lap1`, `lap2`, and optionally `track`, so copying the address bar gives a link that restores the identical comparison.
+The leaderboard has three toggles:
+
+- **This session / All sessions** — stay within the seeding session, or open up to every session at the track.
+- **Me / Field** — only your laps, or everyone's.
+- **Same car** (on by default) — restrict to the same car as the anchor, so the gap is driver skill rather than machinery. Turn it off to see all cars.
+
+So "my fastest vs this session's fastest" and "my fastest vs my 2nd fastest at this track" are just different toggle states. Changing the track clears the anchor and challenger and re-seeds the default, since they can't carry over to a different circuit.
+
+When you jump to Compare from a Session Detail row (via **vs best** or **vs PB**) the anchor and challenger are already filled in — no picking needed.
+
+The comparison is fully shareable: the URL contains `track`, `anchor`, and `challenger`, so copying the address bar gives a link that restores the identical comparison. (Older links using `lap1`/`lap2` still work.)
 
 ### Telemetry charts
 
 Once two laps are selected the following charts and panels render:
 
-- **Speed (KPH)** — both laps' speed traces overlaid, plotted against track position (0 = start/finish, 1 = end of lap). Lap 1 is cyan, Lap 2 is red.
+- **Speed (KPH)** — both laps' speed traces overlaid, plotted against track position (0 = start/finish, 1 = end of lap). The anchor is cyan, the challenger is red.
 - **Track map** — a 2-D outline of the track derived from the cars' world coordinates. As you hover over any chart, a coloured dot per lap moves along the track outline to show exactly where on the circuit that point corresponds to. You can also hover directly over the track map to drive the charts.
-- **Speed delta** — Lap 1 minus Lap 2 at every 1% of track length. Above zero means Lap 1 was faster at that point; below zero means Lap 2 was faster. Use this to find the specific corners or straights where you are losing time.
+- **Speed delta** — anchor minus challenger at every 1% of track length. Above zero means the anchor was faster at that point; below zero means the challenger was faster. Use this to find the specific corners or straights where you are losing time.
 - **Gear mismatch** — a strip that highlights (in red) every sector of the track where the two laps used a different gear. A mismatch is not always bad — it may indicate an opportunity to shift strategy.
 
 All panels are linked: hovering over any chart draws a vertical crosshair across every other chart at the same track position simultaneously, and moves the dots on the track map. This makes it easy to correlate a speed loss in the delta chart with the gear used and the exact corner on the map.

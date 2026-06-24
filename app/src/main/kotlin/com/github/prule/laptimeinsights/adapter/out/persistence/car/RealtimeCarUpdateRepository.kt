@@ -1,14 +1,20 @@
 package com.github.prule.laptimeinsights.adapter.out.persistence.car
 
+import com.github.prule.laptimeinsights.application.domain.model.CarId
+import com.github.prule.laptimeinsights.application.domain.model.LapId
 import com.github.prule.laptimeinsights.application.domain.model.RealtimeCarUpdate
 import com.github.prule.laptimeinsights.application.domain.model.TelemetrySample
 import com.github.prule.laptimeinsights.application.domain.model.Uid
 import org.jetbrains.exposed.v1.core.SortOrder
+import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.core.isNull
+import org.jetbrains.exposed.v1.core.less
 import org.jetbrains.exposed.v1.core.statements.UpdateBuilder
 import org.jetbrains.exposed.v1.jdbc.batchInsert
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.selectAll
+import org.jetbrains.exposed.v1.jdbc.update
 
 /**
  * Persistence for REALTIME_CAR_UPDATE.
@@ -30,6 +36,30 @@ class RealtimeCarUpdateRepository {
     if (updates.isEmpty()) return
     RealtimeCarUpdateTable.batchInsert(updates) { update -> applyFrom(update) }
   }
+
+  /**
+   * Back-fill the lap reference onto the still-unlinked frames captured during [lapNumber] for
+   * [carIndex] in [sessionUid]. Matches frames with a null `lap_uid` whose `laps` counter is below
+   * [lapNumber] — i.e. the in-progress frames of the just-completed lap (and any earlier frames that
+   * were never linked) — without touching the next lap's frames (which already report `laps`
+   * == [lapNumber]). Returns the number of frames linked.
+   */
+  fun linkFramesToLap(
+    sessionUid: Uid,
+    carIndex: CarId,
+    lapNumber: Int,
+    lapId: LapId,
+    lapUid: Uid,
+  ): Int =
+    RealtimeCarUpdateTable.update({
+      (RealtimeCarUpdateTable.sessionUid eq sessionUid.value) and
+        (RealtimeCarUpdateTable.carIndex eq carIndex.value) and
+        RealtimeCarUpdateTable.lapUid.isNull() and
+        (RealtimeCarUpdateTable.laps less lapNumber)
+    }) {
+      it[RealtimeCarUpdateTable.lapId] = lapId.value
+      it[RealtimeCarUpdateTable.lapUid] = lapUid.value
+    }
 
   fun findByLapUid(lapUid: Uid): List<TelemetrySample> =
     RealtimeCarUpdateTable.selectAll()

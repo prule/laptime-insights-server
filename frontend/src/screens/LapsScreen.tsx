@@ -92,11 +92,12 @@ export function LapsScreen() {
 
   const compareSelected = () => {
     if (selected.length !== 2) return;
-    const [lap1, lap2] = selected as [string, string];
-    // Track is preserved in URL only when the user picked one — otherwise
-    // /compare infers it from the chosen laps.
-    const trackParam = facets.track ? `&track=${encodeURIComponent(facets.track)}` : "";
-    navigate(`/compare?lap1=${lap1}&lap2=${lap2}${trackParam}`);
+    const [anchor, challenger] = selected as [string, string];
+    // Compare needs the shared track axis. Prefer the active facet; otherwise
+    // derive it from the anchor lap so the leaderboard lands on the right track.
+    const track = facets.track ?? items.find((l) => l.uid === anchor)?.track ?? undefined;
+    const trackParam = track ? `&track=${encodeURIComponent(track)}` : "";
+    navigate(`/compare?anchor=${anchor}&challenger=${challenger}${trackParam}`);
   };
 
   return (
