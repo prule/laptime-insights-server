@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { useLap, useLapComparison, useSessionOptions } from "../api/queries";
 import { Card } from "../components/ui/Card";
 import { ErrorState, LoadingState, EmptyState } from "../components/ui/States";
-import { GearMismatchStrip } from "../components/ui/GearMismatchStrip";
+import { GearTrace } from "../components/ui/GearTrace";
 import { AnchorControl } from "../components/AnchorControl";
 import { LapLeaderboard } from "../components/LapLeaderboard";
 import { FilterSelect } from "../components/ui/FilterSelect";
@@ -216,10 +216,9 @@ export function CompareScreen() {
           </Card>
 
           <Card className="mb-4">
-            <SectionHeader title="Gear mismatch" sub="Red strips mark sectors where the two laps used different gears" />
-            <GearMismatchStrip
-              lap1={comparisonQuery.data.lap1.samples}
-              lap2={comparisonQuery.data.lap2.samples}
+            <SectionHeader title="Gear" sub="Both laps' gear against track position; red shading marks where they differ" />
+            <GearTrace
+              series={series}
               hoveredPosition={hoveredPosition}
               onHover={setHoveredPosition}
             />

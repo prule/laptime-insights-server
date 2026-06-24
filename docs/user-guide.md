@@ -187,7 +187,7 @@ Once two laps are selected the following charts and panels render:
 - **Speed (KPH)** — both laps' speed traces overlaid, plotted against track position (0 = start/finish, 1 = end of lap). The anchor is cyan, the challenger is red.
 - **Track map** — a 2-D outline of the track derived from the cars' world coordinates. As you hover over any chart, a coloured dot per lap moves along the track outline to show exactly where on the circuit that point corresponds to. You can also hover directly over the track map to drive the charts.
 - **Speed delta** — anchor minus challenger at every 1% of track length. Above zero means the anchor was faster at that point; below zero means the challenger was faster. Use this to find the specific corners or straights where you are losing time.
-- **Gear mismatch** — a strip that highlights (in red) every sector of the track where the two laps used a different gear. A mismatch is not always bad — it may indicate an opportunity to shift strategy.
+- **Gear** — both laps' gear plotted against track position as a stepped line (anchor cyan, challenger red), so you can read exactly what gear each car is in at every point. Track positions where the two laps are in different gears are shaded red behind the traces. A mismatch is not always bad — it may indicate an opportunity to shift strategy.
 
 All panels are linked: hovering over any chart draws a vertical crosshair across every other chart at the same track position simultaneously, and moves the dots on the track map. This makes it easy to correlate a speed loss in the delta chart with the gear used and the exact corner on the map.
 

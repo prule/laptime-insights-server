@@ -26,7 +26,7 @@ frontend/src/
   components/
     layout/           # AppShell, Sidebar, Topbar, TimeRangeSelector
     ui/               # Card, Badge, Delta, StatCard, BarChart, Sparkline,
-                      # TelemetryTrace, SpeedDeltaTrace, GearMismatchStrip, TrackMap,
+                      # TelemetryTrace, SpeedDeltaTrace, GearTrace, TrackMap,
                       # FilterSelect, Modal, SectionHeader, States, TrackPracticeChart
     LapLeaderboard.tsx # ranked same-track lap list (challenger picker + anchor-change modal)
     AnchorControl.tsx  # anchor lap display + change-modal (Compare screen)
@@ -104,7 +104,7 @@ Calls `useLapComparison(anchorUid, challengerUid)` which hits `GET /api/1/laps/c
 Charts and panels:
 - `TelemetryTrace` — generic multi-series SVG trace; `series` prop is `{ samples, color, label }[]`. Renders speed overlaid for both laps. Accepts `hoveredPosition` / `onHover` for the synchronized crosshair; shows a tooltip with per-lap values at the cursor position.
 - `SpeedDeltaTrace` — resamples both lap sample arrays to 100 equidistant buckets by `splinePosition`, then plots Lap 1 KPH minus Lap 2 KPH per bucket. Supports crosshair; tooltip shows signed delta at cursor.
-- `GearMismatchStrip` — same 100-bucket resampling; renders a coloured strip where buckets with differing gear values are highlighted. Supports crosshair.
+- `GearTrace` — both laps' gear as overlaid **stepped** lines (discrete integers) over an integer Y axis, plotted against track position. Track positions where the gears differ (100-bucket resample) are shaded behind the traces, preserving the old mismatch insight. Supports the shared crosshair.
 - `TrackMap` — renders the track outline as an SVG polyline from `worldPosX`/`worldPosY` coordinates normalised into a square viewBox. A coloured dot per lap moves to the nearest sample when `hoveredPosition` changes. Hovering the map emits the nearest sample's `splinePosition` so all charts follow. Start/finish line is marked with a white rectangle.
 
 ## Providers

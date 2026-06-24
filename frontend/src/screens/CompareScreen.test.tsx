@@ -103,7 +103,7 @@ vi.mock("../api/queries", () => ({
 vi.mock("../components/ui/TelemetryTrace", () => ({ TelemetryTrace: () => <div data-testid="telemetry" /> }));
 vi.mock("../components/ui/TrackMap", () => ({ TrackMap: () => <div data-testid="trackmap" /> }));
 vi.mock("../components/ui/SpeedDeltaTrace", () => ({ SpeedDeltaTrace: () => <div data-testid="delta" /> }));
-vi.mock("../components/ui/GearMismatchStrip", () => ({ GearMismatchStrip: () => <div data-testid="gear" /> }));
+vi.mock("../components/ui/GearTrace", () => ({ GearTrace: () => <div data-testid="gear" /> }));
 
 function LocationProbe() {
   const loc = useLocation();
