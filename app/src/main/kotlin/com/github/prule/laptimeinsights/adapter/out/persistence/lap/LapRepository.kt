@@ -4,10 +4,13 @@ import com.github.prule.laptimeinsights.adapter.out.persistence.TimeBucketUnit
 import com.github.prule.laptimeinsights.adapter.out.persistence.dateTrunc
 import com.github.prule.laptimeinsights.adapter.out.persistence.formatTimeBucketKey
 import com.github.prule.laptimeinsights.adapter.out.persistence.session.SessionTable
+import com.github.prule.laptimeinsights.application.domain.model.Car
+import com.github.prule.laptimeinsights.application.domain.model.CarId
 import com.github.prule.laptimeinsights.application.domain.model.Lap
 import com.github.prule.laptimeinsights.application.domain.model.LapAggregateBucket
 import com.github.prule.laptimeinsights.application.domain.model.LapAggregateGroupBy
 import com.github.prule.laptimeinsights.application.domain.model.LapSearchCriteria
+import com.github.prule.laptimeinsights.application.domain.model.Uid
 import com.github.prule.laptimeinsights.tracker.utils.NotFoundException
 import com.github.prule.laptimeinsights.tracker.utils.data.FindByCriteriaRepository
 import com.github.prule.laptimeinsights.tracker.utils.data.FindByIdRepository
@@ -21,17 +24,20 @@ import org.jetbrains.exposed.v1.core.JoinType
 import org.jetbrains.exposed.v1.core.RowNumber
 import org.jetbrains.exposed.v1.core.SortOrder
 import org.jetbrains.exposed.v1.core.alias
+import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.count
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.greaterEq
 import org.jetbrains.exposed.v1.core.inSubQuery
 import org.jetbrains.exposed.v1.core.isNotNull
+import org.jetbrains.exposed.v1.core.isNull
 import org.jetbrains.exposed.v1.core.less
 import org.jetbrains.exposed.v1.core.longLiteral
 import org.jetbrains.exposed.v1.jdbc.Query
 import org.jetbrains.exposed.v1.jdbc.andWhere
 import org.jetbrains.exposed.v1.jdbc.select
 import org.jetbrains.exposed.v1.jdbc.selectAll
+import org.jetbrains.exposed.v1.jdbc.update
 
 class LapRepository(private val mapper: LapMapper) :
   FindByIdRepository<LapEntity, Long>,
@@ -61,6 +67,20 @@ class LapRepository(private val mapper: LapMapper) :
     return LapEntity.findByIdAndUpdate(lap.id.value) { mapper.toEntity(lap, it) }
       ?: throw NotFoundException("Lap not found")
   }
+
+  /**
+   * Back-fill the car model onto laps recorded before the car was known: sets [LapTable.car] for
+   * every lap of [sessionUid] + [carIndex] whose `car` is currently null. Only null rows are touched,
+   * so it is idempotent and never overwrites an already-attributed lap. Returns the row count.
+   */
+  fun fillMissingCar(sessionUid: Uid, carIndex: CarId, car: Car): Int =
+    LapTable.update({
+      (LapTable.sessionUid eq sessionUid.value) and
+        (LapTable.carId eq carIndex.value) and
+        LapTable.car.isNull()
+    }) {
+      it[LapTable.car] = car.value
+    }
 
   private fun resolvedQuery(criteria: LapSearchCriteria): Query =
     if (criteria.allTimeBest?.value == true) bestPerTrackQuery(criteria) else criteria.toQuery()

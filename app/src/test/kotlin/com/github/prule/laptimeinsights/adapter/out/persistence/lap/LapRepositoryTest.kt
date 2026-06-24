@@ -338,6 +338,45 @@ class LapRepositoryTest : RepositoryTest(listOf(LapTable, SessionTable)) {
       sessionType = SessionType("Race"),
     )
 
+  @Test
+  fun `fillMissingCar back-fills only car-less laps for the matching session and car`() {
+    val sessionA = Uid("sess-A")
+    val sessionB = Uid("sess-B")
+    fun lap(uid: String, sessionUid: Uid, carId: Int, car: Car?) =
+      Lap(
+        id = LapId(0L),
+        uid = Uid(uid),
+        recordedAt = Clock.System.now(),
+        carId = CarId(carId),
+        lapTime = LapTimeMs(90_000L),
+        lapNumber = LapNumber(1),
+        valid = ValidLap(true),
+        personalBest = PersonalBest(false),
+        sessionId = SessionId(1L),
+        sessionUId = sessionUid,
+        car = car,
+        track = Track("t"),
+        playerLap = true,
+      )
+
+    transaction {
+      repository.create(lap("a", sessionA, 5, null)) // target
+      repository.create(lap("b", sessionA, 5, null)) // target
+      repository.create(lap("c", sessionA, 5, Car("Existing"))) // already set — untouched
+      repository.create(lap("d", sessionA, 7, null)) // other car — untouched
+      repository.create(lap("e", sessionB, 5, null)) // other session — untouched
+
+      // Only the two car-less laps for sessionA + car 5 are filled (not c which already had a car).
+      assertThat(repository.fillMissingCar(sessionA, CarId(5), Car("Ferrari 296 GT3"))).isEqualTo(2)
+      // Idempotent: a second run finds no remaining car-less laps to fill.
+      assertThat(repository.fillMissingCar(sessionA, CarId(5), Car("Ferrari 296 GT3"))).isZero()
+
+      // The other-car (d) and other-session (e) laps were left car-less, so each is still fillable.
+      assertThat(repository.fillMissingCar(sessionA, CarId(7), Car("Other"))).isEqualTo(1)
+      assertThat(repository.fillMissingCar(sessionB, CarId(5), Car("Other"))).isEqualTo(1)
+    }
+  }
+
   private fun createTestLap(
     sessionId: SessionId = SessionId(1L),
     sessionUid: Uid = Uid(),
