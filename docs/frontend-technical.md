@@ -28,13 +28,14 @@ frontend/src/
     ui/               # Card, Badge, Delta, StatCard, BarChart, Sparkline,
                       # TelemetryTrace, SpeedDeltaTrace, GearMismatchStrip, TrackMap,
                       # FilterSelect, Modal, SectionHeader, States, TrackPracticeChart
-    LapBrowser.tsx    # reusable filtered+paginated lap list (used by LapPicker modal)
-    LapPicker.tsx     # button + Modal wrapping LapBrowser for lap selection
+    LapLeaderboard.tsx # ranked same-track lap list (challenger picker + anchor-change modal)
+    AnchorControl.tsx  # anchor lap display + change-modal (Compare screen)
     SessionRow.tsx    # single session row (Overview + Sessions screens)
   config/
     features.tsx      # FEATURE_CONFIG registry: rel ↔ nav ↔ routes for every feature
   hooks/
     useUrlState.ts    # URL querystring read/write helpers
+    useCompareSeed.ts # latest-session seed + default anchor for the Compare screen
   lib/
     format.ts         # formatLapTime / formatDate / formatDrivingTime / formatNumber
   providers/
@@ -77,7 +78,7 @@ Loads:
 - `useSessionBestLap(uid)` — `GET /api/1/laps?sessionUid=…&validLap=true&sort=lapTime:ASC&size=1`.
 - `useTrackBestLap(track)` — `GET /api/1/laps?track=…&validLap=true&sort=lapTime:ASC&size=1`.
 
-The per-row compare buttons navigate to `/compare?track=…&lap1=…&lap2=…` so both pickers arrive pre-filled.
+The per-row compare buttons navigate to `/compare?track=…&anchor=…&challenger=…` (anchor = the row's lap) so the comparison arrives pre-filled. The "pick…" button omits `challenger` and lands on the leaderboard.
 
 ### LapsScreen (`/laps`)
 
@@ -85,13 +86,18 @@ URL params: `track`, `car`, `simulator`, `invalid` (bool, inverted to `validOnly
 
 Column headers are sortable via the `sortable: string[]` field returned by the backend on `Page<LapResource>` — `LapTable` only renders a clickable header for fields that appear in that list, so adding/removing sortable columns on the server doesn't need a frontend change. Clicking a header cycles ASC → DESC → cleared (reverting to the default). State is mirrored to the `sort` URL param.
 
-Multi-select mode is local component state — selection is transient, not URL-serialised. Selecting a second lap when two are already chosen drops the oldest pick so the most recent two win. Navigates to `/compare` with `lap1` and `lap2` set, plus `track` if a track filter is active.
+Multi-select mode is local component state — selection is transient, not URL-serialised. Selecting a second lap when two are already chosen drops the oldest pick so the most recent two win. Navigates to `/compare` with `anchor` and `challenger` set, plus `track` (the active facet, or derived from the anchor lap) so the Compare axis is always present.
 
 ### CompareScreen (`/compare`)
 
-URL params: `lap1`, `lap2`, `track` (optional hint pre-filling `LapPicker` modals).
+URL params: `track` (the shared comparison axis), `anchor`, `challenger` (lap uids). Old `lap1`/`lap2` links are still honored — they are read as `anchor`/`challenger`.
 
-Calls `useLapComparison(lap1Uid, lap2Uid)` which hits `GET /api/1/laps/compare?lap1Uid=…&lap2Uid=…`. The backend returns raw telemetry samples for both laps in one round trip.
+Track is the comparison axis: laps can only be compared within one track. On a fresh landing (`track`/`anchor` absent), `useCompareSeed(track)` seeds the screen from the latest session — `useSessions({ sort: "startedAt:DESC", size: 1 })` for the track + car, and the player's fastest valid lap in that session (via `useSessionLaps`, falling back to the session best, then `useTrackBestLap`) as the default anchor. An explicit `track`/`anchor` param always wins, so the seed never overrides shared links or the "vs best"/"vs PB" entry points.
+
+- **`AnchorControl`** renders the anchor and opens a `LapLeaderboard` modal to change it.
+- **`LapLeaderboard`** is the challenger picker: a ranked (`lapTime:ASC`) same-track list with toggles for scope (`This session` via `useSessionLaps`, client-filtered; `All sessions` via server-paginated `useLaps`), driver (`Me` → `playerLap=true`), and `Same car` (default ON → `car=<anchor car>`). Rank is the absolute position in the filtered list; the "me" dot and owning session come from `LapTable`. The anchor row is marked and disabled as a challenger pick.
+
+Calls `useLapComparison(anchorUid, challengerUid)` which hits `GET /api/1/laps/compare?lap1Uid=…&lap2Uid=…`. The backend returns raw telemetry samples for both laps in one round trip.
 
 `hoveredPosition: number | null` is lifted to `CompareScreen` and passed as props to every chart and the track map. Any chart that the user hovers emits `onHover(position)`, which sets the shared state and synchronizes all other panels.
 

@@ -1,79 +1,118 @@
 import { useMemo, useState } from "react";
-import { useLapComparison } from "../api/queries";
+import { useLap, useLapComparison, useSessionOptions } from "../api/queries";
 import { Card } from "../components/ui/Card";
 import { ErrorState, LoadingState, EmptyState } from "../components/ui/States";
 import { GearMismatchStrip } from "../components/ui/GearMismatchStrip";
-import { LapPicker } from "../components/LapPicker";
+import { AnchorControl } from "../components/AnchorControl";
+import { LapLeaderboard } from "../components/LapLeaderboard";
+import { FilterSelect } from "../components/ui/FilterSelect";
 import { SectionHeader } from "../components/ui/SectionHeader";
 import { SpeedDeltaTrace } from "../components/ui/SpeedDeltaTrace";
 import { TelemetryTrace } from "../components/ui/TelemetryTrace";
 import { TrackMap } from "../components/ui/TrackMap";
+import { useCompareSeed } from "../hooks/useCompareSeed";
 import { formatLapTime } from "../lib/format";
 import { getString, useUrlState } from "../hooks/useUrlState";
 
-const COLOR_LAP1 = "#00d4ff";
-const COLOR_LAP2 = "#e8212a";
+const COLOR_ANCHOR = "#00d4ff";
+const COLOR_CHALLENGER = "#e8212a";
 
 /**
  * Lap-comparison screen.
  *
- * URL state owns `track`, `lap1`, `lap2`. Reload-safe and shareable.
+ * Track is the comparison axis: chosen once and shared by both laps, so a
+ * comparison can never mix tracks. URL state owns `track`, `anchor`, `challenger`
+ * (reload-safe + shareable). For backward compatibility with old links, `lap1`/
+ * `lap2` are read as `anchor`/`challenger`.
  *
- * Each lap slot is a `LapPicker` — a button that pops a modal with the same
- * track/car/PB filters and pagination as the Laps screen. The optional
- * `track` URL param pre-fills the picker's track filter so jumps from
- * SessionDetail's "vs best" / "vs PB" buttons land on the right context.
+ * On a fresh landing (no `track`/`anchor`) the screen seeds itself from the
+ * latest session via `useCompareSeed`: that session's track becomes the axis and
+ * its default lap (the player's fastest, else the session best) becomes the
+ * anchor — so the screen is useful with zero clicks. The anchor is the reference
+ * point; the challenger is swept from a ranked same-track leaderboard.
  *
- * hoveredPosition (0–1 splinePosition) is lifted here so all panels —
- * TelemetryTrace, SpeedDeltaTrace, GearMismatchStrip, and TrackMap — stay
+ * hoveredPosition (0–1 splinePosition) is lifted here so all panels stay
  * synchronized as the user hovers over any one of them.
  */
 export function CompareScreen() {
   const [params, setParam, setMany] = useUrlState();
 
-  const track = getString(params, "track");
-  const lap1Uid = getString(params, "lap1");
-  const lap2Uid = getString(params, "lap2");
+  const trackParam = getString(params, "track");
+  // Back-compat: honor old `lap1`/`lap2` links as anchor/challenger.
+  const anchorParam = getString(params, "anchor") ?? getString(params, "lap1");
+  const challengerParam = getString(params, "challenger") ?? getString(params, "lap2");
 
-  const comparisonQuery = useLapComparison(lap1Uid, lap2Uid);
+  const optionsQuery = useSessionOptions();
+  const seed = useCompareSeed(trackParam);
+
+  // Effective axis/anchor: explicit param wins, else the latest-session seed.
+  const track = trackParam ?? seed.seedTrack;
+  const anchorUid = anchorParam ?? seed.defaultAnchor?.uid;
+  const isDefaultAnchor = !anchorParam && !!seed.defaultAnchor;
+
+  const anchorLapQuery = useLap(anchorUid);
+  const anchorLap = anchorLapQuery.data;
+  const seedCar = anchorLap?.car ?? seed.seedCar;
+  // Only default the leaderboard to "Me" when the player is actually identifiable; otherwise the
+  // "Me" filter (playerLap=true) yields an empty list against data where playerLap is null.
+  const defaultDriver = anchorLap?.playerLap === true ? "me" : "field";
+
+  const comparisonQuery = useLapComparison(anchorUid, challengerParam);
 
   const [hoveredPosition, setHoveredPosition] = useState<number | null>(null);
 
   const series = useMemo(() => {
     if (!comparisonQuery.data) return [];
     return [
-      { samples: comparisonQuery.data.lap1.samples, color: COLOR_LAP1, label: "Lap 1" },
-      { samples: comparisonQuery.data.lap2.samples, color: COLOR_LAP2, label: "Lap 2" },
+      { samples: comparisonQuery.data.lap1.samples, color: COLOR_ANCHOR, label: "Anchor" },
+      { samples: comparisonQuery.data.lap2.samples, color: COLOR_CHALLENGER, label: "Challenger" },
     ];
   }, [comparisonQuery.data]);
+
+  // Changing the track is a hard reset of incompatible selections (same-track axis).
+  const onTrackChange = (next: string | undefined) => {
+    setMany({ track: next, anchor: undefined, challenger: undefined, lap1: undefined, lap2: undefined });
+  };
+
+  const onPickAnchor = (lap: { uid: string }) => setParam("anchor", lap.uid);
+  const onPickChallenger = (lap: { uid: string }) => setParam("challenger", lap.uid);
+
+  const ready = !!track && !!anchorUid && !!challengerParam;
 
   return (
     <div className="h-full overflow-y-auto px-8 py-7">
       <Card className="mb-4">
         <SectionHeader
           title="Pick laps to compare"
-          sub="Both pickers open a searchable list — filter by track/car, paginate, click to pick. URL stays in sync so the comparison is shareable."
+          sub="Track is the shared axis. The anchor seeds from your latest session; sweep the ranked leaderboard for a challenger. URL stays in sync so the comparison is shareable."
         />
         <div className="flex flex-wrap items-end gap-3">
-          <LapPicker
-            label="Lap 1"
-            accentColor={COLOR_LAP1}
-            defaultTrack={track}
-            selectedUid={lap1Uid}
-            disabledLapUid={lap2Uid}
-            onSelect={(v) => setParam("lap1", v)}
+          <FilterSelect
+            label="Track"
+            value={track}
+            options={optionsQuery.data?.tracks ?? []}
+            onChange={onTrackChange}
           />
-          <LapPicker
-            label="Lap 2"
-            accentColor={COLOR_LAP2}
-            defaultTrack={track}
-            selectedUid={lap2Uid}
-            disabledLapUid={lap1Uid}
-            onSelect={(v) => setParam("lap2", v)}
+          <AnchorControl
+            track={track}
+            anchorLap={anchorLap}
+            seedCar={seedCar}
+            scopeSession={seed.latestSession}
+            isDefault={isDefaultAnchor}
+            accentColor={COLOR_ANCHOR}
+            onChange={onPickAnchor}
           />
-          {(lap1Uid || lap2Uid || track) && (
+          {(trackParam || anchorParam || challengerParam) && (
             <button
-              onClick={() => setMany({ track: undefined, lap1: undefined, lap2: undefined })}
+              onClick={() =>
+                setMany({
+                  track: undefined,
+                  anchor: undefined,
+                  challenger: undefined,
+                  lap1: undefined,
+                  lap2: undefined,
+                })
+              }
               className="self-end rounded border border-border px-3 py-2 font-mono text-[11px] uppercase tracking-[0.08em] text-text-muted hover:text-text"
             >
               Reset
@@ -82,14 +121,38 @@ export function CompareScreen() {
         </div>
       </Card>
 
-      {!lap1Uid || !lap2Uid ? (
+      {!track ? (
         <Card>
           <EmptyState
-            title="Pick two laps"
-            description="Use the pickers above. Tip: from a session detail page, the per-row 'vs best' or 'vs PB' buttons land here with both laps preselected."
+            title="No track selected"
+            description="Pick a track above — or record a session and we'll seed this from your latest one."
           />
         </Card>
-      ) : comparisonQuery.isLoading ? (
+      ) : (
+        <Card className="mb-4">
+          <SectionHeader
+            title="Challenger"
+            sub="Ranked fastest-first at this track. Toggle scope, driver, and same-car; click a row to compare it against the anchor."
+          />
+          {anchorUid && anchorLapQuery.isLoading ? (
+            <LoadingState />
+          ) : (
+            // Mount only once the anchor has resolved: the leaderboard's initial driver toggle is
+            // derived from the anchor's `playerLap`, and the inner component reads it only at mount.
+            <LapLeaderboard
+              track={track}
+              seedCar={seedCar}
+              scopeSession={seed.latestSession}
+              defaultDriver={defaultDriver}
+              anchorLapUid={anchorUid}
+              selectedLapUid={challengerParam}
+              onPick={onPickChallenger}
+            />
+          )}
+        </Card>
+      )}
+
+      {!ready ? null : comparisonQuery.isLoading ? (
         <Card>
           <LoadingState />
         </Card>
@@ -102,15 +165,15 @@ export function CompareScreen() {
           <Card className="mb-4">
             <div className="grid grid-cols-2 gap-6">
               <LapHeader
-                color={COLOR_LAP1}
-                label="Lap 1"
+                color={COLOR_ANCHOR}
+                label="Anchor"
                 lapNumber={comparisonQuery.data.lap1.lapNumber}
                 lapTimeMs={comparisonQuery.data.lap1.lapTimeMs}
                 personalBest={comparisonQuery.data.lap1.personalBest}
               />
               <LapHeader
-                color={COLOR_LAP2}
-                label="Lap 2"
+                color={COLOR_CHALLENGER}
+                label="Challenger"
                 lapNumber={comparisonQuery.data.lap2.lapNumber}
                 lapTimeMs={comparisonQuery.data.lap2.lapTimeMs}
                 personalBest={comparisonQuery.data.lap2.personalBest}
@@ -143,7 +206,7 @@ export function CompareScreen() {
           </div>
 
           <Card className="mb-4">
-            <SectionHeader title="Speed delta" sub="Lap 1 minus Lap 2 at every 1% of track length" />
+            <SectionHeader title="Speed delta" sub="Anchor minus challenger at every 1% of track length" />
             <SpeedDeltaTrace
               lap1={comparisonQuery.data.lap1.samples}
               lap2={comparisonQuery.data.lap2.samples}
@@ -161,7 +224,6 @@ export function CompareScreen() {
               onHover={setHoveredPosition}
             />
           </Card>
-
         </>
       ) : null}
     </div>
