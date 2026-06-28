@@ -8,7 +8,7 @@ built to static files and deployed to **Cloudflare Pages**. Fully isolated from
 
 - Plain `index.html` (no framework, no SPA)
 - Tailwind CSS v4 via `@tailwindcss/cli`
-- Node 24 + pnpm (matches repo convention; `.nvmrc` pins `24.17.0`, and
+- Node 24 + pnpm (matches repo convention; `.node-version` pins `24.17.0`, and
   `package.json` declares `engines.node >= 24` and runs a `preinstall` guard, so
   `pnpm install` fails fast on an older Node)
 
@@ -16,7 +16,7 @@ built to static files and deployed to **Cloudflare Pages**. Fully isolated from
 
 ```bash
 cd landing
-nvm use      # selects Node 24 from .nvmrc
+fnm use      # selects Node 24 from .node-version
 pnpm install
 pnpm dev        # Tailwind --watch: rebuilds dist/styles.css on change
 ```

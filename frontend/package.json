@@ -9,7 +9,7 @@
     "pnpm": ">=11"
   },
   "scripts": {
-    "preinstall": "node -e \"if(+process.versions.node.split('.')[0]<24){console.error('Node 24+ required (found '+process.version+'). Run: nvm use');process.exit(1)}\"",
+    "preinstall": "node -e \"if(+process.versions.node.split('.')[0]<24){console.error('Node 24+ required (found '+process.version+'). Run: fnm use');process.exit(1)}\"",
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
