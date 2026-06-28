@@ -11,7 +11,8 @@ import com.github.prule.laptimeinsights.application.port.out.car.LinkLapTelemetr
  * completes. Without this step the frames keep the null `lapUid` they were recorded with, and the
  * lap telemetry / comparison queries (which look up by `lapUid`) return nothing.
  */
-class LinkLapTelemetryService(private val linkPort: LinkLapTelemetryPort) : LinkLapTelemetryUseCase {
+class LinkLapTelemetryService(private val linkPort: LinkLapTelemetryPort) :
+  LinkLapTelemetryUseCase {
   override fun linkCompletedLap(
     sessionUid: Uid,
     carIndex: CarId,

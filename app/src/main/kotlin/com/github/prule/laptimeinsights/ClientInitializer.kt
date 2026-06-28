@@ -269,7 +269,8 @@ class ClientInitializer(private val appModule: AppModule) {
 
         // Back-fill any laps that completed for this car before its model was known.
         session?.let {
-          val filled = appModule.lap.recordCarOnLapsUseCase.fillMissingCar(it.uid, carId, resolvedCar)
+          val filled =
+            appModule.lap.recordCarOnLapsUseCase.fillMissingCar(it.uid, carId, resolvedCar)
           if (filled > 0) logger.info("Back-filled car on $filled lap(s): carId=${message.carId()}")
         }
 

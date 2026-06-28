@@ -70,8 +70,9 @@ class LapRepository(private val mapper: LapMapper) :
 
   /**
    * Back-fill the car model onto laps recorded before the car was known: sets [LapTable.car] for
-   * every lap of [sessionUid] + [carIndex] whose `car` is currently null. Only null rows are touched,
-   * so it is idempotent and never overwrites an already-attributed lap. Returns the row count.
+   * every lap of [sessionUid] + [carIndex] whose `car` is currently null. Only null rows are
+   * touched, so it is idempotent and never overwrites an already-attributed lap. Returns the row
+   * count.
    */
   fun fillMissingCar(sessionUid: Uid, carIndex: CarId, car: Car): Int =
     LapTable.update({

@@ -9,11 +9,5 @@ import com.github.prule.laptimeinsights.application.domain.model.Uid
  * that lap to the freshly created Lap row.
  */
 interface LinkLapTelemetryUseCase {
-  fun linkCompletedLap(
-    sessionUid: Uid,
-    carIndex: CarId,
-    lapNumber: Int,
-    lapId: LapId,
-    lapUid: Uid,
-  )
+  fun linkCompletedLap(sessionUid: Uid, carIndex: CarId, lapNumber: Int, lapId: LapId, lapUid: Uid)
 }
