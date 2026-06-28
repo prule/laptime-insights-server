@@ -40,8 +40,8 @@ class RealtimeCarUpdateRepository {
   /**
    * Back-fill the lap reference onto the still-unlinked frames captured during [lapNumber] for
    * [carIndex] in [sessionUid]. Matches frames with a null `lap_uid` whose `laps` counter is below
-   * [lapNumber] — i.e. the in-progress frames of the just-completed lap (and any earlier frames that
-   * were never linked) — without touching the next lap's frames (which already report `laps`
+   * [lapNumber] — i.e. the in-progress frames of the just-completed lap (and any earlier frames
+   * that were never linked) — without touching the next lap's frames (which already report `laps`
    * == [lapNumber]). Returns the number of frames linked.
    */
   fun linkFramesToLap(

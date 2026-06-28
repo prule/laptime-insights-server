@@ -58,13 +58,13 @@ also exposes `fetchLink(ctx, links, rel)` for following arbitrary relations.
 
 ## Running
 
-Requires **Node 24** (`.nvmrc` → `24.17.0`) and **pnpm**. `engines` + a `preinstall`
-guard make `pnpm install` fail fast on an older Node — run `nvm use` first.
+Requires **Node 24** (`.node-version` → `24.17.0`) and **pnpm**. `engines` + a `preinstall`
+guard make `pnpm install` fail fast on an older Node — run `fnm use` first.
 
 ```bash
 # Mock-only — no backend required.
 cd frontend
-nvm use                   # selects Node 24 from .nvmrc
+fnm use                   # selects Node 24 from .node-version
 pnpm install
 pnpm dev                  # http://localhost:5173
 

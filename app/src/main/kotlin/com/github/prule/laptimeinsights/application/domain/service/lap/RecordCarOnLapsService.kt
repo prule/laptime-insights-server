@@ -7,8 +7,8 @@ import com.github.prule.laptimeinsights.application.port.`in`.lap.RecordCarOnLap
 import com.github.prule.laptimeinsights.application.port.out.lap.RecordCarOnLapsPort
 
 /**
- * Attributes a resolved car model to laps that were recorded before the car was known, so a lap that
- * completed ahead of its `EntryListCar` no longer keeps a null car.
+ * Attributes a resolved car model to laps that were recorded before the car was known, so a lap
+ * that completed ahead of its `EntryListCar` no longer keeps a null car.
  */
 class RecordCarOnLapsService(private val port: RecordCarOnLapsPort) : RecordCarOnLapsUseCase {
   override fun fillMissingCar(sessionUid: Uid, carIndex: CarId, car: Car): Int =

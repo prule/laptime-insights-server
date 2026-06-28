@@ -16,9 +16,9 @@ import com.github.prule.laptimeinsights.application.domain.service.car.RecordRea
 import com.github.prule.laptimeinsights.application.domain.service.lap.AggregateLapsService
 import com.github.prule.laptimeinsights.application.domain.service.lap.CompareLapsService
 import com.github.prule.laptimeinsights.application.domain.service.lap.CreateLapService
-import com.github.prule.laptimeinsights.application.domain.service.lap.RecordCarOnLapsService
 import com.github.prule.laptimeinsights.application.domain.service.lap.FindLapService
 import com.github.prule.laptimeinsights.application.domain.service.lap.FindLapTelemetryService
+import com.github.prule.laptimeinsights.application.domain.service.lap.RecordCarOnLapsService
 import com.github.prule.laptimeinsights.application.domain.service.lap.SearchLapService
 import com.github.prule.laptimeinsights.application.domain.service.session.AggregateSessionsService
 import com.github.prule.laptimeinsights.application.domain.service.session.CreateSessionService
