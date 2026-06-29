@@ -66,3 +66,17 @@ Contains implementation details for connecting the application to external syste
 - **Unit Tests**: Focus on Domain Models and Application Services, mocking the Ports.
 - **Integration Tests**: Focus on Adapters (e.g., testing database queries or API endpoints).
 - **Library**: JUnit 5 with AssertJ is the preferred testing stack.
+
+## Code formatting
+
+Backend Kotlin is formatted with **ktfmt** (Google style), configured in
+`app/build.gradle.kts`. CI fails the build on any unformatted file
+(`:app:ktfmtCheckMain`).
+
+- Format manually: `./gradlew :app:ktfmtFormat`
+- **Commits auto-format.** A tracked pre-commit hook (`.githooks/pre-commit`)
+  runs `ktfmtFormat` and re-stages the Kotlin files you staged, so unformatted
+  code never reaches CI. The hook activates automatically — `./gradlew build`
+  points git at `.githooks` (via the `installGitHooks` task), so a fresh clone
+  needs no manual setup.
+- Bypass the hook for a single commit with `git commit --no-verify`.

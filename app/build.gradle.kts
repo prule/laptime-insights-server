@@ -83,3 +83,16 @@ tasks.register("copyFrontend", Copy::class) {
 // tasks.getByName("processResources") {
 //  dependsOn("copyFrontend")
 // }
+
+// Activate the tracked pre-commit hook (ktfmt auto-format) without manual per-clone
+// setup by pointing git at the .githooks directory. Disabled outside a git checkout
+// (e.g. a CI source tarball), where .git is absent. The git check is evaluated at
+// configuration time (no execution-time closure) to stay configuration-cache safe.
+val installGitHooks =
+  tasks.register("installGitHooks", Exec::class) {
+    enabled = rootProject.file(".git").exists()
+    workingDir = rootProject.projectDir
+    commandLine("git", "config", "core.hooksPath", ".githooks")
+  }
+
+tasks.named("build") { dependsOn(installGitHooks) }

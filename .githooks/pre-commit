@@ -1,5 +1,23 @@
 #!/bin/sh
-# Run ktfmt on changed files before committing
-./gradlew ktfmtFormat
-git add .
+# Auto-format staged Kotlin with ktfmt before committing.
+# Activated by the Gradle build (sets core.hooksPath to .githooks).
+# Bypass with: git commit --no-verify
 
+# Files staged for this commit (added/copied/modified), Kotlin only.
+staged_kt=$(git diff --cached --name-only --diff-filter=ACM -- '*.kt' '*.kts')
+
+# No staged Kotlin — nothing to format, let the commit proceed.
+[ -z "$staged_kt" ] && exit 0
+
+# Format. Abort the commit if formatting cannot complete.
+if ! ./gradlew --quiet ktfmtFormat; then
+  echo "pre-commit: ktfmtFormat failed; commit aborted (use --no-verify to bypass)." >&2
+  exit 1
+fi
+
+# Re-stage only the files that were already staged (never expand commit scope).
+echo "$staged_kt" | while IFS= read -r f; do
+  [ -f "$f" ] && git add -- "$f"
+done
+
+exit 0
