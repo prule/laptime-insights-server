@@ -24,6 +24,7 @@ export function SessionRow({ session }: { session: SessionResource }) {
   return (
     <button
       type="button"
+      data-testid="session-row"
       onClick={sessionsEnabled ? () => navigate(`/sessions/${uidFromLink}`) : undefined}
       disabled={!sessionsEnabled}
       className={[

@@ -80,7 +80,7 @@ export function CompareScreen() {
   const ready = !!track && !!anchorUid && !!challengerParam;
 
   return (
-    <div className="h-full overflow-y-auto px-8 py-7">
+    <div data-testid="screen-compare" className="h-full overflow-y-auto px-8 py-7">
       <Card className="mb-4">
         <SectionHeader
           title="Pick laps to compare"

@@ -111,7 +111,7 @@ export function SessionDetailScreen() {
     `/compare?track=${encodeURIComponent(session.track ?? "")}&anchor=${anchor}&challenger=${challenger}`;
 
   return (
-    <div className="h-full overflow-y-auto px-8 py-7">
+    <div data-testid="screen-session-detail" className="h-full overflow-y-auto px-8 py-7">
       {sessionsEnabled && (
         <button
           onClick={() => navigate("/sessions")}

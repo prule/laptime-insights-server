@@ -174,7 +174,23 @@ mirrors the same algorithm so mock-mode charts look identical to live-mode chart
 
 ---
 
-## 6. Key Design Patterns
+## 6. Decisions & Non-Goals
+
+### No PWA (Progressive Web App) — intentional
+
+The frontend is **deliberately not** built as a PWA. This is a standing decision, not a gap;
+compliance audits should treat the PWA criterion as **N/A** for this project. Rationale:
+
+* **Self-hosted local app.** It runs locally against a self-hosted Ktor backend on the user's own
+  LAN (see §1), not as a public HTTPS web app. The installable-web-app model PWAs exist for doesn't apply.
+* **Requires a live local backend.** Every view depends on the local API and real-time ACC telemetry,
+  so a service-worker offline cache adds no usable functionality.
+* **Desktop-only.** It targets a desktop browser alongside the running sim; there is no mobile /
+  add-to-home-screen use case.
+* **Distributed as a release bundle.** Shipped as a packaged GitHub release; install and update are
+  handled outside the browser, not via a web-app manifest.
+
+## 7. Key Design Patterns
 
 * **Screaming Architecture:** The package structure tells you what the app does (`com.laptime.sessions`)
   rather than how it works (`com.laptime.controllers`).

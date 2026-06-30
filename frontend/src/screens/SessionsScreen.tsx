@@ -52,7 +52,7 @@ export function SessionsScreen() {
   });
 
   return (
-    <div className="h-full overflow-y-auto px-8 py-7">
+    <div data-testid="screen-sessions" className="h-full overflow-y-auto px-8 py-7">
       <Card className="mb-4">
         <SectionHeader title="Filter" sub="Filters are written to the URL — reload or share the link to restore state" />
         <div className="flex flex-wrap gap-3">

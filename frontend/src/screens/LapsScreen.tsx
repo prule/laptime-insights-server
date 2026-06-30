@@ -101,7 +101,7 @@ export function LapsScreen() {
   };
 
   return (
-    <div className="h-full overflow-y-auto px-8 py-7">
+    <div data-testid="screen-laps" className="h-full overflow-y-auto px-8 py-7">
       <Card className="mb-4">
         <SectionHeader title="Filter" sub="All filters hit /api/1/laps directly · state is mirrored to the URL" />
         <div className="flex flex-wrap items-end gap-3">

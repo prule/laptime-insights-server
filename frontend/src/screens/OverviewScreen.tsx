@@ -172,7 +172,7 @@ export function OverviewScreen() {
   const recentSessions = (sessionsQuery.data?.items ?? []).slice(0, 4);
 
   return (
-    <div className="h-full overflow-y-auto px-8 py-7">
+    <div data-testid="screen-overview" className="h-full overflow-y-auto px-8 py-7">
       <div className="mb-7 flex items-center gap-5 border-b border-border pb-6">
         <div className="flex h-[52px] w-[52px] items-center justify-center rounded-[10px] border border-accent/[0.3] bg-gradient-to-br from-accent/20 to-accent/10 font-mono text-lg font-bold text-accent">
           ◈
