@@ -203,3 +203,17 @@ The bottom-left corner of the sidebar contains a **MOCK / LIVE** toggle:
 - **LIVE** — the dashboard makes real API calls to the backend. Requires the Ktor server to be running. Toggle this when the server is active and you want to see real recorded data.
 
 Switching modes re-fetches all data; cached data from the previous mode is never mixed in.
+
+## Public Profile
+
+The **Public Profile** (Driver Passport) is a shareable page generated from your local data — season
+totals, an activity heatmap, laps per circuit, and your best times per track/car.
+
+- **On by default.** Switch it off (or back on) with the **PUBLIC PROFILE: ON/OFF** control in the
+  sidebar footer (shown in LIVE mode). The setting is saved to your configuration file, so it
+  persists across restarts. While it's off, the Public Profile nav item is hidden.
+- **Identity** (your name, slug, tagline, location, member-since, season label, sim) comes from the
+  `publicProfile` block of your configuration file; everything else is computed from your sessions
+  and laps.
+- The same snapshot is what a future subscription would upload so the page can be hosted publicly at
+  a vanity URL. Total distance is an estimate (no per-track length data is recorded locally).

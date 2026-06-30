@@ -56,6 +56,31 @@ export async function apiGet<T>(ctx: ApiContext, path: string): Promise<T> {
   return (await response.json()) as T;
 }
 
+/**
+ * Send a mutating request (PUT/POST/DELETE) with a JSON body. In mock mode there is no persistence,
+ * so the request body is echoed back — enough for the UI's optimistic flow without a live backend.
+ */
+export async function apiSend<T>(
+  ctx: ApiContext,
+  method: "PUT" | "POST" | "DELETE",
+  path: string,
+  body: unknown,
+): Promise<T> {
+  if (ctx.mode === "mock") {
+    return body as T;
+  }
+  const url = joinUrl(ctx.apiBase, path);
+  const response = await fetch(url, {
+    method,
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!response.ok) {
+    throw new ApiError(response.status, path, `${response.status} ${response.statusText}`);
+  }
+  return (await response.json()) as T;
+}
+
 /** Follow a HATEOAS `_links` value through the same dispatch path. */
 export function fetchLink<T>(ctx: ApiContext, links: Record<string, string>, rel: string) {
   const target = links[rel];

@@ -21,6 +21,7 @@ import type {
   SessionResource,
   SessionOptionsResource,
 } from "../types";
+import { SAMPLE_PROFILE } from "../profile";
 
 const SIMULATE_LATENCY_MS = 120;
 
@@ -114,9 +115,15 @@ export async function mockHandler(path: string): Promise<unknown> {
         lapsAggregate: "/api/1/laps/aggregate",
         compare: "/api/1/laps/compare",
         live: "/api/1/events",
+        "public-profile": "/api/1/public-profile",
+        publicProfileToggle: "/api/1/public-profile/enabled",
       },
-      enabledFeatures: ["overview", "sessions", "laps", "compare", "live"],
+      enabledFeatures: ["overview", "sessions", "laps", "compare", "live", "public-profile"],
     });
+  }
+
+  if (pathname === "/api/1/public-profile") {
+    return delay(SAMPLE_PROFILE);
   }
 
   // /api/1/sessions/aggregate must be matched before /api/1/sessions/{uid}.

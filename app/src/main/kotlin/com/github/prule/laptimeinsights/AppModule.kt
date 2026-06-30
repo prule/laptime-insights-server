@@ -7,6 +7,7 @@ import com.github.prule.laptimeinsights.adapter.out.persistence.car.RealtimeCarU
 import com.github.prule.laptimeinsights.adapter.out.persistence.lap.LapMapper
 import com.github.prule.laptimeinsights.adapter.out.persistence.lap.LapPersistenceAdapter
 import com.github.prule.laptimeinsights.adapter.out.persistence.lap.LapRepository
+import com.github.prule.laptimeinsights.adapter.out.persistence.profile.ProfilePersistenceAdapter
 import com.github.prule.laptimeinsights.adapter.out.persistence.session.SessionMapper
 import com.github.prule.laptimeinsights.adapter.out.persistence.session.SessionPersistenceAdapter
 import com.github.prule.laptimeinsights.adapter.out.persistence.session.SessionRepository
@@ -20,6 +21,7 @@ import com.github.prule.laptimeinsights.application.domain.service.lap.FindLapSe
 import com.github.prule.laptimeinsights.application.domain.service.lap.FindLapTelemetryService
 import com.github.prule.laptimeinsights.application.domain.service.lap.RecordCarOnLapsService
 import com.github.prule.laptimeinsights.application.domain.service.lap.SearchLapService
+import com.github.prule.laptimeinsights.application.domain.service.profile.BuildProfileSnapshotService
 import com.github.prule.laptimeinsights.application.domain.service.session.AggregateSessionsService
 import com.github.prule.laptimeinsights.application.domain.service.session.CreateSessionService
 import com.github.prule.laptimeinsights.application.domain.service.session.EndSessionService
@@ -36,6 +38,12 @@ class AppModule {
   // Car must initialise before Lap — Lap depends on car's find port.
   val car = Car()
   val lap = Lap(session, car)
+  val profile = Profile()
+
+  inner class Profile {
+    val aggregatesPort = ProfilePersistenceAdapter()
+    val buildProfileSnapshotUseCase = BuildProfileSnapshotService(aggregatesPort)
+  }
 
   inner class Car {
     val carModelRepository = CarModelRepository()

@@ -198,3 +198,10 @@ compliance audits should treat the PWA criterion as **N/A** for this project. Ra
   `application.port`. Swapping the database or transport requires changing only the adapter, not the domain.
 * **Custom Hooks:** Telemetry-sharing state (e.g., `hoveredPosition` on the Compare screen) is lifted to the nearest
   common ancestor and passed as props, following standard React patterns.
+* **Feature toggles — startup vs runtime:** Most features resolve once at startup from
+  `FEATURE_<NAME>` env vars (`EnvironmentVariables.enabledFeatures()`). The **public profile** is the
+  exception: its enabled state is persisted in the config file (`ApplicationConfiguration.publicProfile`)
+  and resolved **per request** in `IndexController` from a live `ConfigurationStore`, so the
+  `PUT /api/1/public-profile/enabled` toggle takes effect without a restart. Its snapshot
+  (`GET /api/1/public-profile`) is generated from local Session/Lap data and is the same artifact the
+  optional cloud-publish boundary uploads. See `docs/public-profile.md`.

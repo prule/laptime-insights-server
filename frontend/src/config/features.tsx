@@ -3,6 +3,7 @@ import { CompareScreen } from "../screens/CompareScreen";
 import { LapsScreen } from "../screens/LapsScreen";
 import { LiveScreen } from "../screens/LiveScreen";
 import { OverviewScreen } from "../screens/OverviewScreen";
+import { PublicProfileScreen } from "../screens/PublicProfileScreen";
 import { SessionDetailScreen } from "../screens/SessionDetailScreen";
 import { SessionsScreen } from "../screens/SessionsScreen";
 import type { Feature } from "./feature-types";
@@ -78,5 +79,11 @@ export const FEATURE_CONFIG: Record<Feature, FeatureConfig> = {
     rel: "live",
     nav: { label: "Live", icon: "◉", path: "/live" },
     routes: [{ path: "/live", element: <LiveScreen /> }],
+  },
+  "public-profile": {
+    id: "public-profile",
+    rel: "public-profile",
+    nav: { label: "Public Profile", icon: "🪪", path: "/profile" },
+    routes: [{ path: "/profile", element: <PublicProfileScreen /> }],
   },
 };

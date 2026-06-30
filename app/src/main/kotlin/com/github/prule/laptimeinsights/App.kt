@@ -6,6 +6,7 @@ import com.github.prule.laptimeinsights.adapter.`in`.web.lap.CompareLapsControll
 import com.github.prule.laptimeinsights.adapter.`in`.web.lap.FindLapController
 import com.github.prule.laptimeinsights.adapter.`in`.web.lap.FindLapTelemetryController
 import com.github.prule.laptimeinsights.adapter.`in`.web.lap.SearchLapController
+import com.github.prule.laptimeinsights.adapter.`in`.web.profile.PublicProfileController
 import com.github.prule.laptimeinsights.adapter.`in`.web.session.AggregateSessionsController
 import com.github.prule.laptimeinsights.adapter.`in`.web.session.FindSessionController
 import com.github.prule.laptimeinsights.adapter.`in`.web.session.SearchOptionsController
@@ -43,8 +44,14 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
 
 fun main(args: Array<String>): Unit = runBlocking {
-  val configuration = JsonFileConfigurationRepository().loadConfiguration(args[0])
-  embeddedServer(factory = Netty, port = configuration.port) { module(configuration) }
+  val repository = JsonFileConfigurationRepository()
+  val file = java.io.File(args[0])
+  val configuration = repository.loadConfiguration(file)
+  // File-backed store so runtime toggles (e.g. the public profile) persist across restarts.
+  val configStore = ConfigurationStore(configuration, file, repository)
+  embeddedServer(factory = Netty, port = configuration.port) {
+      module(configuration, configStore = configStore)
+    }
     .start(wait = true)
 }
 
@@ -53,6 +60,8 @@ fun Application.module(
   appModule: AppModule = AppModule(),
   jdbcUrl: String = EnvironmentVariables.jdbcUrl(),
   enabledFeatures: Set<Feature> = EnvironmentVariables.enabledFeatures(),
+  // In-memory store by default (tests); main() supplies a file-backed one.
+  configStore: ConfigurationStore = ConfigurationStore(configuration),
 ) {
 
   install(Resources)
@@ -100,9 +109,10 @@ fun Application.module(
       .seed()
   }
 
-  IndexController(this, enabledFeatures)
+  IndexController(this, enabledFeatures, configStore)
   initializeSessionControllers(appModule)
   initializeLapControllers(appModule)
+  PublicProfileController(this, appModule.profile.buildProfileSnapshotUseCase, configStore)
   SessionEventController(this, appModule.eventPort)
 
   routing {
