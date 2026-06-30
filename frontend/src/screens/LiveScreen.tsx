@@ -366,7 +366,7 @@ export function LiveScreen() {
 
   if (!isLiveMode) {
     return (
-      <div className="flex h-full items-center justify-center p-8">
+      <div data-testid="screen-live" className="flex h-full items-center justify-center p-8">
         <div className="max-w-sm text-center">
           <div className="mb-3 font-mono text-3xl text-text-muted">◉</div>
           <div className="font-sans text-base font-semibold text-text mb-2">Switch to Live mode</div>
@@ -381,7 +381,7 @@ export function LiveScreen() {
   const t = telemetry;
 
   return (
-    <div className="h-full overflow-y-auto px-8 py-7">
+    <div data-testid="screen-live" className="h-full overflow-y-auto px-8 py-7">
       {/* Header */}
       <div className="mb-6 flex items-center gap-4 border-b border-border pb-5">
         <div className="flex h-[52px] w-[52px] items-center justify-center rounded-[10px] border border-accent/[0.3] bg-gradient-to-br from-accent/20 to-accent/10 font-mono text-lg font-bold text-accent">

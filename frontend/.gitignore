@@ -4,3 +4,9 @@ dist-ssr
 *.local
 .vite
 .DS_Store
+
+# Playwright / Serenity-JS E2E
+/playwright-report/
+/test-results/
+/target/site/serenity/
+/playwright/.cache/

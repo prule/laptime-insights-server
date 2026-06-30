@@ -80,6 +80,22 @@ pnpm typecheck
 pnpm build
 ```
 
+## Testing
+
+```bash
+pnpm test                          # Vitest unit / component tests (src/**)
+
+pnpm exec playwright install chromium   # one-time browser download
+pnpm e2e                           # Playwright + Serenity/JS E2E (e2e/**)
+pnpm e2e:ui                        # interactive Playwright UI
+pnpm e2e:report                    # open the last HTML report
+```
+
+E2E tests drive the real app in a browser using the **Serenity/JS Screenplay** pattern (Actors,
+Tasks, Questions). They build + serve the production bundle (`vite preview`, port 4173) and run in
+**MOCK** data mode, so no backend is needed. Details and the directory layout are in
+[`docs/frontend-technical.md`](../docs/frontend-technical.md) § Testing.
+
 ## Feedback form
 
 A **Feedback** launcher in the Topbar lets users file a bug / suggestion / general

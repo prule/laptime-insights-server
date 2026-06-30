@@ -131,7 +131,7 @@ export function LapTable({
   };
 
   return (
-    <div className="overflow-hidden rounded border border-border">
+    <div data-testid="laps-table" className="overflow-hidden rounded border border-border">
       <div
         className="grid items-center gap-3 border-b border-border bg-surface-active px-3 py-2 font-mono text-[10px] uppercase tracking-[0.08em] text-text-muted"
         style={gridStyle}
@@ -245,6 +245,7 @@ export function LapTable({
           return (
             <button
               key={lap.uid}
+              data-testid="lap-row"
               type="button"
               onClick={() => !disabled && onRowClick(lap)}
               disabled={disabled}
@@ -268,6 +269,7 @@ export function LapTable({
         return (
           <div
             key={lap.uid}
+            data-testid="lap-row"
             className={[
               baseClass,
               selected ? "bg-cyan/10" : "hover:bg-surface-hover",

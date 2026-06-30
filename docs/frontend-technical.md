@@ -258,6 +258,46 @@ pnpm typecheck
 pnpm build
 ```
 
+## Testing
+
+Two independent layers:
+
+- **Unit / component (Vitest)** — `pnpm test`. Pure-function tests are `*.test.ts` (node env);
+  component/hook tests are `*.test.tsx` and opt into jsdom per-file via a
+  `// @vitest-environment jsdom` pragma. Vitest only globs `src/**`.
+- **End-to-end (Playwright + Serenity/JS Screenplay)** — `pnpm e2e`. Browser-level tests live in
+  `e2e/` (outside `src/`, so they never overlap Vitest or the `tsc` build).
+
+```bash
+cd frontend
+pnpm exec playwright install chromium   # one-time: download the browser
+pnpm e2e                                # build + preview + run the suite
+pnpm e2e:ui                             # interactive Playwright UI
+pnpm e2e:report                         # open the last HTML report
+```
+
+**Why MOCK mode.** `DataModeProvider` defaults to MOCK and only switches to LIVE from
+`localStorage["lti.dataMode"]`. A fresh Playwright browser context has empty localStorage, so the
+suite runs entirely against the in-memory mock — deterministic, no backend, no ACC telemetry. The
+Playwright `webServer` runs `pnpm build && pnpm preview` (port 4173) so tests hit the production
+bundle.
+
+**Screenplay layout.** Tests are written as an Actor (`Driver`) performing Tasks and asking
+Questions — no raw Playwright locators in spec bodies.
+- `e2e/screenplay/screens.ts` — screen registry + `PageElement`/`PageElements` targets.
+- `e2e/screenplay/tasks.ts` — reusable Tasks (`OpenTheApp`, `NavigateToScreen`,
+  `SelectAllTimeRange`, `OpenTheFirstSession`).
+- `e2e/screenplay/questions.ts` — Questions (`TheScreenTitle`, `TheNumberOfSessions`, `TheNumberOfLaps`).
+- `e2e/specs/` — the tests themselves.
+
+Selectors are role/heading-first; a small set of `data-testid` hooks cover ambiguous nodes
+(`screen-*` roots, `screen-title`, `session-row`, `laps-table`, `lap-row`, `time-range-*`).
+Note the default time range is 1 month, and seeded mock sessions predate that — use the
+`SelectAllTimeRange` Task before asserting on list rows.
+
+CI runs the suite as a dedicated `e2e` job (see `.github/workflows/build-and-test.yml`); a failing
+test blocks the check, and reports/traces upload as artifacts on failure.
+
 ## Adding a new screen
 
 1. Create `src/screens/NewScreen.tsx`.

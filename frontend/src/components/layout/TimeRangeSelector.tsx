@@ -19,6 +19,7 @@ export function TimeRangeSelector() {
           <button
             key={opt.key}
             type="button"
+            data-testid={`time-range-${opt.key}`}
             onClick={() => setRange(opt.key)}
             title={opt.sub}
             aria-pressed={active}
