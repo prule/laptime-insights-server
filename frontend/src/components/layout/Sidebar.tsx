@@ -1,4 +1,5 @@
 import { NavLink } from "react-router-dom";
+import { useTogglePublicProfile } from "../../api/profile";
 import { FEATURE_CONFIG, FEATURES } from "../../config/features";
 import { useDataMode } from "../../providers/DataModeProvider";
 import { useFeatures } from "../../providers/FeaturesProvider";
@@ -8,6 +9,8 @@ export function Sidebar() {
   const { isEnabled } = useFeatures();
   const isLive = mode === "live";
   const navItems = FEATURES.filter(isEnabled).map((f) => ({ id: f, ...FEATURE_CONFIG[f].nav }));
+  const profileEnabled = isEnabled("public-profile");
+  const toggleProfile = useTogglePublicProfile();
 
   return (
     <aside className="flex h-full w-[220px] flex-shrink-0 flex-col border-r border-border bg-sidebar">
@@ -45,6 +48,31 @@ export function Sidebar() {
           </NavLink>
         ))}
       </nav>
+
+      {isLive && (
+        <div className="border-t border-border px-4 pt-4">
+          <button
+            onClick={() => toggleProfile.mutate(!profileEnabled)}
+            disabled={toggleProfile.isPending}
+            className={[
+              "flex w-full items-center justify-between rounded-md border px-3 py-[9px] text-left transition-colors disabled:opacity-50",
+              profileEnabled
+                ? "border-cyan/25 bg-cyan/10"
+                : "border-border bg-white/[0.04] hover:bg-white/[0.06]",
+            ].join(" ")}
+            title={profileEnabled ? "Turn the public profile off" : "Turn the public profile on"}
+          >
+            <span className="font-mono text-[10px] tracking-[0.08em] text-text-muted">
+              PUBLIC PROFILE
+            </span>
+            <span
+              className={`font-mono text-[10px] tracking-[0.08em] ${profileEnabled ? "text-cyan" : "text-text-muted"}`}
+            >
+              {profileEnabled ? "ON" : "OFF"}
+            </span>
+          </button>
+        </div>
+      )}
 
       <div className="border-t border-border p-4">
         <button

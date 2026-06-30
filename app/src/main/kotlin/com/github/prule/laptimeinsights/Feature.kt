@@ -17,4 +17,7 @@ enum class Feature(val rel: String, val envVar: String, val defaultEnabled: Bool
   LAPS("laps", "FEATURE_LAPS"),
   COMPARE("compare", "FEATURE_COMPARE"),
   LIVE("live", "FEATURE_LIVE"),
+  // Public profile is on by default and is the one feature whose enabled state is resolved at
+  // request time from the persisted config toggle (see ConfigurationStore) rather than the env var.
+  PUBLIC_PROFILE("public-profile", "FEATURE_PUBLIC_PROFILE", defaultEnabled = true),
 }

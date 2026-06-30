@@ -5,6 +5,13 @@
  * components).
  */
 
-export type Feature = "overview" | "sessions" | "laps" | "compare" | "live";
+export type Feature = "overview" | "sessions" | "laps" | "compare" | "live" | "public-profile";
 
-export const FEATURES: readonly Feature[] = ["overview", "sessions", "laps", "compare", "live"];
+export const FEATURES: readonly Feature[] = [
+  "overview",
+  "sessions",
+  "laps",
+  "compare",
+  "live",
+  "public-profile",
+];

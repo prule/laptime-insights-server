@@ -3,6 +3,7 @@ package com.github.prule.laptimeinsights.adapter.`in`.web.index
 import com.github.prule.laptimeinsights.AppModule
 import com.github.prule.laptimeinsights.ApplicationConfiguration
 import com.github.prule.laptimeinsights.Feature
+import com.github.prule.laptimeinsights.PublicProfileConfig
 import com.github.prule.laptimeinsights.module
 import io.ktor.client.request.get
 import io.ktor.client.statement.bodyAsText
@@ -40,13 +41,18 @@ class IndexControllerTest {
       "lapsAggregate",
       "compare",
       "live",
+      // Always advertised so the UI can switch the public profile on, even while it's off.
+      "publicProfileToggle",
     )
 
   @Test
   fun `_links always advertises every capability regardless of toggle state`() = testApplication {
     application {
       module(
-        configuration = ApplicationConfiguration(),
+        // Pin the (now on-by-default) public profile off so these env-driven feature assertions
+        // stay focused; public-profile gating has its own test.
+        configuration =
+          ApplicationConfiguration(publicProfile = PublicProfileConfig(enabled = false)),
         appModule = AppModule(),
         jdbcUrl = "jdbc:h2:mem:test-index-all;DB_CLOSE_DELAY=-1;",
         enabledFeatures = Feature.entries.toSet(),
@@ -73,7 +79,10 @@ class IndexControllerTest {
   fun `enabledFeatures lists every Feature when all are on`() = testApplication {
     application {
       module(
-        configuration = ApplicationConfiguration(),
+        // Pin the (now on-by-default) public profile off so these env-driven feature assertions
+        // stay focused; public-profile gating has its own test.
+        configuration =
+          ApplicationConfiguration(publicProfile = PublicProfileConfig(enabled = false)),
         appModule = AppModule(),
         jdbcUrl = "jdbc:h2:mem:test-index-features-all;DB_CLOSE_DELAY=-1;",
         enabledFeatures = Feature.entries.toSet(),
@@ -90,7 +99,10 @@ class IndexControllerTest {
     testApplication {
       application {
         module(
-          configuration = ApplicationConfiguration(),
+          // Pin the (now on-by-default) public profile off so these env-driven feature assertions
+          // stay focused; public-profile gating has its own test.
+          configuration =
+            ApplicationConfiguration(publicProfile = PublicProfileConfig(enabled = false)),
           appModule = AppModule(),
           jdbcUrl = "jdbc:h2:mem:test-index-partial;DB_CLOSE_DELAY=-1;",
           enabledFeatures = setOf(Feature.OVERVIEW, Feature.LAPS),
@@ -108,7 +120,10 @@ class IndexControllerTest {
   fun `enabledFeatures is empty when every UI feature is off`() = testApplication {
     application {
       module(
-        configuration = ApplicationConfiguration(),
+        // Pin the (now on-by-default) public profile off so these env-driven feature assertions
+        // stay focused; public-profile gating has its own test.
+        configuration =
+          ApplicationConfiguration(publicProfile = PublicProfileConfig(enabled = false)),
         appModule = AppModule(),
         jdbcUrl = "jdbc:h2:mem:test-index-none;DB_CLOSE_DELAY=-1;",
         enabledFeatures = emptySet(),
