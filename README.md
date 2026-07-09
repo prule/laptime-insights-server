@@ -32,6 +32,23 @@ And much more hopefully!
 - [Frontend Technical](./docs/frontend-technical.md) - Frontend architecture, screens, providers, and dev workflows.
 - [Clean Architecture](./docs/clean-architecture.md) - Backend project structure and conventions.
 - [Real-time Updates](./docs/real-time-updates.md) - WebSocket event stream protocol.
+- [Development Workflow](./docs/development-workflow.md) - How development is done with Claude + OpenSpec.
+- [Dev Container](./.devcontainer/README.md) - Reproducible JDK 21 + Node 24 environment for VS Code / IntelliJ / WebStorm.
+
+## Dev Container (recommended)
+
+A [dev container](./.devcontainer/README.md) provides a ready-to-go environment
+(JDK 21, Node 24.17.0, pnpm 11.8.0, Gradle wrapper, Playwright) so you don't install
+the toolchain on your host. It has a static name, `laptime-insights-dev`.
+
+- **VS Code** — install the *Dev Containers* extension → *Reopen in Container*.
+- **IntelliJ IDEA / WebStorm** — *Remote Development → Dev Containers → From
+  devcontainer.json* (`.devcontainer/devcontainer.json`).
+
+The first build installs all dependencies and wires up git hooks. Then run
+`./run serve` to start backend (`:8000`) + frontend (`:5173`). See the
+[Dev Container README](./.devcontainer/README.md) and
+[Development Workflow](./docs/development-workflow.md) for details.
 
 ### Frontend
 

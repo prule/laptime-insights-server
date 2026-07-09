@@ -1,0 +1,67 @@
+{
+  "name": "laptime-insights-dev",
+
+  // Base image ships JDK 21 (Temurin) + git + a passwordless-sudo `vscode` user.
+  "image": "mcr.microsoft.com/devcontainers/java:1-21-bookworm",
+
+  "features": {
+    // Pin Node to the version in .node-version so the container matches CI + local.
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "24.17.0"
+    }
+  },
+
+  // Static container name so `docker ps`, `docker exec` and IDE reconnects are stable.
+  // Both VS Code and JetBrains reuse the same named container instead of spawning new ones.
+  "runArgs": ["--name", "laptime-insights-dev"],
+
+  // 8000 = Ktor backend, 5173 = Vite frontend, 9092 = optional H2 TCP server.
+  "forwardPorts": [8000, 5173, 9092],
+  "portsAttributes": {
+    "8000": { "label": "Backend (Ktor API + Swagger UI)", "onAutoForward": "notify" },
+    "5173": { "label": "Frontend (Vite dev server)", "onAutoForward": "openBrowser" },
+    "9092": { "label": "H2 TCP (optional)", "onAutoForward": "silent" }
+  },
+
+  // Sensible first-run defaults: in-memory H2 with sample data seeded, all features on.
+  // Override any of these in your shell / launch config for other scenarios.
+  "remoteEnv": {
+    "JDBC_URL": "jdbc:h2:mem:laptimeinsights;DB_CLOSE_DELAY=-1",
+    "DB_SEED": "true",
+    "FEATURE_OVERVIEW": "true",
+    "FEATURE_SESSIONS": "true",
+    "FEATURE_LAPS": "true",
+    "FEATURE_COMPARE": "true",
+    "FEATURE_LIVE": "true"
+  },
+
+  // Persist Gradle + pnpm caches across rebuilds so installs stay fast.
+  "mounts": [
+    "source=laptime-insights-gradle,target=/home/vscode/.gradle,type=volume",
+    "source=laptime-insights-pnpm,target=/home/vscode/.local/share/pnpm,type=volume"
+  ],
+
+  // One-time provisioning: git hooks, dependency install, warm the build, Playwright browsers.
+  "postCreateCommand": "bash .devcontainer/post-create.sh",
+
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "fwcd.kotlin",
+        "vscjava.vscode-java-pack",
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        "bradlc.vscode-tailwindcss",
+        "ms-playwright.playwright",
+        "anthropic.claude-code"
+      ],
+      "settings": {
+        "java.jdt.ls.java.home": "/usr/lib/jvm/msopenjdk-current",
+        "editor.formatOnSave": true,
+        "files.eol": "\n"
+      }
+    }
+  },
+
+  "remoteUser": "vscode"
+}
