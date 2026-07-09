@@ -2,7 +2,7 @@
   "name": "laptime-insights-dev",
 
   // Base image ships JDK 21 (Temurin) + git + a passwordless-sudo `vscode` user.
-  "image": "mcr.microsoft.com/devcontainers/java:1-21-bookworm",
+  "image": "mcr.microsoft.com/devcontainers/java:3-21-bookworm",
 
   "features": {
     // Pin Node to the version in .node-version so the container matches CI + local.
