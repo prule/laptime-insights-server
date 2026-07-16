@@ -6,7 +6,7 @@
 
   "features": {
     // Pin Node to the version in .node-version so the container matches CI + local.
-    "ghcr.io/devcontainers/features/node:1": {
+    "ghcr.io/devcontainers/features/node:2": {
       "version": "24.18.0"
     }
   },
