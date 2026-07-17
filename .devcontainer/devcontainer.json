@@ -36,10 +36,32 @@
   },
 
   // Persist Gradle + pnpm caches across rebuilds so installs stay fast.
+  //   - .gradle / .local/share/pnpm : per project. The pnpm one is PNPM_HOME —
+  //     it holds globally-installed CLIs as well as (historically) the store,
+  //     so it stays project-local even though the store itself has moved out.
+  //   - /cache : the pnpm store, shared with EVERY dev container on this
+  //     machine, so a package version is downloaded once per machine rather than
+  //     once per project. The source name is deliberately project-independent —
+  //     renaming it per project silently un-shares the store. post-create points
+  //     pnpm at /cache/pnpm-store; pnpm ignores env vars for that setting, so it
+  //     cannot be configured here.
+  //   - ms-playwright : the browsers, so a rebuild doesn't re-download ~539MB.
+  //     Per project on purpose — a shared browser cache lets one project's
+  //     `playwright install` garbage-collect another project's browsers.
   "mounts": [
     "source=laptime-insights-gradle,target=/home/vscode/.gradle,type=volume",
-    "source=laptime-insights-pnpm,target=/home/vscode/.local/share/pnpm,type=volume"
+    "source=laptime-insights-pnpm,target=/home/vscode/.local/share/pnpm,type=volume",
+    "source=devcontainer-cache,target=/cache,type=volume",
+    "source=laptime-insights-playwright,target=/home/vscode/.cache/ms-playwright,type=volume"
   ],
+
+  // Pin Playwright to the volume above rather than relying on its ~/.cache
+  // default. containerEnv, not remoteEnv: remoteEnv only reaches processes the
+  // dev container tooling launches, and a Playwright that cannot see this var
+  // doesn't fail — it silently downloads its own copy, bypassing the volume.
+  "containerEnv": {
+    "PLAYWRIGHT_BROWSERS_PATH": "/home/vscode/.cache/ms-playwright"
+  },
 
   // One-time provisioning: git hooks, dependency install, warm the build, Playwright browsers.
   "postCreateCommand": "bash .devcontainer/post-create.sh",
