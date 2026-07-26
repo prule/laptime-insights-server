@@ -5,11 +5,16 @@ both halves of the stack need, so you never install JDK / Node / pnpm on the hos
 
 | Tool | Version | Why |
 |------|---------|-----|
-| JDK (Temurin) | 21 | Kotlin/Ktor/Exposed backend (`app/`) |
-| Node | 24.17.0 | React/Vite frontend (`frontend/`, `landing/`) — matches `.node-version` |
-| pnpm | 11.8.0 | Package manager (pinned via `package.json` `packageManager`) |
-| Gradle | 9.6.0 | Via the checked-in `./gradlew` wrapper (nothing to install) |
-| Playwright + Chromium | latest | Frontend e2e (`pnpm e2e`) |
+| JDK (Temurin) | 21 | Kotlin/Ktor/Exposed backend (`app/`) — from the `java:1-21` base image |
+| Node | 24.18.0 via fnm | React/Vite frontends (`frontend/`, `landing/`) — driven by `.node-version` |
+| pnpm | 11.13.1, installed standalone (no corepack) | Package manager (pinned via `package.json` `packageManager`) |
+| Gradle | via `./gradlew` wrapper | Nothing to install |
+| Playwright + Chromium | pinned by `@playwright/test` | Frontend e2e (`pnpm e2e`) |
+| OpenSpec CLI | `@fission-ai/openspec` (`OPENSPEC_VERSION` arg) | Spec-driven workflow (`/opsx:*`) |
+| Claude Code, GitHub CLI | official Dev Container Features | `claude` and `gh` in the container |
+
+Node/pnpm are built from `.devcontainer/Dockerfile` (fnm + standalone pnpm),
+layered on the JDK-21 base — matching the approach used across these projects.
 
 The container has a **static name: `laptime-insights-dev`**. `docker ps`, `docker exec`,
 and IDE reconnects always target the same container.
@@ -66,14 +71,17 @@ cd frontend && pnpm e2e        # Playwright e2e
 
 ## Development process (Claude + OpenSpec)
 
-The container ships the **Claude Code** VS Code extension and the `openspec/`
+The container ships the **Claude Code** CLI (`claude`, via a Dev Container
+Feature) and the **OpenSpec CLI** (`openspec`) that drives the `openspec/`
 spec-driven workflow. See **[docs/development-workflow.md](../docs/development-workflow.md)**
 for the full loop (propose → apply → archive) and how Claude fits into it.
 
 ## Rebuilding / troubleshooting
 
 - **Rebuild from scratch:** VS Code → *Dev Containers: Rebuild Container*. To also
-  drop the caches: `docker volume rm laptime-insights-gradle laptime-insights-pnpm`.
+  drop the caches: `docker volume rm laptime-insights-gradle` (the pnpm store is
+  the shared `devcontainer-cache` volume — leave it unless you mean to clear it
+  for every project).
 - **Playwright deps failed during create:** re-run
   `cd frontend && pnpm exec playwright install --with-deps chromium`.
 - **Port already in use:** something else holds `8000`/`5173` on the host — stop it or

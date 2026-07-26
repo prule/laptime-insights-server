@@ -1,19 +1,28 @@
 {
   "name": "laptime-insights-dev",
 
-  // Base image ships JDK 21 (Temurin) + git + a passwordless-sudo `vscode` user.
-  "image": "mcr.microsoft.com/devcontainers/java:1-21-bookworm",
-
-  "features": {
-    // Pin Node to the version in .node-version so the container matches CI + local.
-    "ghcr.io/devcontainers/features/node:1": {
-      "version": "24.18.0"
-    }
+  // JS toolchain (fnm + Node, standalone pnpm, OpenSpec CLI) is built from the
+  // Dockerfile — NOT corepack, matching the Strength project's approach. The
+  // Dockerfile keeps the JDK-21 devcontainer base (Kotlin/Gradle needs the JVM),
+  // so this replaces both the old `image` and the `node` Feature.
+  "build": {
+    "dockerfile": "Dockerfile"
   },
 
-  // Static container name so `docker ps`, `docker exec` and IDE reconnects are stable.
-  // Both VS Code and JetBrains reuse the same named container instead of spawning new ones.
-  "runArgs": ["--name", "laptime-insights-dev"],
+  // Layered on top of the built image as Dev Container Features:
+  //   - github-cli:  `gh` for PRs/issues and HTTPS git auth (`gh auth login`).
+  //   - claude-code: the Claude Code CLI.
+  // Node/pnpm come from the Dockerfile; the JDK comes from the base image.
+  "features": {
+    "ghcr.io/devcontainers/features/github-cli:1": {},
+    "ghcr.io/anthropics/devcontainer-features/claude-code:1": {}
+  },
+
+  // Static container name + a predictable `vscode@laptime-insights` prompt.
+  // Caveat: only ONE orchestrator may own the name at a time; if a start fails
+  // with a 409 / "name already in use", clear the stale one and rebuild:
+  //     docker rm -f laptime-insights-dev
+  "runArgs": ["--name", "laptime-insights-dev", "--hostname", "laptime-insights"],
 
   // 8000 = Ktor backend, 5173 = Vite frontend, 9092 = optional H2 TCP server.
   "forwardPorts": [8000, 5173, 9092],
@@ -23,8 +32,8 @@
     "9092": { "label": "H2 TCP (optional)", "onAutoForward": "silent" }
   },
 
-  // Sensible first-run defaults: in-memory H2 with sample data seeded, all features on.
-  // Override any of these in your shell / launch config for other scenarios.
+  // Sensible first-run defaults: in-memory H2 with sample data seeded, all
+  // features on. Override any of these in your shell / launch config.
   "remoteEnv": {
     "JDBC_URL": "jdbc:h2:mem:laptimeinsights;DB_CLOSE_DELAY=-1",
     "DB_SEED": "true",
@@ -35,37 +44,43 @@
     "FEATURE_LIVE": "true"
   },
 
-  // Persist Gradle + pnpm caches across rebuilds so installs stay fast.
-  //   - .gradle / .local/share/pnpm : per project. The pnpm one is PNPM_HOME —
-  //     it holds globally-installed CLIs as well as (historically) the store,
-  //     so it stays project-local even though the store itself has moved out.
-  //   - /cache : the pnpm store, shared with EVERY dev container on this
-  //     machine, so a package version is downloaded once per machine rather than
-  //     once per project. The source name is deliberately project-independent —
-  //     renaming it per project silently un-shares the store. post-create points
-  //     pnpm at /cache/pnpm-store; pnpm ignores env vars for that setting, so it
-  //     cannot be configured here.
+  // Persist caches across rebuilds so installs stay fast:
+  //   - .gradle : the Gradle build cache / resolved dependencies. Per project.
+  //   - /cache  : the pnpm store, shared with EVERY dev container on this
+  //     machine, so a package version downloads once per machine. The source
+  //     name is deliberately project-independent — renaming it per project
+  //     silently un-shares the store. post-create points pnpm at
+  //     /cache/pnpm-store; pnpm ignores env vars for that setting.
   //   - ms-playwright : the browsers, so a rebuild doesn't re-download ~539MB.
-  //     Per project on purpose — a shared browser cache lets one project's
-  //     `playwright install` garbage-collect another project's browsers.
+  //     Per project on purpose (a shared browser cache lets one project's
+  //     `playwright install` GC another's).
+  // NB: there is intentionally NO volume at ~/.local/share/pnpm (PNPM_HOME) —
+  // the standalone pnpm binary is baked into the image there, and a volume would
+  // shadow it. The old `laptime-insights-pnpm` volume can be deleted.
   "mounts": [
     "source=laptime-insights-gradle,target=/home/vscode/.gradle,type=volume",
-    "source=laptime-insights-pnpm,target=/home/vscode/.local/share/pnpm,type=volume",
     "source=devcontainer-cache,target=/cache,type=volume",
     "source=laptime-insights-playwright,target=/home/vscode/.cache/ms-playwright,type=volume"
   ],
 
-  // Pin Playwright to the volume above rather than relying on its ~/.cache
-  // default. containerEnv, not remoteEnv: remoteEnv only reaches processes the
-  // dev container tooling launches, and a Playwright that cannot see this var
-  // doesn't fail — it silently downloads its own copy, bypassing the volume.
+  // Pin Playwright to the volume above rather than its ~/.cache default
+  // (containerEnv, not remoteEnv: a Playwright that can't see this var silently
+  // downloads its own copy, bypassing the volume). Opt out of OpenSpec's
+  // anonymous telemetry (privacy-preserving default; also silences its notice).
   "containerEnv": {
-    "PLAYWRIGHT_BROWSERS_PATH": "/home/vscode/.cache/ms-playwright"
+    "PLAYWRIGHT_BROWSERS_PATH": "/home/vscode/.cache/ms-playwright",
+    "OPENSPEC_TELEMETRY": "0"
   },
 
-  // One-time provisioning: git hooks, dependency install, warm the build, Playwright browsers.
+  // One-time provisioning: chown the volumes, sync Node to .node-version, wire
+  // git hooks, point pnpm at the shared store, install both frontends, warm the
+  // Gradle build, and fetch the Playwright Chromium.
   "postCreateCommand": "bash .devcontainer/post-create.sh",
 
+  "remoteUser": "vscode",
+
+  // Editor-specific setup. VS Code reads `vscode`; JetBrains Gateway / IntelliJ
+  // reads `jetbrains` (and ignores the other). Both open the SAME container.
   "customizations": {
     "vscode": {
       "extensions": [
@@ -74,16 +89,22 @@
         "dbaeumer.vscode-eslint",
         "esbenp.prettier-vscode",
         "bradlc.vscode-tailwindcss",
-        "ms-playwright.playwright",
-        "anthropic.claude-code"
+        "ms-playwright.playwright"
       ],
       "settings": {
         "java.jdt.ls.java.home": "/usr/lib/jvm/msopenjdk-current",
         "editor.formatOnSave": true,
-        "files.eol": "\n"
+        "files.eol": "\n",
+        "terminal.integrated.defaultProfile.linux": "zsh"
       }
+    },
+    "jetbrains": {
+      // IntelliJ IDEA (Ultimate) — this is a Kotlin/Gradle + React project, so
+      // IDEA is the right JetBrains backend (WebStorm can't do Kotlin/Gradle).
+      "backend": "IntelliJ",
+      "plugins": [
+        "intellij.prettierJS"
+      ]
     }
-  },
-
-  "remoteUser": "vscode"
+  }
 }
