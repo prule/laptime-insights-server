@@ -29,7 +29,10 @@ and IDE reconnects always target the same container.
 - **Dev DB defaults** (`remoteEnv` in `devcontainer.json`): in-memory H2 seeded with
   sample data (`DB_SEED=true`) and all feature flags on, so `./run serve` works on
   first boot. Override in your shell for other scenarios (e.g. a file-backed DB).
-- **Caches persisted** in Docker volumes (`~/.gradle`, pnpm store) so rebuilds stay fast.
+- **Caches persisted** in Docker volumes so rebuilds stay fast. The pnpm store
+  (`/cache/pnpm-store`) and the Gradle cache (`/cache/gradle`, via
+  `GRADLE_USER_HOME`) both live on the machine-wide shared `devcontainer-cache`
+  volume, so a dependency downloads once per machine, not once per project.
 
 ## Opening the container
 
@@ -78,10 +81,11 @@ for the full loop (propose → apply → archive) and how Claude fits into it.
 
 ## Rebuilding / troubleshooting
 
-- **Rebuild from scratch:** VS Code → *Dev Containers: Rebuild Container*. To also
-  drop the caches: `docker volume rm laptime-insights-gradle` (the pnpm store is
-  the shared `devcontainer-cache` volume — leave it unless you mean to clear it
-  for every project).
+- **Rebuild from scratch:** VS Code → *Dev Containers: Rebuild Container*. The
+  pnpm store and Gradle cache live on the shared `devcontainer-cache` volume —
+  leave it unless you mean to clear it for *every* project. (The old
+  per-project `laptime-insights-gradle` / `laptime-insights-pnpm` volumes are no
+  longer used and can be removed: `docker volume rm laptime-insights-gradle laptime-insights-pnpm`.)
 - **Playwright deps failed during create:** re-run
   `cd frontend && pnpm exec playwright install --with-deps chromium`.
 - **Port already in use:** something else holds `8000`/`5173` on the host — stop it or

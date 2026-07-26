@@ -6,17 +6,17 @@ set -euo pipefail
 
 echo "==> laptime-insights dev container: provisioning"
 
-# Named-volume mounts (~/.gradle, Playwright browsers, shared pnpm store) are
+# Named-volume mounts (Playwright browsers, shared pnpm store + Gradle cache) are
 # created root-owned on first boot. Hand them to `vscode` so installs don't hit
 # permission errors. ~/.cache is chowned because mounting a volume at
 # ~/.cache/ms-playwright makes Docker create that parent root-owned, which would
-# break every other user of it. /cache/pnpm-store is chowned non-recursively and
-# /cache itself is left alone: that store is shared with every other dev
-# container, so recursing would be slow and rewrite other projects' data.
+# break every other user of it. The shared /cache/pnpm-store and /cache/gradle
+# are chowned NON-recursively and /cache itself is left alone: they are shared
+# with every other dev container, so recursing would be slow and rewrite other
+# projects' data.
 echo "==> Fixing cache-volume ownership"
-sudo mkdir -p "$HOME/.gradle" "$HOME/.cache/ms-playwright" /cache/pnpm-store
-sudo chown -R vscode:vscode "$HOME/.gradle"
-sudo chown vscode:vscode "$HOME/.cache" "$HOME/.cache/ms-playwright" /cache/pnpm-store
+sudo mkdir -p "$HOME/.cache/ms-playwright" /cache/pnpm-store /cache/gradle
+sudo chown vscode:vscode "$HOME/.cache" "$HOME/.cache/ms-playwright" /cache/pnpm-store /cache/gradle
 
 # Make fnm + pnpm available in this non-interactive shell (mirrors ~/.bashrc).
 export FNM_DIR="$HOME/.fnm"

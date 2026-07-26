@@ -45,30 +45,32 @@
   },
 
   // Persist caches across rebuilds so installs stay fast:
-  //   - .gradle : the Gradle build cache / resolved dependencies. Per project.
-  //   - /cache  : the pnpm store, shared with EVERY dev container on this
-  //     machine, so a package version downloads once per machine. The source
-  //     name is deliberately project-independent — renaming it per project
-  //     silently un-shares the store. post-create points pnpm at
-  //     /cache/pnpm-store; pnpm ignores env vars for that setting.
+  //   - /cache  : shared with EVERY dev container on this machine, so a package
+  //     or Gradle dependency downloads once per machine rather than once per
+  //     project. Holds BOTH the pnpm store (/cache/pnpm-store) and the Gradle
+  //     cache (/cache/gradle, via GRADLE_USER_HOME below). The source name is
+  //     deliberately project-independent — renaming it per project silently
+  //     un-shares the caches.
   //   - ms-playwright : the browsers, so a rebuild doesn't re-download ~539MB.
   //     Per project on purpose (a shared browser cache lets one project's
   //     `playwright install` GC another's).
   // NB: there is intentionally NO volume at ~/.local/share/pnpm (PNPM_HOME) —
   // the standalone pnpm binary is baked into the image there, and a volume would
-  // shadow it. The old `laptime-insights-pnpm` volume can be deleted.
+  // shadow it. The old `laptime-insights-gradle` and `laptime-insights-pnpm`
+  // volumes are now unused and can be deleted.
   "mounts": [
-    "source=laptime-insights-gradle,target=/home/vscode/.gradle,type=volume",
     "source=devcontainer-cache,target=/cache,type=volume",
     "source=laptime-insights-playwright,target=/home/vscode/.cache/ms-playwright,type=volume"
   ],
 
   // Pin Playwright to the volume above rather than its ~/.cache default
   // (containerEnv, not remoteEnv: a Playwright that can't see this var silently
-  // downloads its own copy, bypassing the volume). Opt out of OpenSpec's
-  // anonymous telemetry (privacy-preserving default; also silences its notice).
+  // downloads its own copy, bypassing the volume). Point Gradle at the shared
+  // /cache/gradle (Gradle locks its home, so projects share it safely — like a
+  // host's ~/.gradle). Opt out of OpenSpec's anonymous telemetry.
   "containerEnv": {
     "PLAYWRIGHT_BROWSERS_PATH": "/home/vscode/.cache/ms-playwright",
+    "GRADLE_USER_HOME": "/cache/gradle",
     "OPENSPEC_TELEMETRY": "0"
   },
 
