@@ -19,7 +19,7 @@
 # by `.node-version` (fnm reads it); if you bump it or the `packageManager` pin,
 # update the matching ARG here and rebuild ("Dev Containers: Rebuild").
 
-FROM mcr.microsoft.com/devcontainers/java:1-21-bookworm
+FROM mcr.microsoft.com/devcontainers/java:3-21-bookworm
 
 # --- Pinned versions (keep in sync with the repo's version files) ------------
 ARG NODE_VERSION=24.18.0
