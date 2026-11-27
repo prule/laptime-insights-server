@@ -15,7 +15,7 @@ flyway = "13.1.0"
 junit = "6.1.2"
 assertj = "3.27.7"
 mockk = "1.14.11"
-rest-assured = "6.0.1"
+rest-assured = "7.0.0"
 
 [libraries]
 kotlinGradlePlugin = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }
